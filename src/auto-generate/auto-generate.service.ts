@@ -1,10 +1,17 @@
-import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 import { DataSourceService } from '../data-source/data-source.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { CommonService } from '../common/common.service';
+import { TableDefinition } from '../entities/table.entity';
 
 @Injectable()
 export class AutoGenerateService {
@@ -49,7 +56,7 @@ export class AutoGenerateService {
       }
       this.logger.debug(`Phần ImportPart được tạo:\n${importPart}`);
 
-      let classPart = `@Entity()\n`;
+      let classPart = `@Entity("${payload.name.toLowerCase()}")\n`;
       if (payload.index && payload.index.length) {
         classPart += `@Index([`;
         for (const index of payload.index) {
@@ -76,15 +83,13 @@ export class AutoGenerateService {
           classPart += `  @PrimaryGeneratedColumn(${strategy})\n`;
         } else {
           classPart += `  @Column({`;
-          classPart += `type:'${column.type}', nullable: ${column.isNullable}`;
+          classPart += `type:'${column.type}', nullable: ${String(column.isNullable)}`;
           if (column.default !== undefined) {
-            const type =
-              column.type === 'int' || column.type === 'float'
-                ? column.type
-                : column.type === 'varchar' || column.type === 'text'
-                  ? `"${column.default}"`
-                  : column.default;
-            classPart += `, default: ${type}`;
+            let defVal = column.default;
+            if (typeof defVal === 'string') {
+              defVal = `"${defVal}"`;
+            }
+            classPart += `, default: ${defVal}`;
           }
           classPart += `})\n`;
           if (column.index) {
@@ -97,7 +102,21 @@ export class AutoGenerateService {
       if (payload.relations && payload.relations.length > 0) {
         // Kiểm tra payload.relations tồn tại và có phần tử
         this.logger.debug(`Đang xử lý ${payload.relations.length} quan hệ.`);
+        const repo =
+          this.dataSourceService.getRepository<TableDefinition>(
+            TableDefinition,
+          );
         for (const relation of payload.relations) {
+          const targetTable = await repo.findOne({
+            where: {
+              id: relation.targetTable,
+            },
+          });
+          if (!targetTable) {
+            throw new BadRequestException(
+              `Bảng targetTable ID = ${relation.targetTable} không tồn tại!`,
+            );
+          }
           this.logger.debug(
             `  - Quan hệ: ${relation.propertyName} (${relation.type} to ${relation.targetTable})`,
           );
@@ -116,7 +135,7 @@ export class AutoGenerateService {
           ) {
             classPart += `@Index()\n`;
           }
-          classPart += `  @${type}(() => ${this.commonService.capitalizeFirstLetterEachLine(relation.targetTable)}, {`;
+          classPart += `  @${type}(() => ${this.commonService.capitalizeFirstLetterEachLine(targetTable.name)}, {`;
           if (relation.isEager) {
             classPart += ` eager: true,`;
           }
@@ -146,7 +165,7 @@ export class AutoGenerateService {
             relation.type === 'one-to-many' || relation.type === 'many-to-many'
               ? '[]'
               : '';
-          classPart += `  ${relation.propertyName}: ${this.commonService.capitalizeFirstLetterEachLine(relation.targetTable)}${relationType};\n`;
+          classPart += `  ${relation.propertyName}: ${this.commonService.capitalizeFirstLetterEachLine(targetTable.name)}${relationType};\n`;
         }
       } else {
         this.logger.debug('Không có quan hệ nào trong payload.');
@@ -294,9 +313,62 @@ export class AutoGenerateService {
       await this.autoBuildToJs();
       await this.dataSourceService.reloadDataSource();
       await this.autoGenerateMigrationFile();
+      await this.clearMigrationsTable();
       await this.autoRunMigration();
     } catch (error) {
       this.logger.error('Lỗi trong afterEffect:', error);
+      throw error;
+    }
+  }
+
+  async clearMigrationsTable() {
+    const dataSource = this.dataSourceService.getDataSource();
+    const queryRunner = dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+
+    const dbType = dataSource.options.type;
+
+    let checkTableSql: string;
+
+    if (dbType === 'mysql') {
+      checkTableSql = `
+      SELECT COUNT(*) as count
+      FROM information_schema.tables
+      WHERE table_schema = DATABASE() AND table_name = 'migrations'
+    `;
+    } else if (dbType === 'postgres') {
+      checkTableSql = `
+      SELECT COUNT(*) as count
+      FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'migrations'
+    `;
+    } else {
+      await queryRunner.release();
+      throw new Error(`Unsupported database type: ${dbType}`);
+    }
+
+    const result = await queryRunner.query(checkTableSql);
+    const exists = Number(result[0]?.count) > 0;
+
+    if (exists) {
+      await queryRunner.query('DELETE FROM migrations;');
+      this.logger.log('✅ Đã xoá sạch dữ liệu trong bảng migrations.');
+    } else {
+      this.logger.warn('⚠️ Bảng migrations không tồn tại, bỏ qua xoá.');
+    }
+
+    await queryRunner.release();
+  }
+
+  async autoRemoveOldFile(filePath: string) {
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        this.logger.log(`🧹 Đã xoá file: ${filePath}`);
+      }
+    } catch (error) {
+      this.logger.error(error.message);
       throw error;
     }
   }

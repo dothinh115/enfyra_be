@@ -9,13 +9,14 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsSafeIdentifier } from '../../validator/is-safe-identifer.validator';
 
 export class CreateColumnDto {
   @IsOptional()
   @IsNumber()
   id?: number;
 
-  @IsString()
+  @IsSafeIdentifier()
   @IsNotEmpty()
   name: string;
 
@@ -50,20 +51,20 @@ export class CreateRelationDto {
 
   @IsString()
   @IsNotEmpty()
-  targetTable: string;
+  targetTable: number;
 
   @IsOptional()
   @IsBoolean()
   index?: boolean;
 
-  @IsString()
+  @IsSafeIdentifier()
   @IsOptional()
   inversePropertyName?: string;
 
   @IsIn(['one-to-one', 'one-to-many', 'many-to-one', 'many-to-many'])
   type: 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many';
 
-  @IsString()
+  @IsSafeIdentifier()
   @IsNotEmpty()
   propertyName: string;
 
@@ -87,7 +88,7 @@ export class CreateRelationDto {
 }
 
 export class CreateTableDto {
-  @IsString()
+  @IsSafeIdentifier()
   @IsNotEmpty()
   name: string;
 

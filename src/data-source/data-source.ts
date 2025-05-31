@@ -22,7 +22,6 @@ export const createDataSource: (entities: any[]) => DataSource = (
     migrations: [
       path.resolve(__dirname, '..', '..', 'src', 'migrations', '*.js'),
     ],
-    migrationsTableName: 'migrations',
   });
 };
 
@@ -46,5 +45,4 @@ export const AppDataSource = new DataSource({
     ),
   ],
   migrations: [path.resolve(__dirname, '..', 'migrations', '*.{js,ts}')],
-  migrationsTableName: 'migrations',
 });

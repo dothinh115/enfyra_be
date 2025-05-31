@@ -9,7 +9,6 @@
         "include": "**/*.json", 
         "exclude": "**/node_modules/**" 
       }
-    ],
-    "webpack": false
+    ]
   }
 }

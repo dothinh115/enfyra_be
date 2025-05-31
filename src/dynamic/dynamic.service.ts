@@ -1,19 +1,12 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
 import * as vm from 'vm';
-import { Route } from '../dynamic-entities/route.entity';
-import { TableDefinition } from '../entities/table.entity';
 import { DataSourceService } from '../data-source/data-source.service';
 
 @Injectable()
 export class DynamicService {
   private logger = new Logger(DynamicService.name);
-  constructor(
-    @InjectRepository(Route)
-    @InjectRepository(TableDefinition)
-    private dataSourceService: DataSourceService,
-  ) {}
+  constructor(private dataSourceService: DataSourceService) {}
   async dynamicService(req: Request, body?: any) {
     try {
       const path = req.path;
@@ -29,7 +22,7 @@ export class DynamicService {
         $body: body,
         $repo: repo,
       };
-      const curRouteRepo = this.dataSourceService.getRepository(Route.name);
+      const curRouteRepo = this.dataSourceService.getRepository('route');
       const curRoute: any = await curRouteRepo.findOne({
         where: {
           path,

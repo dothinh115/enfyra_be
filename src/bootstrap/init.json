@@ -1,15 +1,112 @@
 {
+    "defaultRoleTable": {
+        "name": "role",
+        "columns": [
+            {
+                "name": "id",
+                "type": "int",
+                "isPrimary": true,
+                "isGenerated": true,
+                "isNullable": false
+            },
+            {
+                "name": "name",
+                "type": "varchar",
+                "isNullable": false
+            }
+        ]
+    },
     "defaultRole": {
         "name": "Admin"
+    },
+    "defaultUserTable": {
+        "name": "user",
+        "columns": [
+            {
+                "name": "id",
+                "type": "varchar",
+                "isPrimary": true,
+                "isGenerated": true,
+                "isNullable": false
+            },
+            {
+                "name": "email",
+                "type": "varchar",
+                "isNullable": false
+            },
+            {
+                "name": "password",
+                "type": "varchar",
+                "isNullable": false
+            },
+            {
+                "name": "isRootUser",
+                "type": "boolean",
+                "isNullable": false,
+                "default":false
+            }
+        ]
     },
     "defaultUser": {
         "email": "dynamiq@admin.com",
         "password": "1234",
         "isRootUser": true
     },
+    "settingTable": {
+        "name": "setting",
+        "columns": [
+            {
+                "name": "id",
+                "type": "int",
+                "isPrimary": true,
+                "isGenerated": true,
+                "isNullable": false
+            },
+            {
+                "name": "isInit",
+                "type": "boolean",
+                "isNullable": false,
+                "default": false
+            }
+        ]
+    },
     "defaultSetting": {
         "isInit": false
     },
+    "defaultRouteTable": {
+                "name": "route",
+                "columns": [
+                    {
+                    "name": "id",
+                    "type": "int",
+                    "isPrimary": true,
+                    "isGenerated": true,
+                    "isNullable": false
+                    },
+                    {
+                    "name": "method",
+                    "type": "varchar",
+                    "isNullable": false,
+                    "default": "GET"
+                    },
+                    {
+                    "name": "path",
+                    "type": "varchar",
+                    "isNullable": false
+                    },
+                    {
+                    "name": "handler",
+                    "type": "text",
+                    "isNullable": false
+                    },
+                    {
+                    "name": "isPublished",
+                    "type": "boolean",
+                    "isNullable": false,
+                    "default": true
+                    }
+                ]
+                },
     "routeDefinition": {
         "GET": {
             "method": "GET",
@@ -25,7 +122,7 @@
         },
          "DELETE": {
             "method": "DELETE",
-            "handler": "const { id } = $body; const result = await $repo.delete({ id }); return result;"
+            "handler": "const {id, ...data} = $body; const result = await $repo.update({id}, data); return result"
         }
     }
 }

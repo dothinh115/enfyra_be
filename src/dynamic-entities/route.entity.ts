@@ -1,30 +1,32 @@
-import {
-  Column,
-  Entity,
-  JoinTable,
-  ManyToMany,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToMany, ManyToOne, OneToOne, JoinTable, JoinColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Category } from './category.entity';
+
 import { Role } from './role.entity';
 
-@Entity()
+import { Setting } from './setting.entity';
+
+import { User } from './user.entity';
+
+@Entity("route")
 export class Route {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({ default: 'GET' })
+  @Column({type:'varchar', nullable: false})
   method: string;
 
-  @Column({ nullable: false })
+  @Column({type:'varchar', nullable: false})
   path: string;
 
-  @Column({ type: 'text' })
+  @Column({type:'text', nullable: false})
   handler: string;
 
-  @Column({ type: 'boolean', default: false })
+  @Column({type:'boolean', nullable: false})
   isPublished: boolean;
 
-  @ManyToMany(() => Role, (role) => role.routes)
-  @JoinTable()
-  roles: Role[];
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  UpdatedAt: Date;
 }

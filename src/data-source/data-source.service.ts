@@ -2,8 +2,8 @@ import * as path from 'path';
 import { CommonService } from '../common/common.service';
 import { createDataSource } from '../data-source/data-source';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
-import { AutoGenerateService } from '../auto-generate/auto-generate.service';
+import { DataSource, EntitySchema, Repository } from 'typeorm';
+import { QueryTrackerService } from '../query-track/query-track.service';
 
 @Injectable()
 export class DataSourceService implements OnModuleInit {
@@ -12,7 +12,7 @@ export class DataSourceService implements OnModuleInit {
 
   constructor(
     private commonService: CommonService,
-    private autoGService: AutoGenerateService,
+    private queryTrackerService: QueryTrackerService,
   ) {}
 
   async onModuleInit() {
@@ -34,6 +34,26 @@ export class DataSourceService implements OnModuleInit {
       return;
     }
 
+    const interval = 500;
+    const maxCount = 20;
+    let count = 0;
+
+    while (!this.queryTrackerService.isIdle()) {
+      if (count >= maxCount) {
+        this.logger.error(
+          `❌ DataSource vẫn đang bận sau ${(maxCount * interval) / 1000}s, huỷ reload.`,
+        );
+        return; // hoặc throw error nếu muốn retry lại từ client
+      }
+
+      this.logger.debug(
+        `DataSource đang bận, còn ${this.queryTrackerService.getCount()} kết nối...${count > 0 ? `, thử lại ${count}/${maxCount} lần...` : ''}`,
+      );
+
+      count++;
+      await new Promise((resolve) => setTimeout(resolve, interval));
+    }
+
     this.logger.log('🔁 Chuẩn bị reload DataSource');
     await this.dataSource.destroy();
     this.logger.debug('✅ Destroy DataSource cũ thành công!');
@@ -44,9 +64,12 @@ export class DataSourceService implements OnModuleInit {
         '..',
         'dynamic-entities',
       );
+      const entityDir = path.resolve(__dirname, '..', 'entities');
 
-      const entities =
-        await this.commonService.loadDynamicEntities(dynamicEntityDir);
+      const entities = [
+        ...(await this.commonService.loadDynamicEntities(dynamicEntityDir)),
+        ...(await this.commonService.loadDynamicEntities(entityDir)),
+      ];
 
       this.dataSource = createDataSource(entities);
       await this.dataSource.initialize();
@@ -57,19 +80,33 @@ export class DataSourceService implements OnModuleInit {
     }
   }
 
-  getRepository<Entity>(tableName: string): Repository<Entity> {
+  getRepository<Entity>(
+    identifier: string | Function | EntitySchema<any>,
+  ): Repository<Entity> {
     if (!this.dataSource.isInitialized) {
       throw new Error('DataSource chưa được khởi tạo!');
     }
 
-    const metadata = this.dataSource.entityMetadatas.find(
-      (meta) => meta.tableName === tableName,
-    );
+    let metadata;
 
-    if (!metadata) {
-      throw new Error(
-        `Không tìm thấy entity tương ứng với bảng "${tableName}"`,
+    if (typeof identifier === 'string') {
+      // Tìm theo tên bảng
+      metadata = this.dataSource.entityMetadatas.find(
+        (meta) => meta.tableName === identifier,
       );
+
+      if (!metadata) {
+        throw new Error(
+          `Không tìm thấy entity tương ứng với bảng tên "${identifier}"`,
+        );
+      }
+    } else {
+      // Tìm theo class hoặc EntitySchema
+      metadata = this.dataSource.getMetadata(identifier);
+
+      if (!metadata) {
+        throw new Error(`Không tìm thấy metadata cho entity đã truyền vào.`);
+      }
     }
 
     return this.dataSource.getRepository<Entity>(metadata.target as any);

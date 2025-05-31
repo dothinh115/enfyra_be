@@ -1,14 +1,18 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToMany, ManyToOne, OneToOne, JoinTable, JoinColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Category } from './category.entity';
+
 import { Role } from './role.entity';
+
+import { Route } from './route.entity';
 
 import { User } from './user.entity';
 
-@Entity()
+@Entity("setting")
 export class Setting {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({type:'boolean', nullable: false, default: false})
+  @Column({type:'boolean', nullable: false})
   isInit: boolean;
 
   @CreateDateColumn()

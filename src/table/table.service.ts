@@ -1,18 +1,20 @@
+import * as path from 'path';
 import { AutoGenerateService } from '../auto-generate/auto-generate.service';
 import { TableDefinition } from '../entities/table.entity';
-import { RabbitMQRegistry } from '../rabbitmq/rabbitmq.service';
-import { CreateTableDto } from '../table/dto/create-table.dto';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  CreateRelationDto,
+  CreateTableDto,
+} from '../table/dto/create-table.dto';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Table } from 'typeorm';
 
 @Injectable()
 export class TableHanlderService {
+  private logger = new Logger(TableHanlderService.name);
   constructor(
     @InjectRepository(TableDefinition)
-    private tableDefinitionRepo: Repository<TableDefinition>,
     private dataSouce: DataSource,
-    private rmqClient: RabbitMQRegistry,
     private autoGService: AutoGenerateService,
   ) {}
 
@@ -32,47 +34,25 @@ export class TableHanlderService {
         throw new BadRequestException(`Bảng ${body.name} đã tồn tại!`);
       }
 
-      //tiến hành tạo data để lưu db
-      const relations = body.relations
-        ? await Promise.all(
-            body.relations.map(async (relation) => {
-              const targetTable = await manager.findOne(TableDefinition, {
-                where: {
-                  name: relation.targetTable as string,
-                },
-              });
-
-              if (!targetTable) {
-                throw new BadRequestException(
-                  `Relation targetTable ${relation.targetTable} không tồn tại!`,
-                );
-              }
-
-              return {
-                ...relation,
-                targetTable, // Gán entity luôn nếu là quan hệ @ManyToOne
-              };
-            }),
-          )
-        : [];
-
       // Tạo entity từ dữ liệu đã được xử lý
       const tableEntity = manager.create(TableDefinition, {
         name: body.name,
         columns: body.columns,
-        relations,
-      });
+        relations: body.relations ? this.prepareRelations(body.relations) : [],
+      } as any);
 
       const result = !hasTable
         ? await this.autoGService.entityAutoGenerate(body)
         : null;
+
       if (!tableData) await manager.save(TableDefinition, tableEntity);
 
       await queryRunner.commitTransaction();
       return tableData ? tableData : result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw new BadRequestException(error);
+      console.error(error.stack || error.message || error);
+      throw new BadRequestException(error.message || 'Unknown error');
     } finally {
       await queryRunner.release();
     }
@@ -80,12 +60,11 @@ export class TableHanlderService {
 
   async updateTable(id: number, body: CreateTableDto) {
     const queryRunner = this.dataSouce.createQueryRunner();
-    await queryRunner.connect(); // Kết nối
+    await queryRunner.connect();
     await queryRunner.startTransaction();
-    const client = this.rmqClient.getClient();
-
+    const manager = queryRunner.manager;
     try {
-      const exists = await this.tableDefinitionRepo.findOne({
+      const exists = await manager.findOne(TableDefinition, {
         where: {
           id,
         },
@@ -93,42 +72,37 @@ export class TableHanlderService {
       if (!exists) {
         throw new BadRequestException(`Table ${body.name} không tồn tại.`);
       }
-      //tiến hành tạo data để lưu db
-      const relations = body.relations
-        ? await Promise.all(
-            body.relations.map(async (relation) => {
-              const targetTable = await this.tableDefinitionRepo.findOne({
-                where: {
-                  name: relation.targetTable as string,
-                },
-              });
 
-              if (!targetTable) {
-                throw new BadRequestException(
-                  `Relation targetTable ${relation.targetTable} không tồn tại!`,
-                );
-              }
-
-              return {
-                ...relation,
-                targetTable, // Gán entity luôn nếu là quan hệ @ManyToOne
-              };
-            }),
-          )
-        : [];
+      const oldName = exists.name;
+      const newName = body.name;
+      if (oldName !== newName) {
+        this.logger.log(`Sửa tên bảng, tiến hành cập nhật tên bảng trước!`);
+        await queryRunner.query(
+          `RENAME TABLE \`${oldName}\` TO \`${newName}\``,
+        );
+        this.logger.debug(`Đã sửa tên bảng ${oldName} thành ${newName}`);
+        const oldFilePath = path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'src',
+          'dynamic-entities',
+          `${oldName}.entity.ts`,
+        );
+        this.logger.log(`Chuẩn bị xoá file entity với tên cũ: ${oldFilePath}`);
+        await this.autoGService.autoRemoveOldFile(oldFilePath);
+        this.logger.debug(`Xoá file entity cũ thành công!`);
+      }
 
       // Tạo entity từ dữ liệu đã được xử lý
-      const tableEntity = this.tableDefinitionRepo.create({
-        id,
-        name: body.name,
-        columns: body.columns as any,
-        relations,
+      const tableEntity = manager.create(TableDefinition, {
+        ...body,
+        relations: body.relations ? this.prepareRelations(body.relations) : [],
       });
 
-      await queryRunner.commitTransaction();
       await this.autoGService.entityAutoGenerate(body);
-      const result = await this.tableDefinitionRepo.save(tableEntity);
-
+      const result = await manager.save(TableDefinition, tableEntity);
+      await queryRunner.commitTransaction();
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -138,9 +112,17 @@ export class TableHanlderService {
     }
   }
 
+  prepareRelations(relationsDto: CreateRelationDto[] = []) {
+    return relationsDto.map((relation) => ({
+      ...relation,
+      targetTable: { id: relation.targetTable },
+    }));
+  }
+
   async find() {
     try {
-      return await this.tableDefinitionRepo.find();
+      const repo = this.dataSouce.getRepository(TableDefinition);
+      return await repo.find();
     } catch (error) {
       throw new BadRequestException(error.message);
     }

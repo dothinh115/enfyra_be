@@ -13,6 +13,7 @@ import { Request } from 'express';
 @Controller()
 export class DynamicController {
   constructor(private readonly dynamicService: DynamicService) {}
+
   @Get('*')
   @Patch('*')
   @Delete('*')

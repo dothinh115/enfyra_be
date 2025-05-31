@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { DynamicService } from './dynamic.service';
 import { DynamicController } from './dynamic.controller';
 
@@ -6,4 +6,6 @@ import { DynamicController } from './dynamic.controller';
   controllers: [DynamicController],
   providers: [DynamicService],
 })
-export class DynamicModule {}
+export class DynamicModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {}
+}
