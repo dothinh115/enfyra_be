@@ -1,18 +1,15 @@
-import { RouteDefenition } from '../entities/route.entity';
 import { CreateRouteDto } from '../route/dto/create-route.dto';
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSourceService } from '../data-source/data-source.service';
+import { Route } from '../dynamic-entities/route.entity';
 
 @Injectable()
 export class RouteService {
-  constructor(
-    @InjectRepository(RouteDefenition)
-    private routeDefRepo: Repository<RouteDefenition>,
-  ) {}
+  constructor(private dataSourceService: DataSourceService) {}
 
   async createRoute(body: CreateRouteDto) {
-    const exists = await this.routeDefRepo.findOne({
+    const repo = this.dataSourceService.getRepository(Route.name);
+    const exists = await repo.findOne({
       where: {
         method: body.method,
         path: body.path,
@@ -22,7 +19,7 @@ export class RouteService {
       throw new BadRequestException(
         `[${body.method}] ${body.path} đã tồn tại!`,
       );
-    const newRoute = this.routeDefRepo.create(body);
-    return await this.routeDefRepo.save(newRoute);
+    const newRoute = repo.create(body as any);
+    return await repo.save(newRoute);
   }
 }

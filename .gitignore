@@ -6,6 +6,12 @@
 /src/migrations/*.ts
 /src/dynamic-entities/*.entity.ts
 
+!/src/dynamic-entities/user.entity.ts
+!/src/dynamic-entities/role.entity.ts
+!/src/dynamic-entities/setting.entity.ts
+!/src/dynamic-entities/route.entity.ts
+
+
 # Logs
 logs
 *.log

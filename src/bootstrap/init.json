@@ -1,83 +1,31 @@
 {
-    "defaultRoleTable": {
-        "name": "role",
-        "columns": [
-            {
-                "name": "id",
-                "type": "int",
-                "isPrimary": true,
-                "isGenerated": true,
-                "isNullable": false
-            },
-            {
-                "name": "name",
-                "type": "varchar",
-                "isNullable": false
-            }
-        ]
-    },
     "defaultRole": {
         "name": "Admin"
-    },
-    "defaultUserTable": {
-        "name": "user",
-        "columns": [
-            {
-                "name": "id",
-                "type": "varchar",
-                "isPrimary": true,
-                "isGenerated": true,
-                "isNullable": false
-            },
-            {
-                "name": "email",
-                "type": "varchar",
-                "isNullable": false
-            },
-            {
-                "name": "password",
-                "type": "varchar",
-                "isNullable": false
-            },
-            {
-                "name": "isRootUser",
-                "type": "boolean",
-                "isNullable": false,
-                "default":false
-            }
-        ],
-        "relations": [
-            {
-                "propertyName": "role",
-                "type": "many-to-one",
-                "targetTable": "role"
-            }
-        ]
     },
     "defaultUser": {
         "email": "dynamiq@admin.com",
         "password": "1234",
         "isRootUser": true
     },
-    "settingTable": {
-        "name": "setting",
-        "columns": [
-            {
-                "name": "id",
-                "type": "int",
-                "isPrimary": true,
-                "isGenerated": true,
-                "isNullable": false
-            },
-            {
-                "name": "isInit",
-                "type": "boolean",
-                "isNullable": false,
-                "default": false
-            }
-        ]
-    },
     "defaultSetting": {
         "isInit": false
+    },
+    "routeDefinition": {
+        "GET": {
+            "method": "GET",
+            "handler": "const result = await $repo.find(); return result"
+        },
+         "POST": {
+            "method": "POST",
+            "handler": "const result = await $repo.create($body); return result"
+        },
+         "PATCH": {
+            "method": "PATCH",
+            "handler": "const {id, ...data} = $body; const result = await $repo.update({id}, data); return result"
+        },
+         "DELETE": {
+            "method": "DELETE",
+            "handler": "const { id } = $body; const result = await $repo.delete({ id }); return result;"
+        }
     }
 }

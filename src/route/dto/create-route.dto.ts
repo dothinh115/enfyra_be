@@ -1,16 +1,29 @@
-import { Expose } from 'class-transformer';
-import { IsIn, IsNotEmpty } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  IsBoolean,
+  IsString,
+} from 'class-validator';
 
 export class CreateRouteDto {
-  @Expose()
   @IsIn(['GET', 'PATCH', 'POST', 'DELETE'])
   method: string;
 
-  @Expose()
   @IsNotEmpty()
+  @IsString()
   path: string;
 
-  @Expose()
   @IsNotEmpty()
+  @IsString()
   handler: string;
+
+  @IsOptional()
+  @IsArray()
+  roles?: number[];
+
+  @IsOptional()
+  @IsBoolean()
+  isPublished?: boolean;
 }

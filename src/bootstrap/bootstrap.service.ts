@@ -1,202 +1,91 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { QueryRunner } from 'typeorm';
 import { DataSourceService } from '../data-source/data-source.service';
-import { TableHanlderService } from '../table/table.service';
+import { Route } from '../dynamic-entities/route.entity'; // Đảm bảo entity này được định nghĩa đúng
 const initJson = require('./init.json');
 
 @Injectable()
 export class BootstrapService implements OnApplicationBootstrap {
   private readonly logger = new Logger(BootstrapService.name);
 
-  constructor(
-    private readonly dataSourceService: DataSourceService,
-    private readonly tableHandlerService: TableHanlderService,
-  ) {}
-
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  resetQueryRunner(): QueryRunner {
-    const dataSource = this.dataSourceService.getDataSource();
-    return dataSource.createQueryRunner();
-  }
+  constructor(private readonly dataSourceService: DataSourceService) {}
 
   async onApplicationBootstrap() {
-    await this.createSettingTable();
-    await this.delay(2000);
-    await this.createDefaultRoleTable();
-    await this.delay(2000);
-    await this.createDefaultRole();
-    await this.delay(2000);
-    await this.createDefaultUserTable();
+    await this.insertIfTableIsEmpty('setting', initJson.defaultSetting);
+    await this.insertIfTableIsEmpty('role', initJson.defaultRole);
+    await this.insertIfTableIsEmpty('user', initJson.defaultUser);
+    await this.createAndInsertRoutes();
   }
 
-  private async checkTableExists(tableName: string): Promise<boolean> {
-    const dataSource = this.dataSourceService.getDataSource();
-    const query = `
-    SELECT 1 FROM information_schema.tables 
-    WHERE table_schema = DATABASE() AND table_name = ? LIMIT 1
-  `;
-    const result = await dataSource.query(query, [tableName]);
-    return result.length > 0;
-  }
+  private async insertIfTableIsEmpty(tableName: string, data: any) {
+    const repo = this.dataSourceService.getRepository(tableName);
 
-  private async createSettingTable(): Promise<void> {
-    const tableName = initJson.settingTable.name;
-    const queryRunner = this.resetQueryRunner();
+    const count = await repo.count();
 
-    try {
-      const hasTable = await this.checkTableExists(tableName);
-
-      if (!hasTable) {
-        this.logger.log(`Bảng '${tableName}' chưa tồn tại, tiến hành tạo.`);
-        await this.tableHandlerService.createTable(initJson.settingTable);
-        this.logger.log(`Tạo bảng '${tableName}' thành công.`);
-      } else {
-        this.logger.debug(`Bảng '${tableName}' đã tồn tại.`);
-      }
-
-      // Kiểm tra số bản ghi trong bảng
-      const [{ count }] = await queryRunner.query(
-        `SELECT COUNT(*) as count FROM \`${tableName}\``,
+    if (count === 0) {
+      this.logger.log(
+        `Bảng '${tableName}' chưa có dữ liệu, tiến hành thêm mặc định.`,
       );
-
-      if (count === 0) {
-        this.logger.log(
-          `Bảng '${tableName}' chưa có dữ liệu, tiến hành tạo mặc định.`,
-        );
-
-        // Dùng repository để tạo và lưu bản ghi mặc định (nếu entity ánh xạ đúng)
-        const repo = this.dataSourceService.getRepository(tableName);
-        const setting = repo.create(initJson.defaultSetting);
-        await repo.save(setting);
-
-        this.logger.log(`Tạo setting mặc định thành công.`);
-      } else {
-        this.logger.debug(`Bảng '${tableName}' đã có dữ liệu.`);
-      }
-    } catch (error) {
-      this.logger.error(
-        `Lỗi khi xử lý bảng setting '${tableName}': ${error.message}`,
+      await repo.save(data);
+      this.logger.log(
+        `Thêm dữ liệu mặc định cho bảng '${tableName}' thành công.`,
       );
-      throw error;
-    } finally {
-      await queryRunner.release();
+    } else {
+      this.logger.debug(`Bảng '${tableName}' đã có dữ liệu, bỏ qua.`);
     }
   }
 
-  private async createDefaultRoleTable(): Promise<void> {
-    const tableName = initJson.defaultRoleTable.name;
-    const queryRunner = this.resetQueryRunner();
+  private async createAndInsertRoutes() {
+    const paths = ['role', 'setting', 'user'];
+    const routeDefinitions = initJson.routeDefinition;
+    const routesToInsert: Route[] = [];
+    let recordsAddedCount = 0; // Thêm biến đếm số bản ghi được thêm
+    const repo = this.dataSourceService.getRepository('route');
+    for (const path of paths) {
+      for (const methodType of Object.keys(routeDefinitions)) {
+        const routeData = routeDefinitions[methodType];
 
-    try {
-      const hasTable = await this.checkTableExists(tableName);
+        if (routeData && routeData.method && routeData.handler) {
+          const fullPath = `/${path}`; // Đường dẫn đầy đủ
+          const method = routeData.method;
 
-      if (!hasTable) {
-        this.logger.log(`Tạo bảng: ${tableName}`);
-        await this.tableHandlerService.createTable(initJson.defaultRoleTable);
-        this.logger.log(`Tạo bảng '${tableName}' thành công.`);
-      } else {
-        this.logger.debug(`Bảng '${tableName}' đã tồn tại.`);
-      }
-    } catch (error) {
-      this.logger.error(`Lỗi tạo bảng vai trò: ${error.message}`);
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
-  }
+          // Kiểm tra sự tồn tại của route dựa trên path và method
+          const existingRoute = await repo.findOne({
+            where: { path: fullPath, method: method },
+          });
 
-  private async createDefaultRole(): Promise<void> {
-    const tableName = initJson.defaultRoleTable.name;
-    const queryRunner = this.resetQueryRunner();
-
-    try {
-      const hasTable = await this.checkTableExists(tableName);
-      if (!hasTable) {
-        throw new Error(`Bảng '${tableName}' chưa tồn tại.`);
-      }
-
-      // Kiểm tra vai trò đã tồn tại chưa bằng truy vấn SQL thay vì repo.exists()
-      const [result] = await queryRunner.query(
-        `SELECT COUNT(*) as count FROM \`${tableName}\` WHERE name = ?`,
-        [initJson.defaultRole.name],
-      );
-
-      const existsInDb = result.count > 0;
-
-      if (!existsInDb) {
-        this.logger.log(`Tạo vai trò mặc định: ${initJson.defaultRole.name}`);
-        const repo = this.dataSourceService.getRepository(tableName);
-        const role = repo.create(initJson.defaultRole);
-        await repo.save(role);
-        this.logger.log(`Vai trò mặc định đã được tạo.`);
-      } else {
-        this.logger.debug(
-          `Vai trò mặc định '${initJson.defaultRole.name}' đã tồn tại.`,
-        );
-      }
-    } catch (error) {
-      this.logger.error(`Lỗi tạo vai trò mặc định: ${error.message}`);
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
-  private async createDefaultUserTable(): Promise<void> {
-    const tableName = initJson.defaultUserTable.name;
-
-    try {
-      const hasTable = await this.checkTableExists(tableName);
-
-      if (!hasTable) {
-        this.logger.log(`Bảng '${tableName}' chưa tồn tại, tiến hành tạo.`);
-        await this.tableHandlerService.createTable(initJson.defaultUserTable);
-        this.logger.log(`Tạo bảng '${tableName}' thành công.`);
-      } else {
-        this.logger.debug(`Bảng '${tableName}' đã tồn tại.`);
-      }
-
-      const userRepo = this.dataSourceService.getRepository(tableName);
-      const exists = await userRepo.exists({
-        where: { email: initJson.defaultUser.email },
-      });
-
-      if (!exists) {
-        this.logger.log(`Tạo user mặc định: ${initJson.defaultUser.email}`);
-
-        const roleRepo = this.dataSourceService.getRepository(
-          initJson.defaultRoleTable.name,
-        );
-        const role = await roleRepo.findOneBy({
-          name: initJson.defaultRole.name,
-        });
-
-        if (!role) {
-          throw new Error(
-            `Vai trò mặc định '${initJson.defaultRole.name}' không tồn tại.`,
+          if (!existingRoute) {
+            // Nếu route chưa tồn tại, tạo mới và thêm vào danh sách
+            const newRoute = repo.create({
+              path: fullPath,
+              method: method,
+              handler: routeData.handler,
+            });
+            routesToInsert.push(newRoute as any);
+          } else {
+            this.logger.debug(
+              `Route đã tồn tại: path='${fullPath}', method='${method}'. Bỏ qua.`,
+            );
+          }
+        } else {
+          this.logger.warn(
+            `Thiếu method hoặc handler cho ${methodType} trong routeDefinition.`,
           );
         }
-
-        const user = userRepo.create({
-          ...initJson.defaultUser,
-          role,
-        });
-
-        await userRepo.save(user);
-        this.logger.log(`User mặc định đã được tạo.`);
-      } else {
-        this.logger.debug(
-          `User mặc định '${initJson.defaultUser.email}' đã tồn tại.`,
-        );
       }
-    } catch (error) {
-      this.logger.error(
-        `Lỗi tạo bảng user hoặc user mặc định: ${error.message}`,
+    }
+
+    if (routesToInsert.length > 0) {
+      this.logger.log(
+        `Tiến hành thêm ${routesToInsert.length} records route mới vào bảng 'routeDefenition'.`,
       );
-      throw error;
+      await repo.save(routesToInsert);
+      this.logger.log(
+        `Thêm ${routesToInsert.length} records route vào bảng 'routeDefenition' thành công.`,
+      );
+    } else {
+      this.logger.debug(
+        "Không có records route mới nào để thêm vào bảng 'routeDefenition'.",
+      );
     }
   }
 }

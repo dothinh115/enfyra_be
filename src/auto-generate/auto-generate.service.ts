@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
@@ -12,6 +12,7 @@ export class AutoGenerateService {
 
   constructor(
     private commonService: CommonService,
+    @Inject(forwardRef(() => DataSourceService))
     private dataSourceService: DataSourceService,
   ) {}
 
@@ -28,8 +29,9 @@ export class AutoGenerateService {
         'dynamic-entities',
       );
       this.logger.debug(`Đường dẫn file Entity dự kiến: ${dynamicEntityDir}`);
+      const entityDir = path.resolve(__dirname, '..', 'dynamic-entities');
 
-      const entities = await this.commonService.loadDynamicEntities();
+      const entities = await this.commonService.loadDynamicEntities(entityDir);
       this.logger.debug(`Đã tải ${entities.length} Entities.`);
 
       const entityNames = entities
@@ -71,9 +73,9 @@ export class AutoGenerateService {
               : column.type === 'varchar'
                 ? `"uuid"`
                 : '';
-          classPart += `  @PrimaryGeneratedColumn(${strategy})\n`; // Thêm 2 dấu cách để định dạng code đẹp hơn
+          classPart += `  @PrimaryGeneratedColumn(${strategy})\n`;
         } else {
-          classPart += `  @Column({`; // Thêm 2 dấu cách
+          classPart += `  @Column({`;
           classPart += `type:'${column.type}', nullable: ${column.isNullable}`;
           if (column.default !== undefined) {
             const type =

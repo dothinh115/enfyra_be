@@ -59,9 +59,8 @@ export class CommonService {
     return map[tsType] ?? 'text';
   }
 
-  async loadDynamicEntities() {
+  async loadDynamicEntities(entityDir: string) {
     const entities = [];
-    const entityDir = path.resolve(__dirname, '..', 'dynamic-entities');
     if (!fs.existsSync(entityDir)) {
       fs.mkdirSync(entityDir, { recursive: true });
     }

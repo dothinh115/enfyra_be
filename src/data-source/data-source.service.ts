@@ -1,18 +1,28 @@
+import * as path from 'path';
 import { CommonService } from '../common/common.service';
 import { createDataSource } from '../data-source/data-source';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
+import { AutoGenerateService } from '../auto-generate/auto-generate.service';
 
 @Injectable()
 export class DataSourceService implements OnModuleInit {
   private dataSource: DataSource;
   private logger = new Logger(DataSourceService.name);
 
-  constructor(private commonService: CommonService) {}
+  constructor(
+    private commonService: CommonService,
+    private autoGService: AutoGenerateService,
+  ) {}
 
   async onModuleInit() {
     this.logger.log('Chuẩn bị gán và init DataSource.');
-    const entities = await this.commonService.loadDynamicEntities();
+    const dynamicEntityDir = path.resolve(__dirname, '..', 'dynamic-entities');
+    const entityDir = path.resolve(__dirname, '..', 'entities');
+    const entities = [
+      ...(await this.commonService.loadDynamicEntities(dynamicEntityDir)),
+      ...(await this.commonService.loadDynamicEntities(entityDir)),
+    ];
     this.dataSource = createDataSource(entities);
     await this.dataSource.initialize();
     this.logger.debug('Gán và init DataSource thành công!');
@@ -29,7 +39,14 @@ export class DataSourceService implements OnModuleInit {
     this.logger.debug('✅ Destroy DataSource cũ thành công!');
 
     try {
-      const entities = await this.commonService.loadDynamicEntities();
+      const dynamicEntityDir = path.resolve(
+        __dirname,
+        '..',
+        'dynamic-entities',
+      );
+
+      const entities =
+        await this.commonService.loadDynamicEntities(dynamicEntityDir);
 
       this.dataSource = createDataSource(entities);
       await this.dataSource.initialize();

@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { forwardRef, Global, Module } from '@nestjs/common';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule } from '@nestjs/config';
 import { DynamicModule } from './dynamic/dynamic.module';
@@ -7,9 +7,9 @@ import { RouteModule } from './route/route.module';
 import * as path from 'path';
 import { RabbitMQRegistry } from './rabbitmq/rabbitmq.service';
 import { DataSourceModule } from './data-source/data-source.module';
-import { AutoGenerateService } from './auto-generate/auto-generate.service';
 import { CommonModule } from './common/common.module';
 import { BootstrapService } from './bootstrap/bootstrap.service';
+import { AutoGenerateModule } from './auto-generate/auto-generate.module';
 
 @Global()
 @Module({
@@ -24,13 +24,9 @@ import { BootstrapService } from './bootstrap/bootstrap.service';
     RouteModule,
     CommonModule,
     DataSourceModule,
+    AutoGenerateModule,
   ],
-  providers: [
-    BootstrapService,
-    RabbitMQRegistry,
-    AutoGenerateService,
-    DataSourceModule,
-  ],
-  exports: [RabbitMQRegistry, AutoGenerateService, DataSourceModule],
+  providers: [BootstrapService, RabbitMQRegistry],
+  exports: [RabbitMQRegistry, DataSourceModule],
 })
 export class AppModule {}
