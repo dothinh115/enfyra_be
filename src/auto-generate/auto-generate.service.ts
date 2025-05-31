@@ -75,7 +75,7 @@ export class AutoGenerateService {
         } else {
           classPart += `  @Column({`; // Thêm 2 dấu cách
           classPart += `type:'${column.type}', nullable: ${column.isNullable}`;
-          if (column.default) {
+          if (column.default !== undefined) {
             const type =
               column.type === 'int' || column.type === 'float'
                 ? column.type

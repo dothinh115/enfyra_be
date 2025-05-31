@@ -38,6 +38,12 @@
                 "name": "password",
                 "type": "varchar",
                 "isNullable": false
+            },
+            {
+                "name": "isRootUser",
+                "type": "boolean",
+                "isNullable": false,
+                "default":false
             }
         ],
         "relations": [
@@ -50,7 +56,8 @@
     },
     "defaultUser": {
         "email": "dynamiq@admin.com",
-        "password": "1234"
+        "password": "1234",
+        "isRootUser": true
     },
     "settingTable": {
         "name": "setting",
