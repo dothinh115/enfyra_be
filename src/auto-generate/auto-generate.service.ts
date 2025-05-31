@@ -69,12 +69,21 @@ export class AutoGenerateService {
             column.type === 'int'
               ? `'increment'`
               : column.type === 'varchar'
-                ? 'uuid'
+                ? `"uuid"`
                 : '';
           classPart += `  @PrimaryGeneratedColumn(${strategy})\n`; // Thêm 2 dấu cách để định dạng code đẹp hơn
         } else {
           classPart += `  @Column({`; // Thêm 2 dấu cách
           classPart += `type:'${column.type}', nullable: ${column.isNullable}`;
+          if (column.default) {
+            const type =
+              column.type === 'int' || column.type === 'float'
+                ? column.type
+                : column.type === 'varchar' || column.type === 'text'
+                  ? `"${column.default}"`
+                  : column.default;
+            classPart += `, default: ${type}`;
+          }
           classPart += `})\n`;
           if (column.index) {
             classPart += `@Index()`;
@@ -194,7 +203,6 @@ export class AutoGenerateService {
       __dirname,
       '..',
       '..',
-      '..',
       'build-dynamic-entities.ts',
     );
     const script = `npx ts-node ${filePath}`;
@@ -214,7 +222,6 @@ export class AutoGenerateService {
       __dirname,
       '..',
       '..',
-      '..',
       'src',
       'migrations',
       'AutoMigration',
@@ -223,20 +230,39 @@ export class AutoGenerateService {
       __dirname,
       '..',
       '..',
-      '..',
       'src',
       'data-source',
       'data-source.ts',
     );
+
+    const needDeleteDir = path.resolve(
+      __dirname,
+      '..',
+      '..',
+      'src',
+      'migrations',
+    );
     this.logger.log('Chuẩn bị generate file migration');
 
     try {
-      const script = `npm run typeorm -- migration:generate ${migrationDir} -d ${appDataSourceDir}`;
-      this.logger.debug('Generate file migration thành công!');
+      // Xoá toàn bộ file trong thư mục migrationDir
+      if (fs.existsSync(needDeleteDir)) {
+        const files = fs.readdirSync(needDeleteDir);
+        for (const file of files) {
+          fs.unlinkSync(path.join(needDeleteDir, file));
+        }
+        this.logger.log(`Đã xoá sạch thư mục ${needDeleteDir}`);
+      } else {
+        fs.mkdirSync(migrationDir, { recursive: true });
+        this.logger.log(`Đã tạo thư mục ${migrationDir}`);
+      }
 
+      const script = `npm run typeorm -- migration:generate ${migrationDir} -d ${appDataSourceDir}`;
       execSync(script, { stdio: 'inherit' });
+
+      this.logger.debug('Generate file migration thành công!');
     } catch (error) {
-      this.logger.error('Lỗi khi chạy shell script:', error);
+      this.logger.error('Lỗi khi chạy generate migration:', error);
     }
   }
 
@@ -244,7 +270,6 @@ export class AutoGenerateService {
     this.logger.log('Chuẩn bị run migration');
     const dataSourceDir = path.resolve(
       __dirname,
-      '..',
       '..',
       '..',
       'src',

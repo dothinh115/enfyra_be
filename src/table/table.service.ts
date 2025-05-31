@@ -7,7 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 
 @Injectable()
-export class TableService {
+export class TableHanlderService {
   constructor(
     @InjectRepository(TableDefinition)
     private tableDefinitionRepo: Repository<TableDefinition>,
@@ -63,11 +63,11 @@ export class TableService {
         relations,
       });
 
-      if (!tableData) await manager.save(TableDefinition, tableEntity);
-
       const result = !hasTable
         ? await this.autoGService.entityAutoGenerate(body)
         : null;
+      if (!tableData) await manager.save(TableDefinition, tableEntity);
+
       await queryRunner.commitTransaction();
       return tableData ? tableData : result;
     } catch (error) {
@@ -125,9 +125,10 @@ export class TableService {
         relations,
       });
 
-      const result = await this.tableDefinitionRepo.save(tableEntity);
       await queryRunner.commitTransaction();
       await this.autoGService.entityAutoGenerate(body);
+      const result = await this.tableDefinitionRepo.save(tableEntity);
+
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();

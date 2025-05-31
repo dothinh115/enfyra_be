@@ -1,10 +1,10 @@
 import { CreateTableDto } from '../table/dto/create-table.dto';
-import { TableService } from '../table/table.service';
+import { TableHanlderService } from '../table/table.service';
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 
 @Controller('table-handler')
 export class TableController {
-  constructor(private readonly tableService: TableService) {}
+  constructor(private readonly tableService: TableHanlderService) {}
 
   @Post()
   createTable(@Body() body: CreateTableDto) {

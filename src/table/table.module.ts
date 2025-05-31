@@ -2,7 +2,7 @@ import { ColumnDefinition } from '../entities/column.entity';
 import { RelationDefinition } from '../entities/relation.entity';
 import { TableDefinition } from '../entities/table.entity';
 import { TableController } from '../table/table.controller';
-import { TableService } from '../table/table.service';
+import { TableHanlderService } from '../table/table.service';
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -16,7 +16,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     ]),
   ],
   controllers: [TableController],
-  providers: [TableService],
-  exports: [TypeOrmModule],
+  providers: [TableHanlderService],
+  exports: [TypeOrmModule, TableHanlderService],
 })
 export class TableModule {}
