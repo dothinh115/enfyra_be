@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Request } from 'express';
 import * as vm from 'vm';
 import { DataSourceService } from '../data-source/data-source.service';
@@ -21,6 +26,8 @@ export class DynamicService {
         $req: req,
         $body: body,
         $repo: repo,
+        throw400: (message: string) => new BadRequestException(message),
+        throw401: () => new UnauthorizedException(),
       };
       const curRouteRepo = this.dataSourceService.getRepository('route');
       const curRoute: any = await curRouteRepo.findOne({
@@ -42,6 +49,7 @@ export class DynamicService {
       return result;
     } catch (error) {
       this.logger.error(error);
+      throw error;
       throw new BadRequestException(`Lỗi script db: ${error.message}`);
     }
   }

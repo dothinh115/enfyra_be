@@ -2,6 +2,7 @@ import { DBToTSTypeMap, TSToDBTypeMap } from '../utils/type';
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vm from 'vm';
 
 @Injectable()
 export class CommonService {
