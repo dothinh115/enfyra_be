@@ -49,7 +49,7 @@ export class CreateRelationDto {
   @IsNumber()
   id?: number;
 
-  @IsString()
+  @IsNumber()
   @IsNotEmpty()
   targetTable: number;
 
@@ -88,6 +88,10 @@ export class CreateRelationDto {
 }
 
 export class CreateTableDto {
+  @IsOptional()
+  @IsNumber()
+  id?: number;
+
   @IsSafeIdentifier()
   @IsNotEmpty()
   name: string;

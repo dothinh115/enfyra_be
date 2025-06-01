@@ -5,6 +5,9 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntitySchema, Repository } from 'typeorm';
 import { QueryTrackerService } from '../query-track/query-track.service';
 
+const dynamicEntityDir = path.resolve(__dirname, '..', 'dynamic-entities');
+const entityDir = path.resolve(__dirname, '..', 'entities');
+
 @Injectable()
 export class DataSourceService implements OnModuleInit {
   private dataSource: DataSource;
@@ -17,8 +20,7 @@ export class DataSourceService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Chuẩn bị gán và init DataSource.');
-    const dynamicEntityDir = path.resolve(__dirname, '..', 'dynamic-entities');
-    const entityDir = path.resolve(__dirname, '..', 'entities');
+
     const entities = [
       ...(await this.commonService.loadDynamicEntities(dynamicEntityDir)),
       ...(await this.commonService.loadDynamicEntities(entityDir)),
@@ -59,13 +61,6 @@ export class DataSourceService implements OnModuleInit {
     this.logger.debug('✅ Destroy DataSource cũ thành công!');
 
     try {
-      const dynamicEntityDir = path.resolve(
-        __dirname,
-        '..',
-        'dynamic-entities',
-      );
-      const entityDir = path.resolve(__dirname, '..', 'entities');
-
       const entities = [
         ...(await this.commonService.loadDynamicEntities(dynamicEntityDir)),
         ...(await this.commonService.loadDynamicEntities(entityDir)),
@@ -74,6 +69,7 @@ export class DataSourceService implements OnModuleInit {
       this.dataSource = createDataSource(entities);
       await this.dataSource.initialize();
       this.logger.debug('✅ ReInit DataSource thành công!');
+      return this.dataSource;
     } catch (err: any) {
       this.logger.error('❌ Lỗi khi reInit DataSource:', err.message);
       this.logger.error(err.stack || err);

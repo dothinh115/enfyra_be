@@ -12,10 +12,11 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { CommonService } from '../common/common.service';
 import { TableDefinition } from '../entities/table.entity';
+import { DataSource } from 'typeorm';
 
 @Injectable()
-export class AutoGenerateService {
-  private readonly logger = new Logger(AutoGenerateService.name);
+export class AutoService {
+  private readonly logger = new Logger(AutoService.name);
 
   constructor(
     private commonService: CommonService,
@@ -35,25 +36,28 @@ export class AutoGenerateService {
         'src',
         'dynamic-entities',
       );
-      this.logger.debug(`Đường dẫn file Entity dự kiến: ${dynamicEntityDir}`);
-      const entityDir = path.resolve(__dirname, '..', 'dynamic-entities');
 
-      const entities = await this.commonService.loadDynamicEntities(entityDir);
-      this.logger.debug(`Đã tải ${entities.length} Entities.`);
-
-      const entityNames = entities
-        .map((entity) => entity)
-        .filter(
-          (entity) => entity.name.toLowerCase() !== payload.name.toLowerCase(),
-        ); // Chuyển cả payload.name về lowerCase để so sánh chính xác hơn
-      this.logger.debug(
-        `Các Entity khác cần import: ${entityNames.join(', ')}`,
-      );
+      const repo =
+        this.dataSourceService.getRepository<TableDefinition>(TableDefinition);
 
       let importPart = `import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToMany, ManyToOne, OneToOne, JoinTable, JoinColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';\n`;
-      for (const entityName of entityNames) {
-        importPart += `import { ${entityName.name} } from './${entityName.name.toLowerCase()}.entity';\n\n`;
+
+      const imported = new Set<string>();
+      if (payload.relations?.length) {
+        for (const relation of payload.relations) {
+          const targetTable = await repo.findOne({
+            where: {
+              id: relation.targetTable,
+            },
+          });
+
+          if (!imported.has(targetTable.name)) {
+            importPart += `import { ${this.commonService.capitalizeFirstLetterEachLine(targetTable.name)} } from './${targetTable.name.toLowerCase()}.entity';\n\n`;
+            imported.add(targetTable.name);
+          }
+        }
       }
+
       this.logger.debug(`Phần ImportPart được tạo:\n${importPart}`);
 
       let classPart = `@Entity("${payload.name.toLowerCase()}")\n`;
@@ -102,10 +106,7 @@ export class AutoGenerateService {
       if (payload.relations && payload.relations.length > 0) {
         // Kiểm tra payload.relations tồn tại và có phần tử
         this.logger.debug(`Đang xử lý ${payload.relations.length} quan hệ.`);
-        const repo =
-          this.dataSourceService.getRepository<TableDefinition>(
-            TableDefinition,
-          );
+
         for (const relation of payload.relations) {
           const targetTable = await repo.findOne({
             where: {
@@ -209,7 +210,6 @@ export class AutoGenerateService {
       this.logger.log('✅ Ghi file thành công:', dynamicEntityDir);
 
       this.logger.debug('--- Kết thúc xử lý tableChangesHandler ---');
-      await this.afterEffect();
       return { message: `Tạo bảng ${payload.name} thành công!` };
     } catch (error) {
       // Đảm bảo log toàn bộ thông tin lỗi
@@ -311,7 +311,6 @@ export class AutoGenerateService {
   async afterEffect() {
     try {
       await this.autoBuildToJs();
-      await this.dataSourceService.reloadDataSource();
       await this.autoGenerateMigrationFile();
       await this.clearMigrationsTable();
       await this.autoRunMigration();
@@ -361,15 +360,70 @@ export class AutoGenerateService {
     await queryRunner.release();
   }
 
-  async autoRemoveOldFile(filePath: string) {
+  async autoRemoveOldFile(filePathOrPaths: string | string[]) {
     try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        this.logger.log(`🧹 Đã xoá file: ${filePath}`);
+      const paths = Array.isArray(filePathOrPaths)
+        ? filePathOrPaths
+        : [filePathOrPaths];
+
+      for (const filePath of paths) {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          this.logger.log(`🧹 Đã xoá file: ${filePath}`);
+        }
       }
     } catch (error) {
       this.logger.error(error.message);
       throw error;
+    }
+  }
+
+  getEntityClassByTableName(
+    dataSource: DataSource,
+    tableName: string,
+  ): Function | undefined {
+    const entityMetadata = dataSource.entityMetadatas.find(
+      (meta) =>
+        meta.tableName === tableName || meta.givenTableName === tableName,
+    );
+
+    return entityMetadata?.target as Function | undefined;
+  }
+
+  async reGenerateEntitiesAfterUpdate(id: number) {
+    const repo = this.dataSourceService.getRepository(TableDefinition);
+
+    const tables = await repo
+      .createQueryBuilder('table')
+      .leftJoinAndSelect('table.relations', 'relation')
+      .leftJoinAndMapOne(
+        'relation.targetTable',
+        'relation.targetTable',
+        'target',
+      )
+      .leftJoinAndSelect('table.columns', 'column')
+      .where('target.id = :id', { id })
+      .getMany();
+
+    // Lọc các bảng có quan hệ đến bảng targetTable.id = id
+    const relatedTables: any = tables.filter((table: any) =>
+      table.relations?.some((relation) => {
+        return relation.targetTable?.id === id;
+      }),
+    );
+    this.logger.log(`Có ${relatedTables.length} entity cần dc regenerate...`);
+
+    for (let table of relatedTables) {
+      table.relations = table.relations.map((rel: any) => ({
+        ...rel,
+        targetTable: rel.targetTable.id,
+      }));
+
+      console.dir(table.relations, { depth: null });
+      this.logger.log(`Chuẩn bị generate ${table.name}...`);
+      await this.entityAutoGenerate(table);
+      await this.afterEffect();
+      this.logger.debug(`Generate ${table.name} thành công!!!`);
     }
   }
 }

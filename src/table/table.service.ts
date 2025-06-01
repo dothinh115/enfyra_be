@@ -1,36 +1,37 @@
 import * as path from 'path';
-import { AutoGenerateService } from '../auto-generate/auto-generate.service';
+import { AutoService } from '../auto-generate/auto.service';
 import { TableDefinition } from '../entities/table.entity';
 import {
   CreateRelationDto,
   CreateTableDto,
 } from '../table/dto/create-table.dto';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Table } from 'typeorm';
+import { DataSourceService } from '../data-source/data-source.service';
+import { QueryRunner } from 'typeorm';
 
 @Injectable()
 export class TableHanlderService {
   private logger = new Logger(TableHanlderService.name);
   constructor(
-    @InjectRepository(TableDefinition)
-    private dataSouce: DataSource,
-    private autoGService: AutoGenerateService,
+    private dataSouceService: DataSourceService,
+    private autoService: AutoService,
   ) {}
 
   async createTable(body: CreateTableDto) {
-    const queryRunner = this.dataSouce.createQueryRunner();
+    const queryRunner = this.dataSouceService
+      .getDataSource()
+      .createQueryRunner();
     await queryRunner.connect(); // Kết nối
     await queryRunner.startTransaction();
     const manager = queryRunner.manager;
     try {
       const hasTable = await queryRunner.hasTable(body.name);
-      const tableData = await manager.findOne(TableDefinition, {
+      let result = await manager.findOne(TableDefinition, {
         where: {
           name: body.name,
         },
       });
-      if (hasTable && tableData) {
+      if (hasTable && result) {
         throw new BadRequestException(`Bảng ${body.name} đã tồn tại!`);
       }
 
@@ -41,14 +42,16 @@ export class TableHanlderService {
         relations: body.relations ? this.prepareRelations(body.relations) : [],
       } as any);
 
-      const result = !hasTable
-        ? await this.autoGService.entityAutoGenerate(body)
-        : null;
+      await this.autoService.entityAutoGenerate(body);
+      await this.autoService.autoBuildToJs();
+      await this.autoService.autoGenerateMigrationFile();
+      await this.autoService.autoRunMigration();
 
-      if (!tableData) await manager.save(TableDefinition, tableEntity);
+      if (!result) result = await manager.save(TableDefinition, tableEntity);
 
       await queryRunner.commitTransaction();
-      return tableData ? tableData : result;
+      await this.dataSouceService.reloadDataSource();
+      return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error.stack || error.message || error);
@@ -59,12 +62,13 @@ export class TableHanlderService {
   }
 
   async updateTable(id: number, body: CreateTableDto) {
-    const queryRunner = this.dataSouce.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    const manager = queryRunner.manager;
+    const queryRunner = this.dataSouceService
+      .getDataSource()
+      .createQueryRunner();
+    let repo =
+      this.dataSouceService.getRepository<TableDefinition>(TableDefinition);
     try {
-      const exists = await manager.findOne(TableDefinition, {
+      const exists = await repo.findOne({
         where: {
           id,
         },
@@ -80,8 +84,9 @@ export class TableHanlderService {
         await queryRunner.query(
           `RENAME TABLE \`${oldName}\` TO \`${newName}\``,
         );
+
         this.logger.debug(`Đã sửa tên bảng ${oldName} thành ${newName}`);
-        const oldFilePath = path.resolve(
+        const oldFileTsPath = path.resolve(
           __dirname,
           '..',
           '..',
@@ -89,26 +94,40 @@ export class TableHanlderService {
           'dynamic-entities',
           `${oldName}.entity.ts`,
         );
-        this.logger.log(`Chuẩn bị xoá file entity với tên cũ: ${oldFilePath}`);
-        await this.autoGService.autoRemoveOldFile(oldFilePath);
+        const oldFileJsPath = path.resolve(
+          __dirname,
+          '..',
+          'dynamic-entities',
+          `${oldName}.entity.js`,
+        );
+        this.logger.log(
+          `Chuẩn bị xoá file entity với tên cũ: ${oldFileTsPath} và ${oldFileJsPath}`,
+        );
+        await this.autoService.autoRemoveOldFile([
+          oldFileTsPath,
+          oldFileJsPath,
+        ]);
         this.logger.debug(`Xoá file entity cũ thành công!`);
       }
+      await this.dataSouceService.reloadDataSource();
+      repo = this.dataSouceService.getRepository(TableDefinition);
 
       // Tạo entity từ dữ liệu đã được xử lý
-      const tableEntity = manager.create(TableDefinition, {
+      const tableEntity = repo.create({
+        id: body.id,
         ...body,
         relations: body.relations ? this.prepareRelations(body.relations) : [],
       });
 
-      await this.autoGService.entityAutoGenerate(body);
-      const result = await manager.save(TableDefinition, tableEntity);
-      await queryRunner.commitTransaction();
+      await this.autoService.entityAutoGenerate(body);
+      await this.autoService.autoBuildToJs();
+      await this.autoService.autoGenerateMigrationFile();
+      await this.autoService.autoRunMigration();
+      const result = await repo.save(tableEntity);
+      await this.autoService.reGenerateEntitiesAfterUpdate(body.id);
       return result;
     } catch (error) {
-      await queryRunner.rollbackTransaction();
       throw new BadRequestException(error);
-    } finally {
-      await queryRunner.release();
     }
   }
 
@@ -121,8 +140,19 @@ export class TableHanlderService {
 
   async find() {
     try {
-      const repo = this.dataSouce.getRepository(TableDefinition);
+      const repo = this.dataSouceService.getRepository(TableDefinition);
       return await repo.find();
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async findOne(id: number) {
+    try {
+      const repo = this.dataSouceService.getRepository(TableDefinition);
+      return await repo.findOne({
+        where: { id },
+      });
     } catch (error) {
       throw new BadRequestException(error.message);
     }

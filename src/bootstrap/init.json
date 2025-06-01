@@ -74,38 +74,38 @@
         "isInit": false
     },
     "defaultRouteTable": {
-                "name": "route",
-                "columns": [
-                    {
-                    "name": "id",
-                    "type": "int",
-                    "isPrimary": true,
-                    "isGenerated": true,
-                    "isNullable": false
-                    },
-                    {
-                    "name": "method",
-                    "type": "varchar",
-                    "isNullable": false,
-                    "default": "GET"
-                    },
-                    {
-                    "name": "path",
-                    "type": "varchar",
-                    "isNullable": false
-                    },
-                    {
-                    "name": "handler",
-                    "type": "text",
-                    "isNullable": false
-                    },
-                    {
-                    "name": "isPublished",
-                    "type": "boolean",
-                    "isNullable": false,
-                    "default": true
-                    }
-                ]
+        "name": "route",
+        "columns": [
+            {
+                "name": "id",
+                "type": "int",
+                "isPrimary": true,
+                "isGenerated": true,
+                "isNullable": false
+            },
+            {
+                "name": "method",
+                "type": "varchar",
+                "isNullable": false,
+                "default": "GET"
+            },
+            {
+                "name": "path",
+                "type": "varchar",
+                "isNullable": false
+            },
+            {
+                "name": "handler",
+                "type": "text",
+                "isNullable": false
+            },
+            {
+                "name": "isPublished",
+                "type": "boolean",
+                "isNullable": false,
+                "default": true
+            }
+        ]
                 },
     "routeDefinition": {
         "GET": {

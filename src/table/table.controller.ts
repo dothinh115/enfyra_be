@@ -20,4 +20,9 @@ export class TableController {
   find() {
     return this.tableService.find();
   }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.tableService.findOne(+id);
+  }
 }
