@@ -4,7 +4,7 @@ export class Route {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({type:'varchar', nullable: false})
+  @Column({type:'varchar', nullable: false, default: "GET"})
   method: string;
 
   @Column({type:'varchar', nullable: false})
@@ -13,7 +13,7 @@ export class Route {
   @Column({type:'text', nullable: false})
   handler: string;
 
-  @Column({type:'boolean', nullable: false})
+  @Column({type:'boolean', nullable: false, default: true})
   isPublished: boolean;
 
   @CreateDateColumn()

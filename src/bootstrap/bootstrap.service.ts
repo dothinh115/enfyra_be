@@ -2,7 +2,7 @@ import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { TableHanlderService } from '../table/table.service';
 import { TableDefinition } from '../entities/table.entity';
-import { AutoService } from '../auto-generate/auto.service';
+import { AutoService } from '../auto/auto.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { Repository } from 'typeorm';
 
@@ -130,7 +130,10 @@ export class BootstrapService implements OnApplicationBootstrap {
 
     if (!hasTable) {
       this.logger.log(`Bảng '${tableName}' chưa tồn tại, tiến hành tạo.`);
-      await this.autoService.entityAutoGenerate(initJson.defaultRouteTable);
+      await this.autoService.entityAutoGenerate(initJson.defaultRouteTable, {
+        name: 'table',
+        type: 'many-to-one',
+      });
       const tableRepo = this.dataSourceService.getRepository(TableDefinition);
       await this.saveToDb(initJson.defaultRouteTable, tableRepo);
       this.logger.log(`Tạo bảng '${tableName}' thành công.`);
@@ -269,6 +272,8 @@ export class BootstrapService implements OnApplicationBootstrap {
       ...payload,
       relations: this.tableHandlerService.prepareRelations(payload.relations),
     };
-    return await repo.save(newPayload);
+    try {
+      return await repo.save(newPayload);
+    } catch (error) {}
   }
 }

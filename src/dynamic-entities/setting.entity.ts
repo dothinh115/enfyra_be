@@ -4,7 +4,7 @@ export class Setting {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({type:'boolean', nullable: false})
+  @Column({type:'boolean', nullable: false, default: false})
   isInit: boolean;
 
   @CreateDateColumn()

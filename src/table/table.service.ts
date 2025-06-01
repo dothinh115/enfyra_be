@@ -1,17 +1,15 @@
-import * as path from 'path';
-import { AutoService } from '../auto-generate/auto.service';
+import { AutoService } from '../auto/auto.service';
 import { TableDefinition } from '../entities/table.entity';
 import {
+  CreateColumnDto,
   CreateRelationDto,
   CreateTableDto,
 } from '../table/dto/create-table.dto';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
-import { QueryRunner } from 'typeorm';
 
 @Injectable()
 export class TableHanlderService {
-  private logger = new Logger(TableHanlderService.name);
   constructor(
     private dataSouceService: DataSourceService,
     private autoService: AutoService,
@@ -38,11 +36,14 @@ export class TableHanlderService {
       // Tạo entity từ dữ liệu đã được xử lý
       const tableEntity = manager.create(TableDefinition, {
         name: body.name,
-        columns: body.columns,
+        columns: this.normalizeColumnsWithAutoId(body.columns),
         relations: body.relations ? this.prepareRelations(body.relations) : [],
       } as any);
 
-      await this.autoService.entityAutoGenerate(body);
+      await this.autoService.entityAutoGenerate({
+        ...body,
+        columns: this.normalizeColumnsWithAutoId(body.columns),
+      });
       await this.autoService.autoBuildToJs();
       await this.autoService.autoGenerateMigrationFile();
       await this.autoService.autoRunMigration();
@@ -62,9 +63,6 @@ export class TableHanlderService {
   }
 
   async updateTable(id: number, body: CreateTableDto) {
-    const queryRunner = this.dataSouceService
-      .getDataSource()
-      .createQueryRunner();
     let repo =
       this.dataSouceService.getRepository<TableDefinition>(TableDefinition);
     try {
@@ -77,54 +75,24 @@ export class TableHanlderService {
         throw new BadRequestException(`Table ${body.name} không tồn tại.`);
       }
 
-      const oldName = exists.name;
-      const newName = body.name;
-      if (oldName !== newName) {
-        this.logger.log(`Sửa tên bảng, tiến hành cập nhật tên bảng trước!`);
-        await queryRunner.query(
-          `RENAME TABLE \`${oldName}\` TO \`${newName}\``,
-        );
-
-        this.logger.debug(`Đã sửa tên bảng ${oldName} thành ${newName}`);
-        const oldFileTsPath = path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'src',
-          'dynamic-entities',
-          `${oldName}.entity.ts`,
-        );
-        const oldFileJsPath = path.resolve(
-          __dirname,
-          '..',
-          'dynamic-entities',
-          `${oldName}.entity.js`,
-        );
-        this.logger.log(
-          `Chuẩn bị xoá file entity với tên cũ: ${oldFileTsPath} và ${oldFileJsPath}`,
-        );
-        await this.autoService.autoRemoveOldFile([
-          oldFileTsPath,
-          oldFileJsPath,
-        ]);
-        this.logger.debug(`Xoá file entity cũ thành công!`);
-      }
-      await this.dataSouceService.reloadDataSource();
-      repo = this.dataSouceService.getRepository(TableDefinition);
-
       // Tạo entity từ dữ liệu đã được xử lý
       const tableEntity = repo.create({
         id: body.id,
         ...body,
+        columns: this.normalizeColumnsWithAutoId(body.columns),
         relations: body.relations ? this.prepareRelations(body.relations) : [],
       });
 
-      await this.autoService.entityAutoGenerate(body);
+      await this.autoService.entityAutoGenerate({
+        ...body,
+        name: exists.name,
+        columns: this.normalizeColumnsWithAutoId(body.columns),
+      });
       await this.autoService.autoBuildToJs();
       await this.autoService.autoGenerateMigrationFile();
       await this.autoService.autoRunMigration();
       const result = await repo.save(tableEntity);
-      await this.autoService.reGenerateEntitiesAfterUpdate(body.id);
+      // await this.autoService.reGenerateEntitiesAfterUpdate(body.id);
       return result;
     } catch (error) {
       throw new BadRequestException(error);
@@ -132,10 +100,41 @@ export class TableHanlderService {
   }
 
   prepareRelations(relationsDto: CreateRelationDto[] = []) {
-    return relationsDto.map((relation) => ({
+    const result = relationsDto.map((relation) => ({
       ...relation,
       targetTable: { id: relation.targetTable },
     }));
+    return result;
+  }
+
+  normalizeColumnsWithAutoId(columns: CreateColumnDto[]): CreateColumnDto[] {
+    // Tìm xem user có cố gắng định nghĩa cột id không
+    const userIdCol = columns.find((col) => col.name === 'id');
+    const idType = userIdCol?.type === 'varchar' ? 'uuid' : 'int';
+
+    // Loại bỏ cột id do user định nghĩa
+    const filtered = columns.filter((col) => col.name !== 'id');
+
+    // Tạo cột id chuẩn
+    const idColumn: CreateColumnDto =
+      idType === 'uuid'
+        ? {
+            name: 'id',
+            type: 'varchar',
+            isPrimary: true,
+            isGenerated: true,
+            isNullable: false,
+          }
+        : {
+            name: 'id',
+            type: 'int',
+            isPrimary: true,
+            isGenerated: true,
+            isNullable: false,
+          };
+
+    // Trả về kết quả
+    return [idColumn, ...filtered];
   }
 
   async find() {

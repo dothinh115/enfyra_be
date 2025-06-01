@@ -13,6 +13,7 @@ import { CreateTableDto } from '../table/dto/create-table.dto';
 import { CommonService } from '../common/common.service';
 import { TableDefinition } from '../entities/table.entity';
 import { DataSource } from 'typeorm';
+import { TStaticEntities } from '../utils/type';
 
 @Injectable()
 export class AutoService {
@@ -24,7 +25,10 @@ export class AutoService {
     private dataSourceService: DataSourceService,
   ) {}
 
-  async entityAutoGenerate(payload: CreateTableDto) {
+  async entityAutoGenerate(
+    payload: CreateTableDto,
+    staticRelations?: TStaticEntities,
+  ) {
     this.logger.debug('--- Bắt đầu xử lý tableChangesHandler ---');
 
     try {
@@ -57,6 +61,9 @@ export class AutoService {
           }
         }
       }
+
+      // importPart += `import { TableDefinition } from './../entities/table.entity';\n`;
+      // importPart += `import { HookDefinition } from './../entities/hook.entity';\n`;
 
       this.logger.debug(`Phần ImportPart được tạo:\n${importPart}`);
 
@@ -175,6 +182,24 @@ export class AutoService {
       classPart += `  createdAt: Date;\n\n`;
       classPart += `  @UpdateDateColumn()\n`;
       classPart += `  UpdatedAt: Date;\n`;
+      // if (staticRelations !== undefined) {
+      //   const type =
+      //     staticRelations.type === 'many-to-many'
+      //       ? `ManyToMany`
+      //       : staticRelations.type === 'one-to-one'
+      //         ? `OneToOne`
+      //         : staticRelations.type === 'many-to-one'
+      //           ? `ManyToOne`
+      //           : `OneToMany`;
+
+      //   classPart += `  @${type}(() => ${staticRelations.name === 'table' ? 'TableDefinition' : 'HookDefinition'})\n`;
+
+      //   if (staticRelations.type === 'many-to-many')
+      //     classPart += `  @JoinTable()\n`;
+      //   if (staticRelations.type === 'many-to-one')
+      //     classPart += `  @JoinColumn()\n`;
+      //   classPart += `  targetTable: number`;
+      // }
       classPart += `}`;
       this.logger.debug(`Phần ClassPart được tạo:\n${classPart}`);
 

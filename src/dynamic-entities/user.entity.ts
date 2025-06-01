@@ -10,7 +10,7 @@ export class User {
   @Column({type:'varchar', nullable: false})
   password: string;
 
-  @Column({type:'boolean', nullable: false})
+  @Column({type:'boolean', nullable: false, default: false})
   isRootUser: boolean;
 
   @CreateDateColumn()

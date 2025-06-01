@@ -9,7 +9,7 @@ import { RabbitMQRegistry } from './rabbitmq/rabbitmq.service';
 import { DataSourceModule } from './data-source/data-source.module';
 import { CommonModule } from './common/common.module';
 import { BootstrapService } from './bootstrap/bootstrap.service';
-import { AutoGenerateModule } from './auto-generate/auto.module';
+import { AutoGenerateModule } from './auto/auto.module';
 
 @Global()
 @Module({
