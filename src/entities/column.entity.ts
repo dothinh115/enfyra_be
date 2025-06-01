@@ -23,4 +23,7 @@ export class ColumnDefinition {
 
   @ManyToOne(() => TableDefinition, (table) => table.columns)
   table: TableDefinition;
+
+  @Column({ nullable: true, type: 'simple-json' })
+  default: string | number | boolean | null;
 }

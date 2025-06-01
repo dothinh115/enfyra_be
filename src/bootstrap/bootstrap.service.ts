@@ -22,6 +22,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     const tableRepo = this.dataSourceService.getRepository(TableDefinition);
     const tables: any[] = await tableRepo.find();
     for (const table of tables) {
+      console.log(table);
       await this.autoService.entityAutoGenerate(table);
     }
   }
@@ -237,6 +238,7 @@ export class BootstrapService implements OnApplicationBootstrap {
       initJson.defaultUserTable.name,
       initJson.defaultRoleTable.name,
       initJson.settingTable.name,
+      initJson.defaultRouteTable.name,
     ];
 
     let insertedCount = 0;
