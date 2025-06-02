@@ -257,4 +257,60 @@ export class CommonService {
       );
     }
   }
+
+  async cleanInvalidImports(scanDir: string) {
+    const project = new Project({
+      tsConfigFilePath: path.resolve('tsconfig.json'),
+      skipAddingFilesFromTsConfig: true,
+    });
+
+    const files = fs
+      .readdirSync(scanDir)
+      .filter((f) => f.endsWith('.ts'))
+      .map((f) => path.resolve(scanDir, f));
+
+    for (const file of files) {
+      const sourceFile = project.addSourceFileAtPath(file);
+      let changed = false;
+
+      const importDecls = sourceFile.getImportDeclarations();
+      for (const imp of importDecls) {
+        const moduleSpecifier = imp.getModuleSpecifierValue();
+        const modulePath = path.resolve(
+          path.dirname(file),
+          moduleSpecifier + '.ts',
+        );
+
+        if (!fs.existsSync(modulePath)) {
+          imp.remove();
+          changed = true;
+          continue;
+        }
+
+        const tempSourceFile =
+          project.getSourceFile(modulePath) ??
+          project.addSourceFileAtPath(modulePath);
+        const exported = tempSourceFile.getExportedDeclarations();
+        const namedImports = imp.getNamedImports();
+
+        for (const named of namedImports) {
+          const name = named.getName();
+          if (!exported.has(name)) {
+            named.remove();
+            changed = true;
+          }
+        }
+
+        if (imp.getNamedImports().length === 0) {
+          imp.remove();
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        await sourceFile.save();
+        console.log(`🧹 Đã dọn import trong: ${file}`);
+      }
+    }
+  }
 }

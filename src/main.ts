@@ -1,29 +1,56 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import * as mysql from 'mysql2/promise';
+import { DataSource } from 'typeorm';
 
 async function ensureDatabaseExists() {
+  const DB_TYPE = (process.env.DB_TYPE || 'mysql') as 'mysql' | 'postgres';
   const DB_HOST = process.env.DB_HOST || 'localhost';
-  const DB_PORT = Number(process.env.DB_PORT) || 3306;
-  const DB_USER = process.env.DB_USERNAME || 'root';
+  const DB_PORT =
+    Number(process.env.DB_PORT) || (DB_TYPE === 'postgres' ? 5432 : 3306);
+  const DB_USERNAME = process.env.DB_USERNAME || 'root';
   const DB_PASSWORD = process.env.DB_PASSWORD || '';
   const DB_NAME = process.env.DB_NAME || 'dynamiq';
 
-  const connection = await mysql.createConnection({
+  if (DB_TYPE !== 'mysql') {
+    console.log(
+      `⚠️ Đang dùng ${DB_TYPE}, bạn phải tạo database '${DB_NAME}' thủ công.`,
+    );
+    return;
+  }
+
+  // Kết nối tạm tới MySQL để kiểm tra/tạo DB
+  const tempDataSource = new DataSource({
+    type: 'mysql',
     host: DB_HOST,
     port: DB_PORT,
-    user: DB_USER,
+    username: DB_USERNAME,
     password: DB_PASSWORD,
   });
 
-  await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
-  await connection.end();
-  console.log(`✅ Database '${DB_NAME}' đã tồn tại hoặc đã được tạo.`);
+  await tempDataSource.initialize();
+  const queryRunner = tempDataSource.createQueryRunner();
+
+  const result = await queryRunner.query(
+    `SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?`,
+    [DB_NAME],
+  );
+  const dbExists = result.length > 0;
+
+  if (!dbExists) {
+    await queryRunner.query(`CREATE DATABASE \`${DB_NAME}\``);
+    console.log(`✅ Đã tạo database '${DB_NAME}' (MySQL).`);
+  } else {
+    console.log(`✅ Database '${DB_NAME}' đã tồn tại (MySQL).`);
+  }
+
+  await queryRunner.release();
+  await tempDataSource.destroy();
 }
 
 async function bootstrap() {
   await ensureDatabaseExists();
+
   const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(

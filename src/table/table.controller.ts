@@ -1,6 +1,14 @@
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { TableHanlderService } from '../table/table.service';
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 
 @Controller('table-handler')
 export class TableController {
@@ -24,5 +32,10 @@ export class TableController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.tableService.findOne(+id);
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.tableService.delete(+id);
   }
 }

@@ -92,7 +92,6 @@ export class TableHanlderService {
       await this.autoService.autoGenerateMigrationFile();
       await this.autoService.autoRunMigration();
       const result = await repo.save(tableEntity);
-      // await this.autoService.reGenerateEntitiesAfterUpdate(body.id);
       return result;
     } catch (error) {
       throw new BadRequestException(error);
@@ -156,4 +155,6 @@ export class TableHanlderService {
       throw new BadRequestException(error.message);
     }
   }
+
+  async delete(id: number) {}
 }

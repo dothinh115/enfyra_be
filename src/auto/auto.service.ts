@@ -257,12 +257,7 @@ export class AutoService {
   }
 
   async autoBuildToJs() {
-    const filePath = path.resolve(
-      __dirname,
-      '..',
-      '..',
-      'build-dynamic-entities.ts',
-    );
+    const filePath = path.resolve('build-dynamic-entities.ts');
     const script = `npx ts-node ${filePath}`;
     this.logger.log('Chuẩn bị build file js');
     this.logger.log('script', script);
@@ -276,30 +271,14 @@ export class AutoService {
   }
 
   async autoGenerateMigrationFile() {
-    const migrationDir = path.resolve(
-      __dirname,
-      '..',
-      '..',
-      'src',
-      'migrations',
-      'AutoMigration',
-    );
+    const migrationDir = path.resolve('src', 'migrations', 'AutoMigration');
     const appDataSourceDir = path.resolve(
-      __dirname,
-      '..',
-      '..',
       'src',
       'data-source',
       'data-source.ts',
     );
 
-    const needDeleteDir = path.resolve(
-      __dirname,
-      '..',
-      '..',
-      'src',
-      'migrations',
-    );
+    const needDeleteDir = path.resolve('src', 'migrations');
     this.logger.log('Chuẩn bị generate file migration');
 
     try {
@@ -326,14 +305,7 @@ export class AutoService {
 
   async autoRunMigration() {
     this.logger.log('Chuẩn bị run migration');
-    const dataSourceDir = path.resolve(
-      __dirname,
-      '..',
-      '..',
-      'src',
-      'data-source',
-      'data-source.ts',
-    );
+    const dataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
     const script = `npm run typeorm -- migration:run -d ${dataSourceDir}`;
     this.logger.log(`Script: ${script}`);
 
@@ -425,42 +397,5 @@ export class AutoService {
     );
 
     return entityMetadata?.target as Function | undefined;
-  }
-
-  async reGenerateEntitiesAfterUpdate(id: number) {
-    const repo = this.dataSourceService.getRepository(TableDefinition);
-
-    const tables = await repo
-      .createQueryBuilder('table')
-      .leftJoinAndSelect('table.relations', 'relation')
-      .leftJoinAndMapOne(
-        'relation.targetTable',
-        'relation.targetTable',
-        'target',
-      )
-      .leftJoinAndSelect('table.columns', 'column')
-      .where('target.id = :id', { id })
-      .getMany();
-
-    // Lọc các bảng có quan hệ đến bảng targetTable.id = id
-    const relatedTables: any = tables.filter((table: any) =>
-      table.relations?.some((relation) => {
-        return relation.targetTable?.id === id;
-      }),
-    );
-    this.logger.log(`Có ${relatedTables.length} entity cần dc regenerate...`);
-
-    for (let table of relatedTables) {
-      table.relations = table.relations.map((rel: any) => ({
-        ...rel,
-        targetTable: rel.targetTable.id,
-      }));
-
-      console.dir(table.relations, { depth: null });
-      this.logger.log(`Chuẩn bị generate ${table.name}...`);
-      await this.entityAutoGenerate(table);
-      await this.afterEffect();
-      this.logger.debug(`Generate ${table.name} thành công!!!`);
-    }
   }
 }
