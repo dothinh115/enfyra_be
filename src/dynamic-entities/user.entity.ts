@@ -14,6 +14,7 @@ export class User {
   @Column({type:'boolean', nullable: false, default: false})
   isRootUser: boolean;
 
+
   @CreateDateColumn()
   createdAt: Date;
 

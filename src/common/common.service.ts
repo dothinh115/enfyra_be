@@ -84,7 +84,12 @@ export class CommonService {
   async findMissingAndSuggestImports(
     filePath: string,
     scanDirs: string[],
-  ): Promise<{ name: string; module: string }[]> {
+  ): Promise<
+    {
+      name: string;
+      module: string;
+    }[]
+  > {
     const project = new Project({
       compilerOptions: {
         target: 3, // ES2015
@@ -93,18 +98,17 @@ export class CommonService {
     });
 
     const sourceFile = project.addSourceFileAtPath(filePath);
-
     const usedIdentifiers = new Set<string>();
     const importedIdentifiers = new Set<string>();
 
-    // Thu thập identifiers đã import
+    // Lấy các import đã có
     sourceFile.getImportDeclarations().forEach((decl) => {
       decl.getNamedImports().forEach((imp) => {
         importedIdentifiers.add(imp.getName());
       });
     });
 
-    // Thu thập tất cả identifiers được sử dụng
+    // Thu thập các identifier đang dùng
     sourceFile.forEachDescendant((node) => {
       if (node.getKind() === SyntaxKind.Identifier) {
         const name = node.getText();
@@ -116,7 +120,7 @@ export class CommonService {
       }
     });
 
-    // Loại bỏ những identifier nội bộ như class name, biến cục bộ
+    // Bỏ các biến và class nội bộ
     const localDeclarations = sourceFile
       .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
       .map((d) => d.getName());
@@ -128,7 +132,7 @@ export class CommonService {
     const missing = Array.from(usedIdentifiers);
     const suggestions: { name: string; module: string }[] = [];
 
-    // Ưu tiên lấy trong knownGlobalImports
+    // ✅ Ưu tiên check knownGlobalImports trước
     for (const name of missing) {
       if (knownGlobalImports[name]) {
         suggestions.push({
@@ -138,40 +142,41 @@ export class CommonService {
       }
     }
 
-    const remaining = missing.filter(
+    // ❌ Nếu đã có trong suggestions thì bỏ qua khi quét dir
+    const toResolve = missing.filter(
       (name) => !suggestions.find((s) => s.name === name),
     );
 
-    // Quét các thư mục còn lại
-    for (const dir of scanDirs) {
+    const filePromises = scanDirs.flatMap((dir) => {
       const files = fs.readdirSync(dir).filter((f) => f.endsWith('.ts'));
-
-      for (const file of files) {
+      return files.map(async (file) => {
         const fullPath = path.resolve(dir, file);
         const sf = project.addSourceFileAtPathIfExists(fullPath);
-        if (!sf) continue;
+        if (!sf) return;
 
         const exports = sf.getExportedDeclarations();
 
-        for (const name of remaining) {
-          if (suggestions.find((s) => s.name === name)) continue;
+        for (const missingName of toResolve) {
+          if (suggestions.find((s) => s.name === missingName)) continue;
 
-          if (exports.has(name)) {
+          if (exports.has(missingName)) {
             const modulePath = path
               .relative(path.dirname(filePath), fullPath)
               .replace(/\.ts$/, '')
               .replace(/\\/g, '/');
 
             suggestions.push({
-              name,
+              name: missingName,
               module: modulePath.startsWith('.')
                 ? modulePath
                 : `./${modulePath}`,
             });
           }
         }
-      }
-    }
+      });
+    });
+
+    await Promise.all(filePromises);
 
     return suggestions;
   }
@@ -212,13 +217,22 @@ export class CommonService {
   async autoFixMissingImports(dirPath: string): Promise<void> {
     const files = this.getAllTsFiles(dirPath);
 
-    for (const filePath of files) {
-      const suggestions = await this.findMissingAndSuggestImports(filePath, [
-        'src/entities',
-      ]);
-      await this.autoAddImportsToFile(filePath, suggestions);
-      console.log(`✅ Đã tự động thêm import vào ${filePath}`);
-    }
+    await Promise.all(
+      files.map((filePath) =>
+        (async () => {
+          const start = Date.now();
+
+          const suggestions = await this.findMissingAndSuggestImports(
+            filePath,
+            ['src/entities', 'src/dynamic-entities'],
+          );
+          await this.autoAddImportsToFile(filePath, suggestions);
+          console.log(
+            `✅ [${new Date().toISOString()}] Đã xử lý ${filePath} trong ${Date.now() - start}ms`,
+          );
+        })(),
+      ),
+    );
   }
 
   getAllTsFiles(dirPath: string): string[] {

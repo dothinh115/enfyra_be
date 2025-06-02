@@ -8,6 +8,7 @@ export class Setting {
   @Column({type:'boolean', nullable: false, default: false})
   isInit: boolean;
 
+
   @CreateDateColumn()
   createdAt: Date;
 

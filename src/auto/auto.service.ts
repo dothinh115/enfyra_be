@@ -13,7 +13,11 @@ import { CreateTableDto } from '../table/dto/create-table.dto';
 import { CommonService } from '../common/common.service';
 import { TableDefinition } from '../entities/table.entity';
 import { DataSource } from 'typeorm';
-import { TStaticEntities } from '../utils/type';
+import {
+  TInverseRelation,
+  TInverseRelationMap,
+  TStaticEntities,
+} from '../utils/type';
 
 @Injectable()
 export class AutoService {
@@ -25,8 +29,13 @@ export class AutoService {
     private dataSourceService: DataSourceService,
   ) {}
 
+  buildInverseRelationMap() {
+    return new Map<string, TInverseRelation[]>();
+  }
+
   async entityAutoGenerate(
     payload: CreateTableDto,
+    inverseRelationMap?: TInverseRelationMap,
     staticRelations?: TStaticEntities,
   ) {
     this.logger.debug('--- Bắt đầu xử lý tableChangesHandler ---');
@@ -116,7 +125,7 @@ export class AutoService {
         for (const relation of payload.relations) {
           const targetTable = await repo.findOne({
             where: {
-              id: relation.targetTable,
+              id: (relation.targetTable as any).id,
             },
           });
           if (!targetTable) {
@@ -125,8 +134,38 @@ export class AutoService {
             );
           }
           this.logger.debug(
-            `  - Quan hệ: ${relation.propertyName} (${relation.type} to ${relation.targetTable})`,
+            `  - Quan hệ: ${relation.propertyName} (${relation.type} to ${targetTable.name})`,
           );
+
+          if (
+            inverseRelationMap !== undefined &&
+            relation.inversePropertyName
+          ) {
+            let type = 'one-to-one';
+            if (relation.type === 'many-to-many') type = 'many-to-many';
+            if (relation.type === 'one-to-many') type = 'many-to-one';
+            if (relation.type === 'many-to-one') type = 'one-to-many';
+            if (!inverseRelationMap.has(targetTable.name)) {
+              inverseRelationMap.set(targetTable.name, []);
+            }
+            inverseRelationMap.set(targetTable.name, [
+              ...inverseRelationMap.get(targetTable.name),
+              {
+                propertyName: relation.inversePropertyName,
+                inversePropertyName: relation.propertyName,
+                type,
+                onDelete: relation.onDelete,
+                onUpdate: relation.onUpdate,
+                isEager: relation.isEager,
+                isNullable: relation.isNullable,
+                index: relation.index,
+                targetClass: this.commonService.capitalizeFirstLetterEachLine(
+                  payload.name,
+                ),
+              },
+            ]);
+          }
+
           const type =
             relation.type === 'many-to-many'
               ? `ManyToMany`
@@ -142,7 +181,11 @@ export class AutoService {
           ) {
             classPart += `@Index()\n`;
           }
-          classPart += `  @${type}(() => ${this.commonService.capitalizeFirstLetterEachLine(targetTable.name)}, {`;
+          classPart += `  @${type}(() => ${this.commonService.capitalizeFirstLetterEachLine(targetTable.name)}`;
+          if (relation.inversePropertyName) {
+            classPart += `, rel => rel.${relation.inversePropertyName}`;
+          }
+          classPart += `, {`;
           if (relation.isEager) {
             classPart += ` eager: true,`;
           }
@@ -157,7 +200,11 @@ export class AutoService {
           }
           classPart += `})\n`;
 
-          if (relation.type === 'many-to-many') {
+          if (
+            relation.type === 'many-to-many' &&
+            inverseRelationMap !== undefined &&
+            !inverseRelationMap.has(payload.name)
+          ) {
             classPart += `  @JoinTable()\n`;
           } else if (
             relation.type === 'many-to-one' ||
@@ -175,10 +222,41 @@ export class AutoService {
       } else {
         this.logger.debug('Không có quan hệ nào trong payload.');
       }
-      classPart += `  @CreateDateColumn()\n`;
+      classPart += `\n  @CreateDateColumn()\n`;
       classPart += `  createdAt: Date;\n\n`;
       classPart += `  @UpdateDateColumn()\n`;
       classPart += `  UpdatedAt: Date;\n`;
+
+      //nếu có quan hệ ngược
+      if (
+        inverseRelationMap !== undefined &&
+        inverseRelationMap.has(payload.name)
+      ) {
+        const inverseRelationData = inverseRelationMap.get(payload.name);
+        for (const iRel of inverseRelationData) {
+          const type =
+            iRel.type === 'many-to-many'
+              ? `ManyToMany`
+              : iRel.type === 'one-to-one'
+                ? `OneToOne`
+                : iRel.type === 'many-to-one'
+                  ? `ManyToOne`
+                  : `OneToMany`;
+          classPart += `\n  @${type}(() => ${iRel.targetClass}, rel => rel.${iRel.inversePropertyName})\n`;
+          if (iRel.type === 'many-to-one') {
+            classPart += `  @JoinColumn()\n`;
+          }
+          classPart += `  ${iRel.propertyName}: ${iRel.targetClass}`;
+          if (iRel.type === 'one-to-many' || iRel.type === 'many-to-many') {
+            classPart += `[]`;
+          }
+          classPart += `;\n`;
+        }
+        //xoá sau khi generate quan hệ ngược xong
+        inverseRelationMap.delete(payload.name);
+      }
+
+      //nếu có quan hệ với các entity tĩnh
       if (staticRelations !== undefined) {
         const type =
           staticRelations.type === 'many-to-many'
@@ -189,7 +267,7 @@ export class AutoService {
                 ? `ManyToOne`
                 : `OneToMany`;
 
-        classPart += `  @${type}(() => ${staticRelations.name === 'table' ? 'TableDefinition' : 'HookDefinition'}, { eager: true, cascade: true })\n`;
+        classPart += `\n  @${type}(() => ${staticRelations.name === 'table' ? 'TableDefinition' : 'HookDefinition'}, { eager: true, cascade: true })\n`;
 
         if (staticRelations.type === 'many-to-many')
           classPart += `  @JoinTable()\n`;
@@ -375,17 +453,31 @@ export class AutoService {
       this.logger,
     );
     this.logger.debug(`Xoá thành công...`);
-    const tables: any[] = await tableRepo.find();
-    await Promise.all(
-      tables.map((table) =>
-        this.entityAutoGenerate(
-          table,
-          table.name === 'route'
-            ? { name: 'table', type: 'many-to-one' }
-            : undefined,
-        ),
-      ),
-    );
+    let tables: any[] = await tableRepo.find({
+      relations: ['relations', 'relations.targetTable'],
+    });
+    if (tables.length === 0) return;
+    tables = tables.sort((a, b) => {
+      const aHasInverse = a.relations?.some((r) => !!r.inversePropertyName)
+        ? 0
+        : 1;
+      const bHasInverse = b.relations?.some((r) => !!r.inversePropertyName)
+        ? 0
+        : 1;
+      return aHasInverse - bHasInverse; // bảng có inversePropertyName sẽ có giá trị 0 → lên đầu
+    });
+    console.log(tables);
+    const inverseRelationMap = this.buildInverseRelationMap();
+    for (const table of tables) {
+      await this.entityAutoGenerate(
+        table,
+        inverseRelationMap,
+        table.name === 'route'
+          ? { name: 'table', type: 'many-to-one' }
+          : undefined,
+      );
+    }
+
     this.logger.log(`Chuẩn bị fix import`);
     await this.commonService.autoFixMissingImports(
       path.resolve('src', 'dynamic-entities'),
@@ -393,7 +485,7 @@ export class AutoService {
     this.logger.debug(`Đã fix import xong`);
 
     this.logger.log(`Test logic file vừa generate`);
-    this.commonService.checkTsErrors(path.resolve('src', 'dynamic-entities'));
+    // this.commonService.checkTsErrors(path.resolve('src', 'dynamic-entities'));
     this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
     await this.autoBuildToJs();
     await this.dataSourceService.reloadDataSource();

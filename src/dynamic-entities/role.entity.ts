@@ -8,6 +8,7 @@ export class Role {
   @Column({type:'varchar', nullable: false, default: null})
   name: string;
 
+
   @CreateDateColumn()
   createdAt: Date;
 

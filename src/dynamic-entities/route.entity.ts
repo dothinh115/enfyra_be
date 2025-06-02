@@ -18,11 +18,13 @@ export class Route {
   @Column({type:'boolean', nullable: false, default: true})
   isPublished: boolean;
 
+
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   UpdatedAt: Date;
+
   @ManyToOne(() => TableDefinition, { eager: true, cascade: true })
   @JoinColumn()
   targetTable: TableDefinition;

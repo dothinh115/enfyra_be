@@ -73,3 +73,17 @@ export type TStaticEntities = {
   name: 'table' | 'hook';
   type: 'many-to-many' | 'many-to-one' | 'one-to-many' | 'one-to-one';
 };
+
+export type TInverseRelation = {
+  propertyName: string;
+  type: string;
+  onDelete: string;
+  onUpdate: string;
+  isEager: boolean;
+  isNullable: boolean;
+  index: boolean;
+  inversePropertyName: string;
+  targetClass: string;
+};
+
+export type TInverseRelationMap = Map<string, TInverseRelation[]>;

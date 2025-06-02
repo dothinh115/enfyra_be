@@ -133,10 +133,14 @@ export class BootstrapService implements OnApplicationBootstrap {
 
     if (!hasTable) {
       this.logger.log(`Bảng '${tableName}' chưa tồn tại, tiến hành tạo.`);
-      await this.autoService.entityAutoGenerate(initJson.defaultRouteTable, {
-        name: 'table',
-        type: 'many-to-one',
-      });
+      await this.autoService.entityAutoGenerate(
+        initJson.defaultRouteTable,
+        undefined,
+        {
+          name: 'table',
+          type: 'many-to-one',
+        },
+      );
       const tableRepo = this.dataSourceService.getRepository(TableDefinition);
       await this.saveToDb(initJson.defaultRouteTable, tableRepo);
       this.logger.log(`Tạo bảng '${tableName}' thành công.`);
