@@ -23,8 +23,7 @@ async function ensureDatabaseExists() {
 }
 
 async function bootstrap() {
-  await ensureDatabaseExists(); // 🧠 đảm bảo DB có trước khi Nest khởi động
-
+  await ensureDatabaseExists();
   const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(
