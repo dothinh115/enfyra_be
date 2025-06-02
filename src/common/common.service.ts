@@ -212,7 +212,6 @@ export class CommonService {
   async autoFixMissingImports(filePath: string): Promise<void> {
     const suggestions = await this.findMissingAndSuggestImports(filePath, [
       'src/entities',
-      'node_modules/typeorm',
     ]);
 
     await this.autoAddImportsToFile(filePath, suggestions);
