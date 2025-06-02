@@ -12,7 +12,7 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { CommonService } from '../common/common.service';
 import { TableDefinition } from '../entities/table.entity';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import {
   TInverseRelation,
   TInverseRelationMap,
@@ -474,22 +474,28 @@ export class AutoService {
       this.logger,
     );
     this.logger.debug(`Xoá thành công...`);
+
     let tables: any[] = await tableRepo.find({
       relations: ['relations', 'relations.targetTable'],
     });
+
     if (tables.length === 0) return;
 
     const inverseRelationMap = this.buildInverseRelationMap();
     await this.getInverseRelationMetadatas(inverseRelationMap, tables);
-    for (const table of tables) {
-      await this.entityAutoGenerate(
-        table,
-        inverseRelationMap,
-        table.name === 'route'
-          ? { name: 'table', type: 'many-to-one' }
-          : undefined,
-      );
-    }
+
+    await Promise.all(
+      tables.map(
+        async (table) =>
+          await this.entityAutoGenerate(
+            table,
+            inverseRelationMap,
+            table.name === 'route'
+              ? { name: 'table', type: 'many-to-one' }
+              : undefined,
+          ),
+      ),
+    );
 
     this.logger.log(`Chuẩn bị fix import`);
     await this.commonService.autoFixMissingImports(
@@ -498,7 +504,7 @@ export class AutoService {
     this.logger.debug(`Đã fix import xong`);
 
     this.logger.log(`Test logic file vừa generate`);
-    // this.commonService.checkTsErrors(path.resolve('src', 'dynamic-entities'));
+    this.commonService.checkTsErrors(path.resolve('src', 'dynamic-entities'));
     this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
     await this.autoBuildToJs();
     await this.dataSourceService.reloadDataSource();

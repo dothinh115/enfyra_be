@@ -30,15 +30,12 @@ export class CommonService {
       float: 'number',
       real: 'number',
       double: 'number',
-
       varchar: 'string',
       text: 'string',
       char: 'string',
       uuid: 'string',
-
       boolean: 'boolean',
       bool: 'boolean',
-
       date: 'Date',
       timestamp: 'Date',
       timestamptz: 'Date',
@@ -46,7 +43,6 @@ export class CommonService {
       json: 'any',
       jsonb: 'any',
     };
-
     return map[dbType.toLowerCase()] ?? 'any';
   }
 
@@ -58,7 +54,6 @@ export class CommonService {
       Date: 'timestamp',
       any: 'json',
     };
-
     return map[tsType] ?? 'text';
   }
 
@@ -67,9 +62,7 @@ export class CommonService {
     if (!fs.existsSync(entityDir)) {
       fs.mkdirSync(entityDir, { recursive: true });
     }
-
     const files = fs.readdirSync(entityDir);
-
     for (const file of files) {
       if (file.endsWith('.js')) {
         const module = await import(path.join(entityDir, file));
@@ -81,46 +74,65 @@ export class CommonService {
     return entities;
   }
 
+  private async buildExportMapAsync(
+    scanDirs: string[],
+    filePath: string,
+  ): Promise<Map<string, string>> {
+    const exportMap = new Map<string, string>();
+    const allFiles = scanDirs.flatMap((dir) =>
+      fs
+        .readdirSync(dir)
+        .filter((f) => f.endsWith('.ts'))
+        .map((f) => path.resolve(dir, f)),
+    );
+    for (const file of allFiles) {
+      const sourceCode = fs.readFileSync(file, 'utf8');
+      if (!sourceCode.includes('export')) continue;
+      const exportRegex =
+        /export\s+(?:class|const|function|interface|type|enum)\s+(\w+)/g;
+      let match: RegExpExecArray | null;
+      while ((match = exportRegex.exec(sourceCode))) {
+        const name = match[1];
+        const relativePath = path
+          .relative(path.dirname(filePath), file)
+          .replace(/\.ts$/, '')
+          .replace(/\\/g, '/');
+        if (!exportMap.has(name)) {
+          exportMap.set(
+            name,
+            relativePath.startsWith('.') ? relativePath : `./${relativePath}`,
+          );
+        }
+      }
+    }
+    return exportMap;
+  }
+
   async findMissingAndSuggestImports(
     filePath: string,
     scanDirs: string[],
-  ): Promise<
-    {
-      name: string;
-      module: string;
-    }[]
-  > {
-    const project = new Project({
-      compilerOptions: {
-        target: 3, // ES2015
-        module: 1, // CommonJS
-      },
-    });
-
+  ): Promise<{ name: string; module: string }[]> {
+    const project = new Project({ compilerOptions: { target: 3, module: 1 } });
     const sourceFile = project.addSourceFileAtPath(filePath);
     const usedIdentifiers = new Set<string>();
     const importedIdentifiers = new Set<string>();
 
-    // Lấy các import đã có
     sourceFile.getImportDeclarations().forEach((decl) => {
       decl.getNamedImports().forEach((imp) => {
         importedIdentifiers.add(imp.getName());
       });
     });
 
-    // Thu thập các identifier đang dùng
     sourceFile.forEachDescendant((node) => {
       if (node.getKind() === SyntaxKind.Identifier) {
         const name = node.getText();
         const symbol = node.getSymbol();
-
         if (!symbol && !importedIdentifiers.has(name)) {
           usedIdentifiers.add(name);
         }
       }
     });
 
-    // Bỏ các biến và class nội bộ
     const localDeclarations = sourceFile
       .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
       .map((d) => d.getName());
@@ -132,70 +144,32 @@ export class CommonService {
     const missing = Array.from(usedIdentifiers);
     const suggestions: { name: string; module: string }[] = [];
 
-    // ✅ Ưu tiên check knownGlobalImports trước
     for (const name of missing) {
       if (knownGlobalImports[name]) {
-        suggestions.push({
-          name,
-          module: knownGlobalImports[name],
-        });
+        suggestions.push({ name, module: knownGlobalImports[name] });
       }
     }
 
-    // ❌ Nếu đã có trong suggestions thì bỏ qua khi quét dir
     const toResolve = missing.filter(
       (name) => !suggestions.find((s) => s.name === name),
     );
-
-    const filePromises = scanDirs.flatMap((dir) => {
-      const files = fs.readdirSync(dir).filter((f) => f.endsWith('.ts'));
-      return files.map(async (file) => {
-        const fullPath = path.resolve(dir, file);
-        const sf = project.addSourceFileAtPathIfExists(fullPath);
-        if (!sf) return;
-
-        const exports = sf.getExportedDeclarations();
-
-        for (const missingName of toResolve) {
-          if (suggestions.find((s) => s.name === missingName)) continue;
-
-          if (exports.has(missingName)) {
-            const modulePath = path
-              .relative(path.dirname(filePath), fullPath)
-              .replace(/\.ts$/, '')
-              .replace(/\\/g, '/');
-
-            suggestions.push({
-              name: missingName,
-              module: modulePath.startsWith('.')
-                ? modulePath
-                : `./${modulePath}`,
-            });
-          }
-        }
-      });
-    });
-
-    await Promise.all(filePromises);
-
+    const exportMap = await this.buildExportMapAsync(scanDirs, filePath);
+    for (const name of toResolve) {
+      const module = exportMap.get(name);
+      if (module) suggestions.push({ name, module });
+    }
     return suggestions;
   }
 
   async autoAddImportsToFile(
     filePath: string,
-    suggestions: {
-      name: string;
-      module: string;
-    }[],
+    suggestions: { name: string; module: string }[],
   ) {
-    const project = new Project();
-    const sourceFile = project.addSourceFileAtPath(filePath);
-
+    const sourceFile = new Project().addSourceFileAtPath(filePath);
     for (const suggestion of suggestions) {
-      const existingImport = sourceFile.getImportDeclarations().find((imp) => {
-        return imp.getModuleSpecifierValue() === suggestion.module;
-      });
-
+      const existingImport = sourceFile
+        .getImportDeclarations()
+        .find((imp) => imp.getModuleSpecifierValue() === suggestion.module);
       if (existingImport) {
         const namedImports = existingImport
           .getNamedImports()
@@ -210,46 +184,76 @@ export class CommonService {
         });
       }
     }
-
     await sourceFile.save();
   }
 
   async autoFixMissingImports(dirPath: string): Promise<void> {
     const files = this.getAllTsFiles(dirPath);
-
-    await Promise.all(
-      files.map((filePath) =>
-        (async () => {
-          const start = Date.now();
-
-          const suggestions = await this.findMissingAndSuggestImports(
-            filePath,
-            ['src/entities', 'src/dynamic-entities'],
-          );
-          await this.autoAddImportsToFile(filePath, suggestions);
-          console.log(
-            `✅ [${new Date().toISOString()}] Đã xử lý ${filePath} trong ${Date.now() - start}ms`,
-          );
-        })(),
-      ),
+    const exportMap = await this.buildExportMapAsync(
+      ['src/entities', 'src/dynamic-entities'],
+      files[0],
     );
+    for (const filePath of files) {
+      const start = Date.now();
+      const project = new Project({
+        compilerOptions: { target: 3, module: 1 },
+      });
+      const sourceFile = project.addSourceFileAtPath(filePath);
+
+      const usedIdentifiers = new Set<string>();
+      const importedIdentifiers = new Set<string>();
+
+      sourceFile.getImportDeclarations().forEach((decl) => {
+        decl
+          .getNamedImports()
+          .forEach((imp) => importedIdentifiers.add(imp.getName()));
+      });
+
+      sourceFile.forEachDescendant((node) => {
+        if (node.getKind() === SyntaxKind.Identifier) {
+          const name = node.getText();
+          const symbol = node.getSymbol();
+          if (!symbol && !importedIdentifiers.has(name))
+            usedIdentifiers.add(name);
+        }
+      });
+
+      const localDeclarations = sourceFile
+        .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
+        .map((d) => d.getName());
+      sourceFile
+        .getClasses()
+        .forEach((cls) => usedIdentifiers.delete(cls.getName() || ''));
+      localDeclarations.forEach((n) => usedIdentifiers.delete(n));
+
+      const missing = Array.from(usedIdentifiers);
+      const suggestions = missing
+        .filter((name) => !importedIdentifiers.has(name))
+        .map((name) => {
+          const module = exportMap.get(name);
+          if (module) return { name, module };
+          if (knownGlobalImports[name])
+            return { name, module: knownGlobalImports[name] };
+          return null;
+        })
+        .filter(Boolean) as { name: string; module: string }[];
+
+      await this.autoAddImportsToFile(filePath, suggestions);
+      console.log(
+        `✅ [${new Date().toISOString()}] Đã xử lý ${filePath} trong ${Date.now() - start}ms`,
+      );
+    }
   }
 
   getAllTsFiles(dirPath: string): string[] {
     const result: string[] = [];
-
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-
     for (const entry of entries) {
       const fullPath = path.join(dirPath, entry.name);
-
-      if (entry.isDirectory()) {
-        result.push(...this.getAllTsFiles(fullPath));
-      } else if (entry.isFile() && entry.name.endsWith('.ts')) {
+      if (entry.isDirectory()) result.push(...this.getAllTsFiles(fullPath));
+      else if (entry.isFile() && entry.name.endsWith('.ts'))
         result.push(fullPath);
-      }
     }
-
     return result;
   }
 
@@ -266,34 +270,42 @@ export class CommonService {
       path.dirname(configPath),
     );
 
-    const files = this.getAllTsFiles(dirPath);
+    const allFiles = this.getAllTsFiles(dirPath);
+    const program = ts.createProgram(allFiles, parsedConfig.options);
+    const allDiagnostics = ts.getPreEmitDiagnostics(program);
+
+    const errorMap = new Map<string, ts.Diagnostic[]>();
+
+    for (const diag of allDiagnostics) {
+      const file = diag.file?.fileName;
+      if (!file) continue;
+
+      const absPath = path.resolve(file);
+      if (!errorMap.has(absPath)) {
+        errorMap.set(absPath, []);
+      }
+
+      errorMap.get(absPath)!.push(diag);
+    }
+
     let hasError = false;
 
-    for (const filePath of files) {
-      const program = ts.createProgram([filePath], parsedConfig.options);
-      const diagnostics = ts.getPreEmitDiagnostics(program);
+    for (const [filePath, diagnostics] of errorMap.entries()) {
+      const errors = diagnostics.map((d) => {
+        const msg = ts.flattenDiagnosticMessageText(d.messageText, '\n');
+        const pos = d.file?.getLineAndCharacterOfPosition(d.start || 0);
+        return `Line ${pos?.line! + 1}, Col ${pos?.character! + 1}: ${msg}`;
+      });
 
-      const relevantErrors = diagnostics.filter(
-        (d) => d.file?.fileName === path.resolve(filePath),
-      );
-
-      if (relevantErrors.length > 0) {
-        const errors = relevantErrors.map((d) => {
-          const msg = ts.flattenDiagnosticMessageText(d.messageText, '\n');
-          const pos = d.file?.getLineAndCharacterOfPosition(d.start || 0);
-          return `Line ${pos?.line! + 1}, Col ${pos?.character! + 1}: ${msg}`;
-        });
-
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-          console.error(`🗑️ Đã xoá file lỗi: ${filePath}`);
-        }
-
-        console.error(
-          `❌ Lỗi TypeScript trong file ${filePath}:\n${errors.join('\n')}`,
-        );
-        hasError = true;
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.error(`🗑️ Đã xoá file lỗi: ${filePath}`);
       }
+
+      console.error(
+        `❌ Lỗi TypeScript trong file ${filePath}:\n${errors.join('\n')}`,
+      );
+      hasError = true;
     }
 
     if (hasError) {
@@ -306,16 +318,13 @@ export class CommonService {
       tsConfigFilePath: path.resolve('tsconfig.json'),
       skipAddingFilesFromTsConfig: true,
     });
-
     const files = fs
       .readdirSync(scanDir)
       .filter((f) => f.endsWith('.ts'))
       .map((f) => path.resolve(scanDir, f));
-
     for (const file of files) {
       const sourceFile = project.addSourceFileAtPath(file);
       let changed = false;
-
       const importDecls = sourceFile.getImportDeclarations();
       for (const imp of importDecls) {
         const moduleSpecifier = imp.getModuleSpecifierValue();
@@ -323,19 +332,16 @@ export class CommonService {
           path.dirname(file),
           moduleSpecifier + '.ts',
         );
-
         if (!fs.existsSync(modulePath)) {
           imp.remove();
           changed = true;
           continue;
         }
-
         const tempSourceFile =
           project.getSourceFile(modulePath) ??
           project.addSourceFileAtPath(modulePath);
         const exported = tempSourceFile.getExportedDeclarations();
         const namedImports = imp.getNamedImports();
-
         for (const named of namedImports) {
           const name = named.getName();
           if (!exported.has(name)) {
@@ -343,13 +349,11 @@ export class CommonService {
             changed = true;
           }
         }
-
         if (imp.getNamedImports().length === 0) {
           imp.remove();
           changed = true;
         }
       }
-
       if (changed) {
         await sourceFile.save();
         console.log(`🧹 Đã dọn import trong: ${file}`);
@@ -358,36 +362,31 @@ export class CommonService {
   }
 
   async removeOldFile(filePathOrPaths: string | string[], logger: Logger) {
-    try {
-      const paths = Array.isArray(filePathOrPaths)
-        ? filePathOrPaths
-        : [filePathOrPaths];
-
-      for (const targetPath of paths) {
+    const paths = Array.isArray(filePathOrPaths)
+      ? filePathOrPaths
+      : [filePathOrPaths];
+    for (const targetPath of paths) {
+      try {
         if (!fs.existsSync(targetPath)) continue;
-
-        const stat = fs.statSync(targetPath);
-
+        const stat = await fs.promises.stat(targetPath);
         if (stat.isFile()) {
-          // Xoá file đơn
-          fs.unlinkSync(targetPath);
+          await fs.promises.unlink(targetPath);
           logger.log(`🧹 Đã xoá file: ${targetPath}`);
         } else if (stat.isDirectory()) {
-          // Xoá toàn bộ file trong thư mục
-          const files = fs.readdirSync(targetPath);
+          const files = await fs.promises.readdir(targetPath);
           for (const file of files) {
             const fullPath = path.join(targetPath, file);
-            const fileStat = fs.statSync(fullPath);
+            const fileStat = await fs.promises.stat(fullPath);
             if (fileStat.isFile()) {
-              fs.unlinkSync(fullPath);
+              await fs.promises.unlink(fullPath);
               logger.log(`🧹 Đã xoá file trong thư mục: ${fullPath}`);
             }
           }
         }
+      } catch (error) {
+        logger.error(`❌ Lỗi khi xoá file: ${error.message}`);
+        throw error;
       }
-    } catch (error) {
-      logger.error(`❌ Lỗi khi xoá file: ${error.message}`);
-      throw error;
     }
   }
 }
