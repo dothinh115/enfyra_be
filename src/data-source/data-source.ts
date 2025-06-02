@@ -43,6 +43,7 @@ export const AppDataSource = new DataSource({
       'dynamic-entities',
       '*.entity.js',
     ),
+    path.resolve(__dirname, '..', '..', 'dist', 'entities', '*.entity.js'),
   ],
   migrations: [path.resolve(__dirname, '..', 'migrations', '*.{js,ts}')],
 });

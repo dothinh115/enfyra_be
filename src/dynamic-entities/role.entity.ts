@@ -4,7 +4,7 @@ export class Role {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({type:'varchar', nullable: false})
+  @Column({type:'varchar', nullable: false, default: null})
   name: string;
 
   @CreateDateColumn()

@@ -5,6 +5,7 @@ import { TableDefinition } from '../entities/table.entity';
 import { AutoService } from '../auto/auto.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { Repository } from 'typeorm';
+import { CommonService } from '../common/common.service';
 
 const initJson = require('./init.json');
 
@@ -22,8 +23,12 @@ export class BootstrapService implements OnApplicationBootstrap {
     const tableRepo = this.dataSourceService.getRepository(TableDefinition);
     const tables: any[] = await tableRepo.find();
     for (const table of tables) {
-      console.log(table);
-      await this.autoService.entityAutoGenerate(table);
+      await this.autoService.entityAutoGenerate(
+        table,
+        table.name === 'route'
+          ? { name: 'table', type: 'many-to-one' }
+          : undefined,
+      );
     }
   }
 
@@ -232,6 +237,8 @@ export class BootstrapService implements OnApplicationBootstrap {
   private async insertDefaultRoutes(): Promise<void> {
     const tableName = initJson.defaultRouteTable.name;
     const routeRepo = this.dataSourceService.getRepository(tableName);
+    const tableDefRepo = this.dataSourceService.getRepository(TableDefinition);
+
     const existingRoutes = await routeRepo.find();
 
     const paths = [
@@ -242,7 +249,20 @@ export class BootstrapService implements OnApplicationBootstrap {
     ];
 
     let insertedCount = 0;
+
     for (const path of paths) {
+      // 🔍 Tìm id trong TableDefinition theo name
+      const targetTable: any = await tableDefRepo.findOne({
+        where: { name: path },
+      });
+
+      if (!targetTable) {
+        this.logger.warn(
+          `❗Không tìm thấy TableDefinition cho '${path}', bỏ qua.`,
+        );
+        continue;
+      }
+
       for (const method of Object.keys(initJson.routeDefinition)) {
         const def = initJson.routeDefinition[method];
 
@@ -255,7 +275,9 @@ export class BootstrapService implements OnApplicationBootstrap {
             method: def.method,
             path: `/${path}`,
             handler: def.handler,
+            targetTable: targetTable.id, // 👈 Gán ID vào đây
           });
+
           await routeRepo.save(route);
           insertedCount++;
         }
@@ -268,7 +290,6 @@ export class BootstrapService implements OnApplicationBootstrap {
       this.logger.debug(`Tất cả route mặc định đã tồn tại.`);
     }
   }
-
   async saveToDb(payload: CreateTableDto, repo: Repository<any>) {
     const newPayload = {
       ...payload,

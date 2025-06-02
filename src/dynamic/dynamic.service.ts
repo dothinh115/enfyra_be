@@ -12,23 +12,11 @@ import { DataSourceService } from '../data-source/data-source.service';
 export class DynamicService {
   private logger = new Logger(DynamicService.name);
   constructor(private dataSourceService: DataSourceService) {}
+
   async dynamicService(req: Request, body?: any) {
     try {
       const path = req.path;
       const method = req.method;
-      const repo = this.dataSourceService.getRepository(
-        path.replace(/^\//, ''),
-      );
-      if (!repo) {
-        throw new BadRequestException(`[${method}] ${path} không tồn tại!`);
-      }
-      const context = {
-        $req: req,
-        $body: body,
-        $repo: repo,
-        throw400: (message: string) => new BadRequestException(message),
-        throw401: () => new UnauthorizedException(),
-      };
       const curRouteRepo = this.dataSourceService.getRepository('route');
       const curRoute: any = await curRouteRepo.findOne({
         where: {
@@ -38,7 +26,16 @@ export class DynamicService {
       });
       if (!curRoute)
         throw new BadRequestException(`[${method}] ${path} không tồn tại!`);
-
+      const curRepo = this.dataSourceService.getRepository(
+        curRoute.targetTable.name,
+      );
+      const context = {
+        $req: req,
+        $body: body,
+        $repo: curRepo,
+        throw400: (message: string) => new BadRequestException(message),
+        throw401: () => new UnauthorizedException(),
+      };
       // Tạo context sandbox
       const script = new vm.Script(`(async () => { ${curRoute.handler} })()`);
       const vmContext = vm.createContext(context);

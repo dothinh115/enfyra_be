@@ -21,7 +21,7 @@ export class CreateColumnDto {
   name: string;
 
   @IsString()
-  @IsIn(['int', 'varchar', 'boolean', 'text', 'date', 'float', 'json'])
+  @IsIn(['int', 'varchar', 'boolean', 'text', 'date', 'float', 'simple-json'])
   type: string;
 
   @IsBoolean()

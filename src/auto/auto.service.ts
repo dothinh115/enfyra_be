@@ -61,9 +61,10 @@ export class AutoService {
           }
         }
       }
-
-      // importPart += `import { TableDefinition } from './../entities/table.entity';\n`;
-      // importPart += `import { HookDefinition } from './../entities/hook.entity';\n`;
+      if (staticRelations?.name === 'table')
+        importPart += `import { TableDefinition } from './../entities/table.entity';\n`;
+      if (staticRelations?.name === 'hook')
+        importPart += `import { HookDefinition } from './../entities/hook.entity';\n`;
 
       this.logger.debug(`Phần ImportPart được tạo:\n${importPart}`);
 
@@ -182,24 +183,24 @@ export class AutoService {
       classPart += `  createdAt: Date;\n\n`;
       classPart += `  @UpdateDateColumn()\n`;
       classPart += `  UpdatedAt: Date;\n`;
-      // if (staticRelations !== undefined) {
-      //   const type =
-      //     staticRelations.type === 'many-to-many'
-      //       ? `ManyToMany`
-      //       : staticRelations.type === 'one-to-one'
-      //         ? `OneToOne`
-      //         : staticRelations.type === 'many-to-one'
-      //           ? `ManyToOne`
-      //           : `OneToMany`;
+      if (staticRelations !== undefined) {
+        const type =
+          staticRelations.type === 'many-to-many'
+            ? `ManyToMany`
+            : staticRelations.type === 'one-to-one'
+              ? `OneToOne`
+              : staticRelations.type === 'many-to-one'
+                ? `ManyToOne`
+                : `OneToMany`;
 
-      //   classPart += `  @${type}(() => ${staticRelations.name === 'table' ? 'TableDefinition' : 'HookDefinition'})\n`;
+        classPart += `  @${type}(() => ${staticRelations.name === 'table' ? 'TableDefinition' : 'HookDefinition'}, { nullable: false, eager: true, cascade: true })\n`;
 
-      //   if (staticRelations.type === 'many-to-many')
-      //     classPart += `  @JoinTable()\n`;
-      //   if (staticRelations.type === 'many-to-one')
-      //     classPart += `  @JoinColumn()\n`;
-      //   classPart += `  targetTable: number`;
-      // }
+        if (staticRelations.type === 'many-to-many')
+          classPart += `  @JoinTable()\n`;
+        if (staticRelations.type === 'many-to-one')
+          classPart += `  @JoinColumn()\n`;
+        classPart += `  targetTable: TableDefinition;\n`;
+      }
       classPart += `}`;
       this.logger.debug(`Phần ClassPart được tạo:\n${classPart}`);
 
