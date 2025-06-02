@@ -40,18 +40,9 @@ export class TableHanlderService {
         relations: body.relations ? this.prepareRelations(body.relations) : [],
       } as any);
 
-      await this.autoService.entityAutoGenerate({
-        ...body,
-        columns: this.normalizeColumnsWithAutoId(body.columns),
-      });
-      await this.autoService.autoBuildToJs();
-      await this.autoService.autoGenerateMigrationFile();
-      await this.autoService.autoRunMigration();
-
       if (!result) result = await manager.save(TableDefinition, tableEntity);
-
+      await this.autoService.pullMetadataFromDb();
       await queryRunner.commitTransaction();
-      await this.dataSouceService.reloadDataSource();
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -82,16 +73,9 @@ export class TableHanlderService {
         columns: this.normalizeColumnsWithAutoId(body.columns),
         relations: body.relations ? this.prepareRelations(body.relations) : [],
       });
-
-      await this.autoService.entityAutoGenerate({
-        ...body,
-        name: exists.name,
-        columns: this.normalizeColumnsWithAutoId(body.columns),
-      });
-      await this.autoService.autoBuildToJs();
-      await this.autoService.autoGenerateMigrationFile();
-      await this.autoService.autoRunMigration();
       const result = await repo.save(tableEntity);
+
+      await this.autoService.pullMetadataFromDb();
       return result;
     } catch (error) {
       throw new BadRequestException(error);

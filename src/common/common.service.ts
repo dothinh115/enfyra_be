@@ -209,19 +209,38 @@ export class CommonService {
     await sourceFile.save();
   }
 
-  async autoFixMissingImports(filePath: string): Promise<void> {
-    const suggestions = await this.findMissingAndSuggestImports(filePath, [
-      'src/entities',
-    ]);
+  async autoFixMissingImports(dirPath: string): Promise<void> {
+    const files = this.getAllTsFiles(dirPath);
 
-    await this.autoAddImportsToFile(filePath, suggestions);
-
-    console.log(`✅ Đã tự động thêm import vào ${filePath}`);
+    for (const filePath of files) {
+      const suggestions = await this.findMissingAndSuggestImports(filePath, [
+        'src/entities',
+      ]);
+      await this.autoAddImportsToFile(filePath, suggestions);
+      console.log(`✅ Đã tự động thêm import vào ${filePath}`);
+    }
   }
 
-  checkTsErrors(filePath: string, tsconfigPath = 'tsconfig.json'): void {
-    const configPath = ts.findConfigFile(tsconfigPath, ts.sys.fileExists);
+  getAllTsFiles(dirPath: string): string[] {
+    const result: string[] = [];
 
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dirPath, entry.name);
+
+      if (entry.isDirectory()) {
+        result.push(...this.getAllTsFiles(fullPath));
+      } else if (entry.isFile() && entry.name.endsWith('.ts')) {
+        result.push(fullPath);
+      }
+    }
+
+    return result;
+  }
+
+  checkTsErrors(dirPath: string, tsconfigPath = 'tsconfig.json'): void {
+    const configPath = ts.findConfigFile(tsconfigPath, ts.sys.fileExists);
     if (!configPath) {
       throw new Error(`Không tìm thấy tsconfig tại ${tsconfigPath}`);
     }
@@ -233,28 +252,38 @@ export class CommonService {
       path.dirname(configPath),
     );
 
-    const program = ts.createProgram([filePath], parsedConfig.options);
-    const diagnostics = ts.getPreEmitDiagnostics(program);
+    const files = this.getAllTsFiles(dirPath);
+    let hasError = false;
 
-    const relevantErrors = diagnostics.filter(
-      (d) => d.file?.fileName === path.resolve(filePath),
-    );
+    for (const filePath of files) {
+      const program = ts.createProgram([filePath], parsedConfig.options);
+      const diagnostics = ts.getPreEmitDiagnostics(program);
 
-    if (relevantErrors.length > 0) {
-      const errors = relevantErrors.map((d) => {
-        const msg = ts.flattenDiagnosticMessageText(d.messageText, '\n');
-        const pos = d.file?.getLineAndCharacterOfPosition(d.start || 0);
-        return `Line ${pos?.line! + 1}, Col ${pos?.character! + 1}: ${msg}`;
-      });
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.error(`🗑️ Đã xoá file lỗi: ${filePath}`);
-      }
-
-      throw new Error(
-        `❌ Lỗi TypeScript trong file ${filePath}:\n${errors.join('\n')}`,
+      const relevantErrors = diagnostics.filter(
+        (d) => d.file?.fileName === path.resolve(filePath),
       );
+
+      if (relevantErrors.length > 0) {
+        const errors = relevantErrors.map((d) => {
+          const msg = ts.flattenDiagnosticMessageText(d.messageText, '\n');
+          const pos = d.file?.getLineAndCharacterOfPosition(d.start || 0);
+          return `Line ${pos?.line! + 1}, Col ${pos?.character! + 1}: ${msg}`;
+        });
+
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.error(`🗑️ Đã xoá file lỗi: ${filePath}`);
+        }
+
+        console.error(
+          `❌ Lỗi TypeScript trong file ${filePath}:\n${errors.join('\n')}`,
+        );
+        hasError = true;
+      }
+    }
+
+    if (hasError) {
+      throw new Error('Một hoặc nhiều file có lỗi TypeScript đã bị xoá.');
     }
   }
 

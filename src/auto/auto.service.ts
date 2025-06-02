@@ -33,13 +33,7 @@ export class AutoService {
 
     try {
       this.logger.debug('Đang tải các Entities động hiện có...');
-      const dynamicEntityDir = path.resolve(
-        __dirname,
-        '..',
-        '..',
-        'src',
-        'dynamic-entities',
-      );
+      const dynamicEntityDir = path.resolve('src', 'dynamic-entities');
 
       const repo =
         this.dataSourceService.getRepository<TableDefinition>(TableDefinition);
@@ -238,14 +232,6 @@ export class AutoService {
       fs.writeFileSync(entityFilePath, fileContent);
       this.logger.log('✅ Ghi file thành công:', dynamicEntityDir);
 
-      this.logger.log(`Chuẩn bị fix import`);
-      await this.commonService.autoFixMissingImports(entityFilePath);
-      this.logger.debug(`Đã fix import xong`);
-
-      this.logger.log(`Test logic file vừa generate`);
-      this.commonService.checkTsErrors(entityFilePath);
-      this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
-
       this.logger.debug('--- Kết thúc xử lý tableChangesHandler ---');
       return { message: `Tạo bảng ${payload.name} thành công!` };
     } catch (error) {
@@ -397,5 +383,33 @@ export class AutoService {
     );
 
     return entityMetadata?.target as Function | undefined;
+  }
+
+  async pullMetadataFromDb() {
+    const tableRepo = this.dataSourceService.getRepository(TableDefinition);
+    const tables: any[] = await tableRepo.find();
+    await Promise.all(
+      tables.map((table) =>
+        this.entityAutoGenerate(
+          table,
+          table.name === 'route'
+            ? { name: 'table', type: 'many-to-one' }
+            : undefined,
+        ),
+      ),
+    );
+    this.logger.log(`Chuẩn bị fix import`);
+    await this.commonService.autoFixMissingImports(
+      path.resolve('src', 'dynamic-entities'),
+    );
+    this.logger.debug(`Đã fix import xong`);
+
+    this.logger.log(`Test logic file vừa generate`);
+    this.commonService.checkTsErrors(path.resolve('src', 'dynamic-entities'));
+    this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
+    await this.autoBuildToJs();
+    await this.dataSourceService.reloadDataSource();
+    await this.autoGenerateMigrationFile();
+    await this.autoRunMigration();
   }
 }

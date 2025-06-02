@@ -18,19 +18,6 @@ export class BootstrapService implements OnApplicationBootstrap {
     private autoService: AutoService,
   ) {}
 
-  async pullMetadataFromDb() {
-    const tableRepo = this.dataSourceService.getRepository(TableDefinition);
-    const tables: any[] = await tableRepo.find();
-    for (const table of tables) {
-      await this.autoService.entityAutoGenerate(
-        table,
-        table.name === 'route'
-          ? { name: 'table', type: 'many-to-one' }
-          : undefined,
-      );
-    }
-  }
-
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -57,7 +44,7 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     await this.waitForDatabaseConnection();
-    await this.pullMetadataFromDb();
+    await this.autoService.pullMetadataFromDb();
     await this.createSettingTableIfNotExists();
     await this.createDefaultRoleTable();
     await this.createDefaultUserTableIfNotExists();
