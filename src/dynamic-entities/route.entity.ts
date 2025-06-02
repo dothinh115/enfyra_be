@@ -1,7 +1,7 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToMany, ManyToOne, OneToOne, JoinTable, JoinColumn, Index, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
-import { TableDefinition } from './../entities/table.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
+import { TableDefinition } from "../entities/table.entity";
+
 @Entity("route")
-@Unique(["method", "path", ])
 export class Route {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -9,10 +9,10 @@ export class Route {
   @Column({type:'varchar', nullable: false, default: "GET"})
   method: string;
 
-  @Column({type:'varchar', nullable: false})
+  @Column({type:'varchar', nullable: false, default: null})
   path: string;
 
-  @Column({type:'text', nullable: false})
+  @Column({type:'text', nullable: false, default: null})
   handler: string;
 
   @Column({type:'boolean', nullable: false, default: true})

@@ -14,7 +14,6 @@ import { CommonService } from '../common/common.service';
 import { TableDefinition } from '../entities/table.entity';
 import { DataSource } from 'typeorm';
 import { TStaticEntities } from '../utils/type';
-import ts from 'typescript';
 
 @Injectable()
 export class AutoService {
@@ -44,30 +43,6 @@ export class AutoService {
 
       const repo =
         this.dataSourceService.getRepository<TableDefinition>(TableDefinition);
-
-      let importPart = `import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToMany, ManyToOne, OneToOne, JoinTable, JoinColumn, Index, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';\n`;
-
-      const imported = new Set<string>();
-      if (payload.relations?.length) {
-        for (const relation of payload.relations) {
-          const targetTable = await repo.findOne({
-            where: {
-              id: relation.targetTable,
-            },
-          });
-
-          if (!imported.has(targetTable.name)) {
-            importPart += `import { ${this.commonService.capitalizeFirstLetterEachLine(targetTable.name)} } from './${targetTable.name.toLowerCase()}.entity';\n\n`;
-            imported.add(targetTable.name);
-          }
-        }
-      }
-      if (staticRelations?.name === 'table')
-        importPart += `import { TableDefinition } from './../entities/table.entity';\n`;
-      if (staticRelations?.name === 'hook')
-        importPart += `import { HookDefinition } from './../entities/hook.entity';\n`;
-
-      this.logger.debug(`Phần ImportPart được tạo:\n${importPart}`);
 
       let classPart = `@Entity("${payload.name.toLowerCase()}")\n`;
 
@@ -196,9 +171,7 @@ export class AutoService {
           ) {
             classPart += `  @JoinColumn()\n`;
           }
-          // Điều chỉnh kiểu dữ liệu cho quan hệ:
-          // Nếu là OneToMany hoặc ManyToMany, nó sẽ là mảng.
-          // Nếu là ManyToOne hoặc OneToOne, nó là một đối tượng duy nhất.
+
           const relationType =
             relation.type === 'one-to-many' || relation.type === 'many-to-many'
               ? '[]'
@@ -231,17 +204,9 @@ export class AutoService {
         classPart += `  targetTable: TableDefinition;\n`;
       }
       classPart += `}`;
-      this.logger.debug(`Phần ClassPart được tạo:\n${classPart}`);
 
       this.logger.log(`Chuẩn bị kiểm tra ts valid`);
-      const fileContent = importPart + classPart;
-
-      if (!this.isValidTypeScript(fileContent)) {
-        this.logger.error(`Lỗi TypeScript, không ghi file!`);
-        throw new Error(
-          '❌ File entity.ts chứa lỗi TypeScript, không ghi file!',
-        );
-      }
+      const fileContent = classPart;
 
       this.logger.debug('--- Bắt đầu xử lý ghi file ---');
       const dir = path.dirname(dynamicEntityDir);
@@ -272,6 +237,14 @@ export class AutoService {
       this.logger.debug(`Nội dung file Entity cuối cùng:\n${fileContent}`);
       fs.writeFileSync(entityFilePath, fileContent);
       this.logger.log('✅ Ghi file thành công:', dynamicEntityDir);
+
+      this.logger.log(`Chuẩn bị fix import`);
+      await this.commonService.autoFixMissingImports(entityFilePath);
+      this.logger.debug(`Đã fix import xong`);
+
+      this.logger.log(`Test logic file vừa generate`);
+      this.commonService.checkTsErrors(entityFilePath);
+      this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
 
       this.logger.debug('--- Kết thúc xử lý tableChangesHandler ---');
       return { message: `Tạo bảng ${payload.name} thành công!` };
@@ -489,22 +462,5 @@ export class AutoService {
       await this.afterEffect();
       this.logger.debug(`Generate ${table.name} thành công!!!`);
     }
-  }
-
-  isValidTypeScript(code: string): boolean {
-    const result = ts.transpileModule(code, {
-      compilerOptions: { module: ts.ModuleKind.CommonJS },
-      reportDiagnostics: true,
-    });
-
-    if (result.diagnostics?.length) {
-      for (const diag of result.diagnostics) {
-        const msg = ts.flattenDiagnosticMessageText(diag.messageText, '\n');
-        console.error(`❌ Lỗi TypeScript: ${msg}`);
-      }
-      return false;
-    }
-
-    return true;
   }
 }
