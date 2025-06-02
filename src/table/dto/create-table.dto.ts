@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { IsSafeIdentifier } from '../../validator/is-safe-identifer.validator';
+import { PrimaryKeyValidCheck } from '../../validator/primary-key-valid-check.validator';
 
 export class CreateColumnDto {
   @IsOptional()
@@ -119,6 +120,7 @@ export class CreateTableDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateColumnDto)
+  @PrimaryKeyValidCheck()
   columns: CreateColumnDto[];
 
   @IsArray()

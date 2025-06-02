@@ -14,6 +14,7 @@ import { CommonService } from '../common/common.service';
 import { TableDefinition } from '../entities/table.entity';
 import { DataSource } from 'typeorm';
 import { TStaticEntities } from '../utils/type';
+import ts from 'typescript';
 
 @Injectable()
 export class AutoService {
@@ -232,6 +233,16 @@ export class AutoService {
       classPart += `}`;
       this.logger.debug(`Phần ClassPart được tạo:\n${classPart}`);
 
+      this.logger.log(`Chuẩn bị kiểm tra ts valid`);
+      const fileContent = importPart + classPart;
+
+      if (!this.isValidTypeScript(fileContent)) {
+        this.logger.error(`Lỗi TypeScript, không ghi file!`);
+        throw new Error(
+          '❌ File entity.ts chứa lỗi TypeScript, không ghi file!',
+        );
+      }
+
       this.logger.debug('--- Bắt đầu xử lý ghi file ---');
       const dir = path.dirname(dynamicEntityDir);
       this.logger.debug(`Thư mục đích: ${dir}`);
@@ -258,7 +269,6 @@ export class AutoService {
         this.logger.debug(`Thư mục đã tồn tại: ${dir}.`);
       }
 
-      const fileContent = importPart + classPart;
       this.logger.debug(`Nội dung file Entity cuối cùng:\n${fileContent}`);
       fs.writeFileSync(entityFilePath, fileContent);
       this.logger.log('✅ Ghi file thành công:', dynamicEntityDir);
@@ -479,5 +489,22 @@ export class AutoService {
       await this.afterEffect();
       this.logger.debug(`Generate ${table.name} thành công!!!`);
     }
+  }
+
+  isValidTypeScript(code: string): boolean {
+    const result = ts.transpileModule(code, {
+      compilerOptions: { module: ts.ModuleKind.CommonJS },
+      reportDiagnostics: true,
+    });
+
+    if (result.diagnostics?.length) {
+      for (const diag of result.diagnostics) {
+        const msg = ts.flattenDiagnosticMessageText(diag.messageText, '\n');
+        console.error(`❌ Lỗi TypeScript: ${msg}`);
+      }
+      return false;
+    }
+
+    return true;
   }
 }
