@@ -137,35 +137,6 @@ export class AutoService {
             `  - Quan hệ: ${relation.propertyName} (${relation.type} to ${targetTable.name})`,
           );
 
-          if (
-            inverseRelationMap !== undefined &&
-            relation.inversePropertyName
-          ) {
-            let type = 'one-to-one';
-            if (relation.type === 'many-to-many') type = 'many-to-many';
-            if (relation.type === 'one-to-many') type = 'many-to-one';
-            if (relation.type === 'many-to-one') type = 'one-to-many';
-            if (!inverseRelationMap.has(targetTable.name)) {
-              inverseRelationMap.set(targetTable.name, []);
-            }
-            inverseRelationMap.set(targetTable.name, [
-              ...inverseRelationMap.get(targetTable.name),
-              {
-                propertyName: relation.inversePropertyName,
-                inversePropertyName: relation.propertyName,
-                type,
-                onDelete: relation.onDelete,
-                onUpdate: relation.onUpdate,
-                isEager: relation.isEager,
-                isNullable: relation.isNullable,
-                index: relation.index,
-                targetClass: this.commonService.capitalizeFirstLetterEachLine(
-                  payload.name,
-                ),
-              },
-            ]);
-          }
-
           const type =
             relation.type === 'many-to-many'
               ? `ManyToMany`
@@ -445,6 +416,56 @@ export class AutoService {
     return entityMetadata?.target as Function | undefined;
   }
 
+  async getInverseRelationMetadatas(
+    inverseRelationMap: TInverseRelationMap,
+    tables: CreateTableDto[],
+  ) {
+    for (const table of tables) {
+      for (const relation of table.relations) {
+        if (relation.inversePropertyName) {
+          let type = 'one-to-one';
+          if (relation.type === 'many-to-many') type = 'many-to-many';
+          if (relation.type === 'one-to-many') type = 'many-to-one';
+          if (relation.type === 'many-to-one') type = 'one-to-many';
+
+          const repo =
+            this.dataSourceService.getRepository<TableDefinition>(
+              TableDefinition,
+            );
+          const targetTable = await repo.findOne({
+            where: {
+              id: (relation.targetTable as any).id,
+            },
+          });
+          if (!targetTable) {
+            this.logger.warn(
+              `Không tìm thấy targetTable cho relation ${relation.propertyName} trong bảng ${table.name}`,
+            );
+            continue;
+          }
+          const existed = inverseRelationMap.get(targetTable.name) ?? [];
+
+          inverseRelationMap.set(targetTable.name, [
+            ...existed,
+            {
+              propertyName: relation.inversePropertyName,
+              inversePropertyName: relation.propertyName,
+              type,
+              onDelete: relation.onDelete,
+              onUpdate: relation.onUpdate,
+              isEager: relation.isEager,
+              isNullable: relation.isNullable,
+              index: relation.index,
+              targetClass: this.commonService.capitalizeFirstLetterEachLine(
+                table.name,
+              ),
+            },
+          ]);
+        }
+      }
+    }
+  }
+
   async pullMetadataFromDb() {
     const tableRepo = this.dataSourceService.getRepository(TableDefinition);
     this.logger.log(`Xoá toàn bộ entities cũ...`);
@@ -457,17 +478,9 @@ export class AutoService {
       relations: ['relations', 'relations.targetTable'],
     });
     if (tables.length === 0) return;
-    tables = tables.sort((a, b) => {
-      const aHasInverse = a.relations?.some((r) => !!r.inversePropertyName)
-        ? 0
-        : 1;
-      const bHasInverse = b.relations?.some((r) => !!r.inversePropertyName)
-        ? 0
-        : 1;
-      return aHasInverse - bHasInverse; // bảng có inversePropertyName sẽ có giá trị 0 → lên đầu
-    });
-    console.log(tables);
+
     const inverseRelationMap = this.buildInverseRelationMap();
+    await this.getInverseRelationMetadatas(inverseRelationMap, tables);
     for (const table of tables) {
       await this.entityAutoGenerate(
         table,
