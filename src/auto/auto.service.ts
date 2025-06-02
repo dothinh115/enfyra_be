@@ -44,7 +44,7 @@ export class AutoService {
       const repo =
         this.dataSourceService.getRepository<TableDefinition>(TableDefinition);
 
-      let importPart = `import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToMany, ManyToOne, OneToOne, JoinTable, JoinColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';\n`;
+      let importPart = `import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToMany, ManyToOne, OneToOne, JoinTable, JoinColumn, Index, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';\n`;
 
       const imported = new Set<string>();
       if (payload.relations?.length) {
@@ -69,13 +69,38 @@ export class AutoService {
       this.logger.debug(`Phần ImportPart được tạo:\n${importPart}`);
 
       let classPart = `@Entity("${payload.name.toLowerCase()}")\n`;
-      if (payload.index && payload.index.length) {
-        classPart += `@Index([`;
-        for (const index of payload.index) {
-          classPart += `"${index}", `;
+
+      if (payload.unique && payload.unique.length) {
+        for (const unique of payload.unique) {
+          classPart += `@Unique([`;
+          for (const value of unique.value) {
+            classPart += `"${value}", `;
+          }
+          classPart += `])\n`;
         }
-        classPart += `])\n`;
       }
+
+      // Nếu có index, loại bỏ những cái trùng với unique
+      if (payload.index && payload.index.length) {
+        // Chuẩn hóa unique để so sánh
+        const uniqueKeys = (payload.unique || []).map((u) =>
+          [...u.value].sort().join('|'),
+        );
+
+        for (const index of payload.index) {
+          const key = [...index.value].sort().join('|');
+          if (uniqueKeys.includes(key)) {
+            continue; // Bỏ qua nếu trùng với unique
+          }
+
+          classPart += `@Index([`;
+          for (const value of index.value) {
+            classPart += `"${value}", `;
+          }
+          classPart += `])\n`;
+        }
+      }
+
       classPart += `export class ${this.commonService.capitalizeFirstLetterEachLine(payload.name)} {\n`;
       this.logger.debug(
         `Tên Class Entity: ${this.commonService.capitalizeFirstLetterEachLine(payload.name)}`,
@@ -96,6 +121,9 @@ export class AutoService {
         } else {
           classPart += `  @Column({`;
           classPart += `type:'${column.type}', nullable: ${String(column.isNullable)}`;
+          if (column.unique) {
+            classPart += `, unique: true`;
+          }
           if (column.default !== undefined) {
             let defVal = column.default;
             if (typeof defVal === 'string') {
@@ -193,7 +221,7 @@ export class AutoService {
                 ? `ManyToOne`
                 : `OneToMany`;
 
-        classPart += `  @${type}(() => ${staticRelations.name === 'table' ? 'TableDefinition' : 'HookDefinition'}, { nullable: false, eager: true, cascade: true })\n`;
+        classPart += `  @${type}(() => ${staticRelations.name === 'table' ? 'TableDefinition' : 'HookDefinition'}, { eager: true, cascade: true })\n`;
 
         if (staticRelations.type === 'many-to-many')
           classPart += `  @JoinTable()\n`;

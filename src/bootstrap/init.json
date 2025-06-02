@@ -32,7 +32,8 @@
             {
                 "name": "email",
                 "type": "varchar",
-                "isNullable": false
+                "isNullable": false,
+                "unique": true
             },
             {
                 "name": "password",
@@ -75,6 +76,11 @@
     },
     "defaultRouteTable": {
         "name": "route",
+        "unique": [
+            {
+                "value": ["method", "path"]
+            }
+        ],
         "columns": [
             {
                 "name": "id",

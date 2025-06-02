@@ -5,7 +5,6 @@ import { TableDefinition } from '../entities/table.entity';
 import { AutoService } from '../auto/auto.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { Repository } from 'typeorm';
-import { CommonService } from '../common/common.service';
 
 const initJson = require('./init.json');
 

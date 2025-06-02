@@ -78,7 +78,7 @@ export class DataSourceService implements OnModuleInit {
 
   getRepository<Entity>(
     identifier: string | Function | EntitySchema<any>,
-  ): Repository<Entity> {
+  ): Repository<Entity> | null {
     if (!this.dataSource.isInitialized) {
       throw new Error('DataSource chưa được khởi tạo!');
     }
@@ -90,19 +90,16 @@ export class DataSourceService implements OnModuleInit {
       metadata = this.dataSource.entityMetadatas.find(
         (meta) => meta.tableName === identifier,
       );
-
-      if (!metadata) {
-        throw new Error(
-          `Không tìm thấy entity tương ứng với bảng tên "${identifier}"`,
-        );
-      }
     } else {
-      // Tìm theo class hoặc EntitySchema
-      metadata = this.dataSource.getMetadata(identifier);
-
-      if (!metadata) {
-        throw new Error(`Không tìm thấy metadata cho entity đã truyền vào.`);
+      try {
+        metadata = this.dataSource.getMetadata(identifier);
+      } catch {
+        return null; // Không tìm thấy metadata
       }
+    }
+
+    if (!metadata) {
+      return null;
     }
 
     return this.dataSource.getRepository<Entity>(metadata.target as any);

@@ -1,13 +1,13 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToMany, ManyToOne, OneToOne, JoinTable, JoinColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToMany, ManyToOne, OneToOne, JoinTable, JoinColumn, Index, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
 @Entity("user")
 export class User {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({type:'varchar', nullable: false, default: null})
+  @Column({type:'varchar', nullable: false, unique: true})
   email: string;
 
-  @Column({type:'varchar', nullable: false, default: null})
+  @Column({type:'varchar', nullable: false})
   password: string;
 
   @Column({type:'boolean', nullable: false, default: false})

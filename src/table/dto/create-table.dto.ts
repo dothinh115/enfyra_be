@@ -42,6 +42,10 @@ export class CreateColumnDto {
   @IsOptional()
   @IsBoolean()
   index?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  unique?: boolean;
 }
 
 export class CreateRelationDto {
@@ -87,6 +91,16 @@ export class CreateRelationDto {
   isNullable?: boolean;
 }
 
+export class CreateIndexDto {
+  @IsNotEmpty()
+  value: string[];
+}
+
+export class CreateUniqueDto {
+  @IsNotEmpty()
+  value: string[];
+}
+
 export class CreateTableDto {
   @IsOptional()
   @IsNumber()
@@ -97,8 +111,10 @@ export class CreateTableDto {
   name: string;
 
   @IsOptional()
-  @IsArray()
-  index?: string[];
+  index?: CreateIndexDto[];
+
+  @IsOptional()
+  unique: CreateUniqueDto[];
 
   @IsArray()
   @ValidateNested({ each: true })

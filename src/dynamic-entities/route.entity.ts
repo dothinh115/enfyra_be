@@ -1,6 +1,7 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToMany, ManyToOne, OneToOne, JoinTable, JoinColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToMany, ManyToOne, OneToOne, JoinTable, JoinColumn, Index, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
 import { TableDefinition } from './../entities/table.entity';
 @Entity("route")
+@Unique(["method", "path", ])
 export class Route {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -8,10 +9,10 @@ export class Route {
   @Column({type:'varchar', nullable: false, default: "GET"})
   method: string;
 
-  @Column({type:'varchar', nullable: false, default: null})
+  @Column({type:'varchar', nullable: false})
   path: string;
 
-  @Column({type:'text', nullable: false, default: null})
+  @Column({type:'text', nullable: false})
   handler: string;
 
   @Column({type:'boolean', nullable: false, default: true})
@@ -22,7 +23,7 @@ export class Route {
 
   @UpdateDateColumn()
   UpdatedAt: Date;
-  @ManyToOne(() => TableDefinition, { nullable: false, eager: true, cascade: true })
+  @ManyToOne(() => TableDefinition, { eager: true, cascade: true })
   @JoinColumn()
   targetTable: TableDefinition;
 }

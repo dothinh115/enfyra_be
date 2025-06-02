@@ -9,6 +9,7 @@
 /src/entities/*.entity.js
 
 
+
 # Logs
 logs
 *.log
