@@ -1,15 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
 
 @Entity("role")
 export class Role {
-  @Column({type:'varchar', nullable: false, default: null})
-  name: string;
-
   @PrimaryGeneratedColumn('increment')
   id: number;
 
   @Column({type:'varchar', nullable: false, default: null})
-  test: string;
+  name: string;
 
   @CreateDateColumn()
   createdAt: Date;

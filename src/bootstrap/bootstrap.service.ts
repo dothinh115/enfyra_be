@@ -5,7 +5,8 @@ import { TableDefinition } from '../entities/table.entity';
 import { AutoService } from '../auto/auto.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { Repository } from 'typeorm';
-
+import { CommonService } from '../common/common.service';
+import * as path from 'path';
 const initJson = require('./init.json');
 
 @Injectable()
@@ -16,6 +17,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     private dataSourceService: DataSourceService,
     private tableHandlerService: TableHanlderService,
     private autoService: AutoService,
+    private commonService: CommonService,
   ) {}
 
   private delay(ms: number): Promise<void> {
@@ -49,10 +51,19 @@ export class BootstrapService implements OnApplicationBootstrap {
     await this.createDefaultRoleTable();
     await this.createDefaultUserTableIfNotExists();
     await this.createDefaultRouteTableIfNotExists();
+    this.logger.log(`Chuẩn bị fix import`);
+    await this.commonService.autoFixMissingImports(
+      path.resolve('src', 'dynamic-entities'),
+    );
+    this.logger.debug(`Đã fix import xong`);
+
+    this.logger.log(`Test logic file vừa generate`);
+    this.commonService.checkTsErrors(path.resolve('src', 'dynamic-entities'));
+    this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
     await this.autoService.autoBuildToJs();
+    await this.dataSourceService.reloadDataSource();
     await this.autoService.autoGenerateMigrationFile();
     await this.autoService.autoRunMigration();
-    await this.dataSourceService.reloadDataSource();
     await Promise.all([
       await this.createDefaultRole(),
       await this.insertDefaultSettingIfEmpty(),

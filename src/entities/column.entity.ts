@@ -1,5 +1,11 @@
 import { TableDefinition } from '../entities/table.entity';
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity()
 export class ColumnDefinition {
@@ -21,7 +27,10 @@ export class ColumnDefinition {
   @Column({ default: true })
   isNullable: boolean;
 
-  @ManyToOne(() => TableDefinition, (table) => table.columns)
+  @ManyToOne(() => TableDefinition, (table) => table.columns, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
   table: TableDefinition;
 
   @Column({ nullable: true, type: 'simple-json' })

@@ -1,15 +1,23 @@
 import { TableDefinition } from '../entities/table.entity';
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity()
 export class RelationDefinition {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @ManyToOne(() => TableDefinition)
+  @ManyToOne(() => TableDefinition, { onDelete: 'CASCADE' })
+  @JoinColumn()
   sourceTable: TableDefinition;
 
-  @ManyToOne(() => TableDefinition)
+  @ManyToOne(() => TableDefinition, { onDelete: 'CASCADE' })
+  @JoinColumn()
   targetTable: TableDefinition;
 
   @Column({

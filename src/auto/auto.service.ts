@@ -355,24 +355,6 @@ export class AutoService {
     await queryRunner.release();
   }
 
-  async autoRemoveOldFile(filePathOrPaths: string | string[]) {
-    try {
-      const paths = Array.isArray(filePathOrPaths)
-        ? filePathOrPaths
-        : [filePathOrPaths];
-
-      for (const filePath of paths) {
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-          this.logger.log(`🧹 Đã xoá file: ${filePath}`);
-        }
-      }
-    } catch (error) {
-      this.logger.error(error.message);
-      throw error;
-    }
-  }
-
   getEntityClassByTableName(
     dataSource: DataSource,
     tableName: string,
@@ -387,6 +369,12 @@ export class AutoService {
 
   async pullMetadataFromDb() {
     const tableRepo = this.dataSourceService.getRepository(TableDefinition);
+    this.logger.log(`Xoá toàn bộ entities cũ...`);
+    await this.commonService.removeOldFile(
+      path.resolve('src', 'dynamic-entities'),
+      this.logger,
+    );
+    this.logger.debug(`Xoá thành công...`);
     const tables: any[] = await tableRepo.find();
     await Promise.all(
       tables.map((table) =>

@@ -41,8 +41,9 @@ export class TableHanlderService {
       } as any);
 
       if (!result) result = await manager.save(TableDefinition, tableEntity);
-      await this.autoService.pullMetadataFromDb();
       await queryRunner.commitTransaction();
+      await this.autoService.pullMetadataFromDb();
+
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -54,10 +55,14 @@ export class TableHanlderService {
   }
 
   async updateTable(id: number, body: CreateTableDto) {
-    let repo =
-      this.dataSouceService.getRepository<TableDefinition>(TableDefinition);
+    const queryRunner = this.dataSouceService
+      .getDataSource()
+      .createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    const manager = queryRunner.manager;
     try {
-      const exists = await repo.findOne({
+      const exists = await manager.findOne(TableDefinition, {
         where: {
           id,
         },
@@ -67,18 +72,24 @@ export class TableHanlderService {
       }
 
       // Tạo entity từ dữ liệu đã được xử lý
-      const tableEntity = repo.create({
+      const tableEntity = manager.create(TableDefinition, {
         id: body.id,
         ...body,
         columns: this.normalizeColumnsWithAutoId(body.columns),
         relations: body.relations ? this.prepareRelations(body.relations) : [],
       });
-      const result = await repo.save(tableEntity);
+      const result = await manager.save(TableDefinition, tableEntity);
 
+      await queryRunner.commitTransaction();
       await this.autoService.pullMetadataFromDb();
+
       return result;
     } catch (error) {
-      throw new BadRequestException(error);
+      await queryRunner.rollbackTransaction();
+      console.error(error.stack || error.message || error);
+      throw new BadRequestException(error.message || 'Unknown error');
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -140,5 +151,27 @@ export class TableHanlderService {
     }
   }
 
-  async delete(id: number) {}
+  async delete(id: number) {
+    const repo = this.dataSouceService.getRepository(TableDefinition);
+
+    try {
+      const exists = await repo.findOne({
+        where: {
+          id,
+        },
+      });
+      console.log(exists);
+      if (!exists) {
+        throw new BadRequestException(`Table với id ${id} không tồn tại.`);
+      }
+
+      const result = await repo.remove(exists);
+
+      await this.autoService.pullMetadataFromDb();
+      return result;
+    } catch (error) {
+      console.error(error.stack || error.message || error);
+      throw new BadRequestException(error.message || 'Unknown error');
+    }
+  }
 }

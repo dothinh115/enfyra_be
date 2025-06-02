@@ -1,5 +1,5 @@
 import { DBToTSTypeMap, TSToDBTypeMap } from '../utils/type';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Project, SyntaxKind } from 'ts-morph';
@@ -340,6 +340,40 @@ export class CommonService {
         await sourceFile.save();
         console.log(`🧹 Đã dọn import trong: ${file}`);
       }
+    }
+  }
+
+  async removeOldFile(filePathOrPaths: string | string[], logger: Logger) {
+    try {
+      const paths = Array.isArray(filePathOrPaths)
+        ? filePathOrPaths
+        : [filePathOrPaths];
+
+      for (const targetPath of paths) {
+        if (!fs.existsSync(targetPath)) continue;
+
+        const stat = fs.statSync(targetPath);
+
+        if (stat.isFile()) {
+          // Xoá file đơn
+          fs.unlinkSync(targetPath);
+          logger.log(`🧹 Đã xoá file: ${targetPath}`);
+        } else if (stat.isDirectory()) {
+          // Xoá toàn bộ file trong thư mục
+          const files = fs.readdirSync(targetPath);
+          for (const file of files) {
+            const fullPath = path.join(targetPath, file);
+            const fileStat = fs.statSync(fullPath);
+            if (fileStat.isFile()) {
+              fs.unlinkSync(fullPath);
+              logger.log(`🧹 Đã xoá file trong thư mục: ${fullPath}`);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      logger.error(`❌ Lỗi khi xoá file: ${error.message}`);
+      throw error;
     }
   }
 }
