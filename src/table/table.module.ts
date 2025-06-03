@@ -1,4 +1,5 @@
 import { ColumnDefinition } from '../entities/column.entity';
+import { MiddlewareDefinition } from '../entities/middleware.entity';
 import { RelationDefinition } from '../entities/relation.entity';
 import { TableDefinition } from '../entities/table.entity';
 import { TableController } from '../table/table.controller';
@@ -13,6 +14,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       TableDefinition,
       ColumnDefinition,
       RelationDefinition,
+      MiddlewareDefinition,
     ]),
   ],
   controllers: [TableController],

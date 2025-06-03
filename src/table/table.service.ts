@@ -66,9 +66,28 @@ export class TableHanlderService {
         where: {
           id,
         },
+        relations: ['columns', 'relations'],
       });
       if (!exists) {
         throw new BadRequestException(`Table ${body.name} không tồn tại.`);
+      }
+
+      const oldColumn = exists.columns;
+      const newColumn = body.columns.filter((col) => col.id);
+      for (const newCol of newColumn) {
+        const oldCol = oldColumn.find((col) => col.id === newCol.id);
+
+        if (!oldCol) {
+          console.warn(
+            `⚠️ Không tìm thấy column với id = ${newCol.id}, bỏ qua.`,
+          );
+          continue;
+        }
+        if (newCol.name !== oldCol.name) {
+          await queryRunner.query(
+            `ALTER TABLE \`${exists.name}\` RENAME COLUMN \`${oldCol.name}\` TO \`${newCol.name}\`;`,
+          );
+        }
       }
 
       // Tạo entity từ dữ liệu đã được xử lý

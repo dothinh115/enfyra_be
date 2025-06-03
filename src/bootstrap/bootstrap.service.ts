@@ -7,6 +7,7 @@ import { CreateTableDto } from '../table/dto/create-table.dto';
 import { Repository } from 'typeorm';
 import { CommonService } from '../common/common.service';
 import * as path from 'path';
+import { MiddlewareDefinition } from '../entities/middleware.entity';
 const initJson = require('./init.json');
 
 @Injectable()
@@ -70,6 +71,7 @@ export class BootstrapService implements OnApplicationBootstrap {
       await this.insertDefaultUserIfEmpty(),
       await this.insertDefaultRoutes(),
     ]);
+    await this.createAdminRoute();
   }
 
   private async checkTableExists(tableName: string): Promise<boolean> {
@@ -299,5 +301,13 @@ export class BootstrapService implements OnApplicationBootstrap {
     try {
       return await repo.save(newPayload);
     } catch (error) {}
+  }
+
+  async createAdminRoute() {
+    const repo = this.dataSourceService.getRepository(MiddlewareDefinition);
+    const count = await repo.count();
+    if (count === 0) {
+      await repo.create(initJson.adminGuardMiddleware);
+    }
   }
 }

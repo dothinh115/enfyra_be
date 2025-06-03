@@ -18,6 +18,9 @@ export class Route {
   @Column({type:'boolean', nullable: false, default: true})
   isPublished: boolean;
 
+  @Column({type:'boolean', nullable: true, default: false})
+  isEnabled: boolean;
+
 
   @CreateDateColumn()
   createdAt: Date;

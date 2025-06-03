@@ -10,6 +10,7 @@ import { DataSourceModule } from './data-source/data-source.module';
 import { CommonModule } from './common/common.module';
 import { BootstrapService } from './bootstrap/bootstrap.service';
 import { AutoGenerateModule } from './auto/auto.module';
+import { MiddlewareModule } from './middleware/middleware.module';
 
 @Global()
 @Module({
@@ -25,6 +26,7 @@ import { AutoGenerateModule } from './auto/auto.module';
     CommonModule,
     DataSourceModule,
     AutoGenerateModule,
+    MiddlewareModule,
   ],
   providers: [BootstrapService, RabbitMQRegistry],
   exports: [RabbitMQRegistry, DataSourceModule],

@@ -79,7 +79,7 @@ export class DataSourceService implements OnModuleInit {
   getRepository<Entity>(
     identifier: string | Function | EntitySchema<any>,
   ): Repository<Entity> | null {
-    if (!this.dataSource.isInitialized) {
+    if (!this.dataSource?.isInitialized) {
       throw new Error('DataSource chưa được khởi tạo!');
     }
 

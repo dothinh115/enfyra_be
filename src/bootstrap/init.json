@@ -110,6 +110,11 @@
                 "type": "boolean",
                 "isNullable": false,
                 "default": true
+            },
+            {
+                "name": "isEnabled",
+                "type": "boolean",
+                "default": false
             }
         ]
                 },
@@ -130,5 +135,12 @@
             "method": "DELETE",
             "handler": "const {id, ...data} = $body; const result = await $repo.update({id}, data); return result"
         }
+    },
+    "adminGuardMiddleware": {
+        "name": "Route for root Admin",
+        "method": null,
+        "path": null,
+        "isEnabled": true,
+        "handler": "const user = $req.user; if(!user.isRootUser) return throw401();"
     }
 }

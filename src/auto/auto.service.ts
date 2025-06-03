@@ -12,7 +12,7 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { CommonService } from '../common/common.service';
 import { TableDefinition } from '../entities/table.entity';
-import { DataSource, In } from 'typeorm';
+import { DataSource } from 'typeorm';
 import {
   TInverseRelation,
   TInverseRelationMap,
@@ -248,7 +248,6 @@ export class AutoService {
       }
       classPart += `}`;
 
-      this.logger.log(`Chuẩn bị kiểm tra ts valid`);
       const fileContent = classPart;
 
       this.logger.debug('--- Bắt đầu xử lý ghi file ---');
