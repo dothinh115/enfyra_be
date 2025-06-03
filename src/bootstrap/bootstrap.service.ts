@@ -46,6 +46,7 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   async onApplicationBootstrap() {
+    return;
     await this.waitForDatabaseConnection();
     await this.autoService.pullMetadataFromDb();
     await this.createSettingTableIfNotExists();

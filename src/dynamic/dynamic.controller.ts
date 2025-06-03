@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Patch,
-  Post,
-  Req,
-} from '@nestjs/common';
+import { All, Controller, Req } from '@nestjs/common';
 import { DynamicService } from './dynamic.service';
 import { Request } from 'express';
 
@@ -14,15 +6,8 @@ import { Request } from 'express';
 export class DynamicController {
   constructor(private readonly dynamicService: DynamicService) {}
 
-  @Get('*')
-  @Patch('*')
-  @Delete('*')
+  @All('*')
   dynamicGetController(@Req() req: Request) {
     return this.dynamicService.dynamicService(req);
-  }
-
-  @Post('*')
-  dynamicPostController(@Req() req: Request, @Body() body: any) {
-    return this.dynamicService.dynamicService(req, body);
   }
 }

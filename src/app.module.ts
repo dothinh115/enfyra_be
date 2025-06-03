@@ -1,6 +1,6 @@
 import { forwardRef, Global, Module } from '@nestjs/common';
 import { DatabaseModule } from './database/database.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DynamicModule } from './dynamic/dynamic.module';
 import { TableModule } from './table/table.module';
 import { RouteModule } from './route/route.module';
@@ -10,7 +10,11 @@ import { DataSourceModule } from './data-source/data-source.module';
 import { CommonModule } from './common/common.module';
 import { BootstrapService } from './bootstrap/bootstrap.service';
 import { AutoGenerateModule } from './auto/auto.module';
-import { MiddlewareModule } from './middleware/middleware.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './guard/jwt-auth.guard';
+import { JwtStrategy } from './auth/jwt.strategy';
+import { JwtModule } from '@nestjs/jwt';
+import { MiddlewareService } from './middleware/middleware.service';
 
 @Global()
 @Module({
@@ -26,9 +30,23 @@ import { MiddlewareModule } from './middleware/middleware.module';
     CommonModule,
     DataSourceModule,
     AutoGenerateModule,
-    MiddlewareModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => {
+        return {
+          secret: configService.get('SECRET_KEY'),
+        };
+      },
+      inject: [ConfigService],
+    }),
   ],
-  providers: [BootstrapService, RabbitMQRegistry],
-  exports: [RabbitMQRegistry, DataSourceModule],
+  providers: [
+    BootstrapService,
+    RabbitMQRegistry,
+    JwtStrategy,
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: MiddlewareService },
+  ],
+  exports: [RabbitMQRegistry, DataSourceModule, JwtModule],
 })
 export class AppModule {}
