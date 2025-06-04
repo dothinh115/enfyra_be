@@ -203,7 +203,7 @@ export class AutoService {
       classPart += `\n  @CreateDateColumn()\n`;
       classPart += `  createdAt: Date;\n\n`;
       classPart += `  @UpdateDateColumn()\n`;
-      classPart += `  UpdatedAt: Date;\n`;
+      classPart += `  updatedAt: Date;\n`;
 
       //nếu có quan hệ ngược
       if (
@@ -471,7 +471,17 @@ export class AutoService {
     });
 
     if (tables.length === 0) return;
+    tables.forEach((table) => {
+      table.columns.sort((a, b) => {
+        if (a.isPrimary && !b.isPrimary) return -1;
+        if (!a.isPrimary && b.isPrimary) return 1;
+        return a.name.localeCompare(b.name);
+      });
 
+      table.relations.sort((a, b) =>
+        a.propertyName.localeCompare(b.propertyName),
+      );
+    });
     this.logger.log(`Xoá entities cũ`);
     await this.commonService.removeOldFile(
       path.resolve('src', 'entities'),
