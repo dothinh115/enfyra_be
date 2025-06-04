@@ -69,20 +69,20 @@ export class CreateRelationDto {
   @IsNumber()
   id?: number;
 
-  @IsOptional()
-  @IsBoolean()
-  isCascade?: boolean;
-
   @IsNumber()
   @IsNotEmpty()
   targetTable: number;
 
   @IsOptional()
   @IsBoolean()
-  isInverseCascade?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
+  @Transform(({ obj }) => {
+    if (obj.isEager === true && obj.isInverseEager === true) {
+      throw new Error(
+        'Không được bật cả isEager và isInverseEager cùng lúc để tránh eager 2 chiều.',
+      );
+    }
+    return obj.isEager;
+  })
   isInverseEager?: boolean;
 
   @IsOptional()
@@ -100,18 +100,16 @@ export class CreateRelationDto {
   @IsNotEmpty()
   propertyName: string;
 
-  @IsString()
-  @IsOptional()
-  @IsIn(['CASCADE', 'SET NULL', 'NO ACTION', 'RESTRICT'])
-  onDelete?: 'CASCADE' | 'SET NULL' | 'NO ACTION' | 'RESTRICT';
-
-  @IsString()
-  @IsOptional()
-  @IsIn(['CASCADE', 'SET NULL', 'NO ACTION', 'RESTRICT'])
-  onUpdate?: 'CASCADE' | 'SET NULL' | 'NO ACTION' | 'RESTRICT';
-
   @IsBoolean()
   @IsOptional()
+  @Transform(({ obj }) => {
+    if (obj.isEager === true && obj.isInverseEager === true) {
+      throw new Error(
+        'Không được bật cả isEager và isInverseEager cùng lúc để tránh eager 2 chiều.',
+      );
+    }
+    return obj.isEager;
+  })
   isEager?: boolean;
 
   @IsBoolean()

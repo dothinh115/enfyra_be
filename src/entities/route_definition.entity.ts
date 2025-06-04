@@ -22,7 +22,7 @@ export class Route_definition {
   isEnabled: boolean;
 
 
-  @ManyToMany(() => Table_definition, { eager: true, onDelete: 'NO ACTION', onUpdate: 'NO ACTION', nullable: true } )
+  @ManyToMany(() => Table_definition, { eager: true, nullable: true, cascade: true } )
   @JoinTable()
   targetTables: Table_definition[];
 

@@ -20,9 +20,9 @@ export class Table_definition {
   @UpdateDateColumn()
   UpdatedAt: Date;
 
-  @OneToMany(() => Column_definition, rel => rel.table,{ eager: true, cascade: true })
+  @OneToMany(() => Column_definition, rel => rel.table,{ cascade: true, eager: true })
   columns: Column_definition[];
 
-  @OneToMany(() => Relation_definition, rel => rel.sourceTable,{ eager: true, cascade: true })
+  @OneToMany(() => Relation_definition, rel => rel.sourceTable,{ cascade: true, eager: true })
   relations: Relation_definition[];
 }

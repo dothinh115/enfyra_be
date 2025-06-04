@@ -37,7 +37,7 @@ export class Column_definition {
   isUpdatable: boolean;
 
 
-  @ManyToOne(() => Table_definition, rel => rel.columns , { onDelete: 'NO ACTION', onUpdate: 'NO ACTION', nullable: true } )
+  @ManyToOne(() => Table_definition, rel => rel.columns , { nullable: true } )
   @JoinColumn()
   table: Table_definition;
 

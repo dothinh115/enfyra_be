@@ -56,10 +56,8 @@
                 "propertyName": "table",
                 "type": "many-to-one",
                 "targetTable": "table_definition",
-                "isCascade": true,
                 "isStatic": true,
                 "inversePropertyName": "columns",
-                "isInverseCascade":true,
                 "isInverseEager": true
             }
         ]
@@ -76,15 +74,11 @@
             { "name": "isEager", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "isNullable", "type": "boolean", "isNullable": false, "isStatic": true, "default": true },
             { "name": "isStatic", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "onUpdate", "type": "enum", "isStatic": true, "default": "NO ACTION", "enumValues": ["CASCADE", "SET NULL", "NO ACTION", "RESTRICT"] },
-            { "name": "onDelete", "type": "enum", "isStatic": true, "default": "NO ACTION", "enumValues": ["CASCADE", "SET NULL", "NO ACTION", "RESTRICT"] },
-            { "name": "isCascade", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "isInverseCascade", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "isInverseEager", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
         ],
         "relations": [
-            { "propertyName": "sourceTable", "type": "many-to-one", "targetTable": "table_definition", "isCascade": true, "isStatic": true, "inversePropertyName": "relations", "isInverseCascade": true, "isInverseEager": true },
-            { "propertyName": "targetTable", "type": "many-to-one", "targetTable": "table_definition", "isCascade": true, "isStatic": true }
+            { "propertyName": "sourceTable", "type": "many-to-one", "targetTable": "table_definition", "isStatic": true, "inversePropertyName": "relations", "isInverseEager": true },
+            { "propertyName": "targetTable", "type": "many-to-one", "targetTable": "table_definition", "isStatic": true }
         ]
 
     },
@@ -127,7 +121,7 @@
             { "name": "isEnabled", "type": "boolean", "isNullable": true, "isStatic": true, "default": false }
         ],
         "relations": [
-            { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isCascade": true, "isStatic": true, "isEager": true }
+            { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isStatic": true, "isEager": true }
         ]
     },
     "role_definition": {

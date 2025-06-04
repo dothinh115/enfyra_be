@@ -7,6 +7,7 @@ import { knownGlobalImports } from '../utils/common';
 import * as ts from 'typescript';
 import { EntityTarget } from 'typeorm';
 import { DataSourceService } from '../data-source/data-source.service';
+import pLimit from 'p-limit';
 
 @Injectable()
 export class CommonService {
@@ -66,9 +67,7 @@ export class CommonService {
 
   async loadDynamicEntities(entityDir: string) {
     const entities = [];
-    if (!fs.existsSync(entityDir)) {
-      fs.mkdirSync(entityDir, { recursive: true });
-    }
+    if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
     const files = fs.readdirSync(entityDir);
     for (const file of files) {
       if (file.endsWith('.js')) {
@@ -134,9 +133,8 @@ export class CommonService {
       if (node.getKind() === SyntaxKind.Identifier) {
         const name = node.getText();
         const symbol = node.getSymbol();
-        if (!symbol && !importedIdentifiers.has(name)) {
+        if (!symbol && !importedIdentifiers.has(name))
           usedIdentifiers.add(name);
-        }
       }
     });
 
@@ -152,9 +150,8 @@ export class CommonService {
     const suggestions: { name: string; module: string }[] = [];
 
     for (const name of missing) {
-      if (knownGlobalImports[name]) {
+      if (knownGlobalImports[name])
         suggestions.push({ name, module: knownGlobalImports[name] });
-      }
     }
 
     const toResolve = missing.filter(
@@ -172,7 +169,8 @@ export class CommonService {
     filePath: string,
     suggestions: { name: string; module: string }[],
   ) {
-    const sourceFile = new Project().addSourceFileAtPath(filePath);
+    const project = new Project();
+    const sourceFile = project.addSourceFileAtPath(filePath);
     for (const suggestion of suggestions) {
       const existingImport = sourceFile
         .getImportDeclarations()
@@ -181,9 +179,8 @@ export class CommonService {
         const namedImports = existingImport
           .getNamedImports()
           .map((ni) => ni.getName());
-        if (!namedImports.includes(suggestion.name)) {
+        if (!namedImports.includes(suggestion.name))
           existingImport.addNamedImport(suggestion.name);
-        }
       } else {
         sourceFile.addImportDeclaration({
           namedImports: [suggestion.name],
@@ -194,62 +191,67 @@ export class CommonService {
     await sourceFile.save();
   }
 
+  private async processFile(
+    project: Project,
+    filePath: string,
+    exportMap: Map<string, string>,
+  ) {
+    const start = Date.now();
+    const sourceFile = project.addSourceFileAtPath(filePath);
+    const usedIdentifiers = new Set<string>();
+    const importedIdentifiers = new Set<string>();
+
+    sourceFile.getImportDeclarations().forEach((decl) => {
+      decl
+        .getNamedImports()
+        .forEach((imp) => importedIdentifiers.add(imp.getName()));
+    });
+
+    sourceFile.forEachDescendant((node) => {
+      if (node.getKind() === SyntaxKind.Identifier) {
+        const name = node.getText();
+        const symbol = node.getSymbol();
+        if (!symbol && !importedIdentifiers.has(name))
+          usedIdentifiers.add(name);
+      }
+    });
+
+    const localDeclarations = sourceFile
+      .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
+      .map((d) => d.getName());
+    sourceFile
+      .getClasses()
+      .forEach((cls) => usedIdentifiers.delete(cls.getName() || ''));
+    localDeclarations.forEach((n) => usedIdentifiers.delete(n));
+
+    const missing = Array.from(usedIdentifiers);
+    const suggestions = missing
+      .filter((name) => !importedIdentifiers.has(name))
+      .map((name) => {
+        const module = exportMap.get(name) ?? knownGlobalImports[name];
+        return module ? { name, module } : null;
+      })
+      .filter(Boolean) as { name: string; module: string }[];
+
+    await this.autoAddImportsToFile(filePath, suggestions);
+    console.log(
+      `✅ [${new Date().toISOString()}] Đã xử lý ${filePath} trong ${Date.now() - start}ms`,
+    );
+  }
+
   async autoFixMissingImports(dirPath: string): Promise<void> {
     const files = this.getAllTsFiles(dirPath);
     const exportMap = await this.buildExportMapAsync(
       ['src/entities'],
       files[0],
     );
-    for (const filePath of files) {
-      const start = Date.now();
-      const project = new Project({
-        compilerOptions: { target: 3, module: 1 },
-      });
-      const sourceFile = project.addSourceFileAtPath(filePath);
+    const project = new Project({ compilerOptions: { target: 3, module: 1 } });
+    const limit = pLimit(5);
 
-      const usedIdentifiers = new Set<string>();
-      const importedIdentifiers = new Set<string>();
-
-      sourceFile.getImportDeclarations().forEach((decl) => {
-        decl
-          .getNamedImports()
-          .forEach((imp) => importedIdentifiers.add(imp.getName()));
-      });
-
-      sourceFile.forEachDescendant((node) => {
-        if (node.getKind() === SyntaxKind.Identifier) {
-          const name = node.getText();
-          const symbol = node.getSymbol();
-          if (!symbol && !importedIdentifiers.has(name))
-            usedIdentifiers.add(name);
-        }
-      });
-
-      const localDeclarations = sourceFile
-        .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
-        .map((d) => d.getName());
-      sourceFile
-        .getClasses()
-        .forEach((cls) => usedIdentifiers.delete(cls.getName() || ''));
-      localDeclarations.forEach((n) => usedIdentifiers.delete(n));
-
-      const missing = Array.from(usedIdentifiers);
-      const suggestions = missing
-        .filter((name) => !importedIdentifiers.has(name))
-        .map((name) => {
-          const module = exportMap.get(name);
-          if (module) return { name, module };
-          if (knownGlobalImports[name])
-            return { name, module: knownGlobalImports[name] };
-          return null;
-        })
-        .filter(Boolean) as { name: string; module: string }[];
-
-      await this.autoAddImportsToFile(filePath, suggestions);
-      console.log(
-        `✅ [${new Date().toISOString()}] Đã xử lý ${filePath} trong ${Date.now() - start}ms`,
-      );
-    }
+    const tasks = files.map((filePath) =>
+      limit(() => this.processFile(project, filePath, exportMap)),
+    );
+    await Promise.allSettled(tasks);
   }
 
   getAllTsFiles(dirPath: string): string[] {
@@ -266,9 +268,8 @@ export class CommonService {
 
   checkTsErrors(dirPath: string, tsconfigPath = 'tsconfig.json'): void {
     const configPath = ts.findConfigFile(tsconfigPath, ts.sys.fileExists);
-    if (!configPath) {
+    if (!configPath)
       throw new Error(`Không tìm thấy tsconfig tại ${tsconfigPath}`);
-    }
 
     const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
     const parsedConfig = ts.parseJsonConfigFileContent(
@@ -282,42 +283,33 @@ export class CommonService {
     const allDiagnostics = ts.getPreEmitDiagnostics(program);
 
     const errorMap = new Map<string, ts.Diagnostic[]>();
-
     for (const diag of allDiagnostics) {
       const file = diag.file?.fileName;
       if (!file) continue;
-
       const absPath = path.resolve(file);
-      if (!errorMap.has(absPath)) {
-        errorMap.set(absPath, []);
-      }
-
+      if (!errorMap.has(absPath)) errorMap.set(absPath, []);
       errorMap.get(absPath)!.push(diag);
     }
 
     let hasError = false;
-
     for (const [filePath, diagnostics] of errorMap.entries()) {
       const errors = diagnostics.map((d) => {
         const msg = ts.flattenDiagnosticMessageText(d.messageText, '\n');
         const pos = d.file?.getLineAndCharacterOfPosition(d.start || 0);
         return `Line ${pos?.line! + 1}, Col ${pos?.character! + 1}: ${msg}`;
       });
-
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
         console.error(`🗑️ Đã xoá file lỗi: ${filePath}`);
       }
-
       console.error(
         `❌ Lỗi TypeScript trong file ${filePath}:\n${errors.join('\n')}`,
       );
       hasError = true;
     }
 
-    if (hasError) {
+    if (hasError)
       throw new Error('Một hoặc nhiều file có lỗi TypeScript đã bị xoá.');
-    }
   }
 
   async cleanInvalidImports(scanDir: string) {

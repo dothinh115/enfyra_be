@@ -160,15 +160,19 @@ export class AutoService {
           }
           const options: string[] = [];
           if (relation.isEager) options.push(`eager: true`);
-          if (relation.onDelete && relation.type !== 'one-to-many')
-            options.push(`onDelete: '${relation.onDelete}'`);
-          if (relation.onUpdate && relation.type !== 'one-to-many')
-            options.push(`onUpdate: '${relation.onUpdate}'`);
+
           if (
             relation.isNullable !== undefined &&
             relation.type !== 'one-to-many'
           )
             options.push(`nullable: ${relation.isNullable}`);
+          if (
+            relation.type === 'one-to-many' ||
+            relation.type === 'many-to-many'
+          ) {
+            options.push(`cascade: true`);
+          }
+
           const optionBlock = options.length
             ? `, { ${options.join(', ')} }`
             : '';
@@ -218,8 +222,9 @@ export class AutoService {
                   ? `ManyToOne`
                   : `OneToMany`;
           const options: string[] = [];
+          if (iRel.type === 'many-to-many' || iRel.type === 'one-to-many')
+            options.push(`cascade: true`);
           if (iRel.isEager) options.push(`eager: true`);
-          if (iRel.isCascade) options.push(`cascade: true`);
           let optionsBlock: string = '';
           if (options.length) {
             optionsBlock += `,{ ${options.join(`, `)} }`;
@@ -464,11 +469,8 @@ export class AutoService {
               propertyName: relation.inversePropertyName,
               inversePropertyName: relation.propertyName,
               type,
-              onDelete: relation.onDelete,
-              onUpdate: relation.onUpdate,
               isEager: relation.isInverseEager,
               isNullable: relation.isNullable,
-              isCascade: relation.isInverseCascade,
               index: relation.index,
               targetClass: this.commonService.capitalizeFirstLetterEachLine(
                 table.name,
@@ -511,9 +513,9 @@ export class AutoService {
     );
     this.logger.debug(`Đã fix import xong`);
 
-    this.logger.log(`Test logic file vừa generate`);
+    // this.logger.log(`Test logic file vừa generate`);
     // this.commonService.checkTsErrors(path.resolve('src', 'entities'));
-    this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
+    // this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
     await this.autoBuildToJs();
     await this.dataSourceService.reloadDataSource();
     await this.autoGenerateMigrationFile();

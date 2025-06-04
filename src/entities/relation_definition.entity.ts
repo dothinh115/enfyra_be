@@ -24,27 +24,15 @@ export class Relation_definition {
   @Column({ type: "boolean", nullable: false, default: false })
   isStatic: boolean;
 
-  @Column({ type: "enum", nullable: true, enum: ['CASCADE', 'SET NULL', 'NO ACTION', 'RESTRICT'], default: "NO ACTION" })
-  onUpdate: 'CASCADE' | 'SET NULL' | 'NO ACTION' | 'RESTRICT';
-
-  @Column({ type: "enum", nullable: true, enum: ['CASCADE', 'SET NULL', 'NO ACTION', 'RESTRICT'], default: "NO ACTION" })
-  onDelete: 'CASCADE' | 'SET NULL' | 'NO ACTION' | 'RESTRICT';
-
-  @Column({ type: "boolean", nullable: false, default: false })
-  isCascade: boolean;
-
-  @Column({ type: "boolean", nullable: false, default: false })
-  isInverseCascade: boolean;
-
   @Column({ type: "boolean", nullable: false, default: false })
   isInverseEager: boolean;
 
 
-  @ManyToOne(() => Table_definition, { onDelete: 'NO ACTION', onUpdate: 'NO ACTION', nullable: true } )
+  @ManyToOne(() => Table_definition, { nullable: true } )
   @JoinColumn()
   targetTable: Table_definition;
 
-  @ManyToOne(() => Table_definition, rel => rel.relations , { onDelete: 'NO ACTION', onUpdate: 'NO ACTION', nullable: true } )
+  @ManyToOne(() => Table_definition, rel => rel.relations , { nullable: true } )
   @JoinColumn()
   sourceTable: Table_definition;
 

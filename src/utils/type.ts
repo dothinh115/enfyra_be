@@ -72,14 +72,11 @@ export type TSToDBTypeMap = {
 export type TInverseRelation = {
   propertyName: string;
   type: string;
-  onDelete: string;
-  onUpdate: string;
   isEager: boolean;
   isNullable: boolean;
   index: boolean;
   inversePropertyName: string;
   targetClass: string;
-  isCascade: boolean;
 };
 
 export type TInverseRelationMap = Map<string, TInverseRelation[]>;
