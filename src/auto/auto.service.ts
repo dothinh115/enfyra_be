@@ -172,6 +172,8 @@ export class AutoService {
           ) {
             options.push(`cascade: true`);
           }
+          options.push(`onDelete: 'CASCADE'`);
+          options.push(`onUpdate: 'CASCADE'`);
 
           const optionBlock = options.length
             ? `, { ${options.join(', ')} }`
@@ -185,10 +187,7 @@ export class AutoService {
             !inverseRelationMap.has(payload.name)
           ) {
             classPart += `  @JoinTable()\n`;
-          } else if (
-            relation.type === 'many-to-one' ||
-            relation.type === 'one-to-one'
-          ) {
+          } else if (relation.type === 'many-to-one') {
             classPart += `  @JoinColumn()\n`;
           }
 
@@ -225,6 +224,8 @@ export class AutoService {
           if (iRel.type === 'many-to-many' || iRel.type === 'one-to-many')
             options.push(`cascade: true`);
           if (iRel.isEager) options.push(`eager: true`);
+          options.push(`onDelete: 'CASCADE'`);
+          options.push(`onUpdate: 'CASCADE'`);
           let optionsBlock: string = '';
           if (options.length) {
             optionsBlock += `,{ ${options.join(`, `)} }`;
@@ -245,26 +246,6 @@ export class AutoService {
         //xoá sau khi generate quan hệ ngược xong
         inverseRelationMap.delete(payload.name);
       }
-
-      // //nếu có quan hệ với các entity tĩnh
-      // if (staticRelations !== undefined) {
-      //   const type =
-      //     staticRelations.type === 'many-to-many'
-      //       ? `ManyToMany`
-      //       : staticRelations.type === 'one-to-one'
-      //         ? `OneToOne`
-      //         : staticRelations.type === 'many-to-one'
-      //           ? `ManyToOne`
-      //           : `OneToMany`;
-
-      //   classPart += `\n  @${type}(() => ${staticRelations.name === 'table' ? 'TableDefinition' : 'HookDefinition'}, { eager: true, cascade: true })\n`;
-
-      //   if (staticRelations.type === 'many-to-many')
-      //     classPart += `  @JoinTable()\n`;
-      //   if (staticRelations.type === 'many-to-one')
-      //     classPart += `  @JoinColumn()\n`;
-      //   classPart += `  targetTable: TableDefinition;\n`;
-      // }
       classPart += `}`;
 
       const fileContent = classPart;
