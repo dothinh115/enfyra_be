@@ -6,18 +6,19 @@ import {
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
+  CanActivate,
 } from '@nestjs/common';
-import { CanActivate } from '../../node_modules/@nestjs/common/interfaces/features/can-activate.interface.d';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MiddlewareDefinition } from '../entities/middleware.entity';
+import { Middleware_definition } from '../entities/middleware_definition.entity';
 import { Repository } from 'typeorm';
 import * as vm from 'vm';
 import { Request } from 'express';
+
 @Injectable()
 export class MiddlewareService implements CanActivate {
   constructor(
-    @InjectRepository(MiddlewareDefinition)
-    private middlewareRepo: Repository<MiddlewareDefinition>,
+    @InjectRepository(Middleware_definition)
+    private middlewareRepo: Repository<Middleware_definition>,
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request & { user?: any }>();

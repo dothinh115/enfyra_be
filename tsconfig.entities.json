@@ -2,14 +2,14 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
-    "outDir": "dist/dynamic-entities",
-    "rootDir": "src/dynamic-entities",
-    "strict": true,
+    "outDir": "dist/entities",
+    "rootDir": "src/entities",
+    "strict": false,
     "esModuleInterop": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "skipLibCheck": true,
     "sourceMap": false
   },
-  "include": ["src/dynamic-entities/*.entity.ts"]
+  "include": ["src/entities/*.entity.ts"]
 }

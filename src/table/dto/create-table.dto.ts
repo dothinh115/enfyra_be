@@ -22,8 +22,22 @@ export class CreateColumnDto {
   name: string;
 
   @IsString()
-  @IsIn(['int', 'varchar', 'boolean', 'text', 'date', 'float', 'simple-json'])
+  @IsIn([
+    'int',
+    'varchar',
+    'boolean',
+    'text',
+    'date',
+    'float',
+    'simple-json',
+    'enum',
+  ])
   type: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  enumValues?: string[];
 
   @IsBoolean()
   @IsOptional()
@@ -46,7 +60,7 @@ export class CreateColumnDto {
 
   @IsOptional()
   @IsBoolean()
-  unique?: boolean;
+  isUnique?: boolean;
 }
 
 export class CreateRelationDto {
@@ -54,9 +68,21 @@ export class CreateRelationDto {
   @IsNumber()
   id?: number;
 
+  @IsOptional()
+  @IsBoolean()
+  isCascade?: boolean;
+
   @IsNumber()
   @IsNotEmpty()
   targetTable: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isInverseCascade?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isInverseEager?: boolean;
 
   @IsOptional()
   @IsBoolean()

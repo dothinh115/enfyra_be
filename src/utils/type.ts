@@ -1,5 +1,5 @@
-import { ColumnDefinition } from '../entities/column.entity';
-import { RelationDefinition } from '../entities/relation.entity';
+import { Column_definition } from '../entities/column_definition.entity';
+import { RelationDefinition } from '../relation.entity';
 
 export type TEntitySchemaIn = {
   id: number | string;
@@ -25,9 +25,9 @@ export type TEntitySchemaIn = {
 
 export type TableDiff = {
   nameChanged: boolean;
-  addedColumns: ColumnDefinition[];
-  removedColumns: ColumnDefinition[];
-  updatedColumns: { old: ColumnDefinition; new: ColumnDefinition }[];
+  addedColumns: Column_definition[];
+  removedColumns: Column_definition[];
+  updatedColumns: { old: Column_definition; new: Column_definition }[];
 
   addedRelations: RelationDefinition[];
   removedRelations: RelationDefinition[];
@@ -69,11 +69,6 @@ export type TSToDBTypeMap = {
   any: 'json';
 };
 
-export type TStaticEntities = {
-  name: 'table' | 'hook';
-  type: 'many-to-many' | 'many-to-one' | 'one-to-many' | 'one-to-one';
-};
-
 export type TInverseRelation = {
   propertyName: string;
   type: string;
@@ -84,6 +79,7 @@ export type TInverseRelation = {
   index: boolean;
   inversePropertyName: string;
   targetClass: string;
+  isCascade: boolean;
 };
 
 export type TInverseRelationMap = Map<string, TInverseRelation[]>;

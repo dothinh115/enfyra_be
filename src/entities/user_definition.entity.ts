@@ -1,14 +1,14 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
 
-@Entity("user")
-export class User {
-  @PrimaryGeneratedColumn("uuid")
+@Entity("user_definition")
+export class User_definition {
+  @PrimaryGeneratedColumn()
   id: string;
 
-  @Column({type:'varchar', nullable: false, default: null})
+  @Column({type:'varchar', nullable: false})
   email: string;
 
-  @Column({type:'varchar', nullable: false, default: null})
+  @Column({type:'varchar', nullable: false})
   password: string;
 
   @Column({type:'boolean', nullable: false, default: false})

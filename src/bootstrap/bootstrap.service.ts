@@ -1,13 +1,17 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { TableHanlderService } from '../table/table.service';
-import { TableDefinition } from '../entities/table.entity';
+import { Table_definition } from '../entities/table_definition.entity';
 import { AutoService } from '../auto/auto.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { Repository } from 'typeorm';
 import { CommonService } from '../common/common.service';
-import * as path from 'path';
-import { MiddlewareDefinition } from '../entities/middleware.entity';
+import { Middleware_definition } from '../entities/middleware_definition.entity';
+import { Route_definition } from '../entities/route_definition.entity';
+import { Role_definition } from '../entities/role_definition.entity';
+import { Setting_definition } from '../entities/setting_definition.entity';
+import { User_definition } from '../entities/user_definition.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 const initJson = require('./init.json');
 
 @Injectable()
@@ -19,6 +23,8 @@ export class BootstrapService implements OnApplicationBootstrap {
     private tableHandlerService: TableHanlderService,
     private autoService: AutoService,
     private commonService: CommonService,
+    @InjectRepository(Table_definition)
+    private tableDefRepo: Repository<Table_definition>,
   ) {}
 
   private delay(ms: number): Promise<void> {
@@ -46,26 +52,12 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   async onApplicationBootstrap() {
-    return;
+    // return;
     await this.waitForDatabaseConnection();
+    await this.createInitMetadata();
     await this.autoService.pullMetadataFromDb();
-    await this.createSettingTableIfNotExists();
-    await this.createDefaultRoleTable();
-    await this.createDefaultUserTableIfNotExists();
-    await this.createDefaultRouteTableIfNotExists();
-    this.logger.log(`Chuẩn bị fix import`);
-    await this.commonService.autoFixMissingImports(
-      path.resolve('src', 'dynamic-entities'),
-    );
-    this.logger.debug(`Đã fix import xong`);
 
-    this.logger.log(`Test logic file vừa generate`);
-    this.commonService.checkTsErrors(path.resolve('src', 'dynamic-entities'));
-    this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
-    await this.autoService.autoBuildToJs();
-    await this.dataSourceService.reloadDataSource();
-    await this.autoService.autoGenerateMigrationFile();
-    await this.autoService.autoRunMigration();
+    return;
     await Promise.all([
       await this.createDefaultRole(),
       await this.insertDefaultSettingIfEmpty(),
@@ -92,7 +84,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     if (!hasTable) {
       this.logger.log(`Bảng '${tableName}' chưa tồn tại, tiến hành tạo.`);
       await this.autoService.entityAutoGenerate(initJson.settingTable);
-      const tableRepo = this.dataSourceService.getRepository(TableDefinition);
+      const tableRepo = this.dataSourceService.getRepository(Table_definition);
       await this.saveToDb(initJson.settingTable, tableRepo);
       this.logger.log(`Tạo bảng '${tableName}' thành công.`);
     } else {
@@ -107,7 +99,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     if (!hasTable) {
       this.logger.log(`Tạo bảng: ${tableName}`);
       await this.autoService.entityAutoGenerate(initJson.defaultRoleTable);
-      const tableRepo = this.dataSourceService.getRepository(TableDefinition);
+      const tableRepo = this.dataSourceService.getRepository(Table_definition);
       await this.saveToDb(initJson.defaultRoleTable, tableRepo);
       this.logger.log(`Tạo bảng '${tableName}' thành công.`);
     } else {
@@ -122,7 +114,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     if (!hasTable) {
       this.logger.log(`Bảng '${tableName}' chưa tồn tại, tiến hành tạo.`);
       await this.autoService.entityAutoGenerate(initJson.defaultUserTable);
-      const tableRepo = this.dataSourceService.getRepository(TableDefinition);
+      const tableRepo = this.dataSourceService.getRepository(Table_definition);
       await this.saveToDb(initJson.defaultUserTable, tableRepo);
       this.logger.log(`Tạo bảng '${tableName}' thành công.`);
     } else {
@@ -130,30 +122,24 @@ export class BootstrapService implements OnApplicationBootstrap {
     }
   }
 
-  private async createDefaultRouteTableIfNotExists(): Promise<void> {
-    const tableName = initJson.defaultRouteTable.name;
-    const hasTable = await this.checkTableExists(tableName);
+  // private async createDefaultRouteTableIfNotExists(): Promise<void> {
+  //   const tableName = initJson.defaultRouteTable.name;
+  //   const hasTable = await this.checkTableExists(tableName);
 
-    if (!hasTable) {
-      this.logger.log(`Bảng '${tableName}' chưa tồn tại, tiến hành tạo.`);
-      await this.autoService.entityAutoGenerate(
-        initJson.defaultRouteTable,
-        undefined,
-        {
-          name: 'table',
-          type: 'many-to-one',
-        },
-      );
-      const tableRepo = this.dataSourceService.getRepository(TableDefinition);
-      await this.saveToDb(initJson.defaultRouteTable, tableRepo);
-      this.logger.log(`Tạo bảng '${tableName}' thành công.`);
-    } else {
-      this.logger.debug(`Bảng '${tableName}' đã tồn tại.`);
-    }
-  }
+  //   if (!hasTable) {
+  //     this.logger.log(`Bảng '${tableName}' chưa tồn tại, tiến hành tạo.`);
+  //     await this.autoService.entityAutoGenerate(initJson.defaultRouteTable);
+  //     const tableRepo = this.dataSourceService.getRepository(TableDefinition);
+  //     await this.saveToDb(initJson.defaultRouteTable, tableRepo);
+  //     this.logger.log(`Tạo bảng '${tableName}' thành công.`);
+  //   } else {
+  //     this.logger.debug(`Bảng '${tableName}' đã tồn tại.`);
+  //   }
+  // }
 
   private async insertDefaultSettingIfEmpty(): Promise<void> {
-    const tableName = initJson.settingTable.name;
+    const tableName =
+      this.commonService.getTableNameFromEntity(Setting_definition);
     const dataSource = this.dataSourceService.getDataSource();
 
     const [{ count }] = await dataSource.query(
@@ -176,7 +162,8 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   private async createDefaultRole(): Promise<void> {
-    const tableName = initJson.defaultRoleTable.name;
+    const tableName =
+      this.commonService.getTableNameFromEntity(Role_definition);
     const dataSource = this.dataSourceService.getDataSource();
 
     const [result] = await dataSource.query(
@@ -200,7 +187,8 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   private async insertDefaultUserIfEmpty(): Promise<void> {
-    const tableName = initJson.defaultUserTable.name;
+    const tableName =
+      this.commonService.getTableNameFromEntity(User_definition);
     const dataSource = this.dataSourceService.getDataSource();
     const userRepo = this.dataSourceService.getRepository(tableName);
 
@@ -211,9 +199,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     if (Number(count) === 0) {
       this.logger.log(`Tạo user mặc định: ${initJson.defaultUser.email}`);
 
-      const roleRepo = this.dataSourceService.getRepository(
-        initJson.defaultRoleTable.name,
-      );
+      const roleRepo = this.dataSourceService.getRepository(Role_definition);
       const role = await roleRepo.findOneBy({
         name: initJson.defaultRole.name,
       });
@@ -239,17 +225,15 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   private async insertDefaultRoutes(): Promise<void> {
-    const tableName = initJson.defaultRouteTable.name;
-    const routeRepo = this.dataSourceService.getRepository(tableName);
-    const tableDefRepo = this.dataSourceService.getRepository(TableDefinition);
+    const routeRepo = this.dataSourceService.getRepository(Route_definition);
+    const tableDefRepo = this.dataSourceService.getRepository(Table_definition);
 
     const existingRoutes = await routeRepo.find();
 
     const paths = [
-      initJson.defaultUserTable.name,
-      initJson.defaultRoleTable.name,
-      initJson.settingTable.name,
-      initJson.defaultRouteTable.name,
+      this.commonService.getTableNameFromEntity(User_definition),
+      this.commonService.getTableNameFromEntity(Role_definition),
+      this.commonService.getTableNameFromEntity(Setting_definition),
     ];
 
     let insertedCount = 0;
@@ -305,10 +289,89 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   async createAdminRoute() {
-    const repo = this.dataSourceService.getRepository(MiddlewareDefinition);
+    const repo = this.dataSourceService.getRepository(Middleware_definition);
     const count = await repo.count();
     if (count === 0) {
       await repo.create(initJson.adminGuardMiddleware);
+    }
+  }
+
+  async createInitMetadata() {
+    const dataSource = this.dataSourceService.getDataSource();
+    const queryRunner = dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const saveTable = async (key: string) => {
+        const tableData = initJson[key];
+        const exist = await this.tableDefRepo.findOne({
+          where: { name: tableData.name },
+        });
+        if (exist) {
+          this.logger.log(`Bỏ qua ${key}, đã tồn tại trong DB`);
+          return;
+        }
+
+        this.logger.log(`Tạo bảng ${tableData.name} trắng để lấy id...`);
+        const emptyTable = await this.tableDefRepo.save({
+          name: tableData.name,
+          isStatic: true,
+        });
+        this.logger.debug(`Tạo bảng ${tableData.name} trắng thành công!`);
+
+        const columns = tableData.columns.map((col) => ({
+          ...col,
+          table: { id: emptyTable.id },
+        }));
+
+        const relations = (tableData.relations || []).map(async (rel) => ({
+          ...rel,
+          targetTable: {
+            id:
+              tableData.name === 'relation_definition' ||
+              tableData.name === 'column_definition'
+                ? (
+                    await this.tableDefRepo.findOne({
+                      where: { name: 'table_definition' },
+                    })
+                  )?.id
+                : emptyTable.id,
+          },
+        }));
+
+        await this.tableDefRepo.save({
+          id: emptyTable.id,
+          columns,
+          relations,
+        });
+
+        this.logger.debug(`Tạo metadata cho ${key} thành công!`);
+      };
+
+      const tableKeys: (keyof typeof initJson)[] = [
+        'table_definition',
+        'column_definition',
+        'relation_definition',
+        'user_definition',
+        'setting_definition',
+        'route_definition',
+        'role_definition',
+        'middleware_definition',
+        'hook_definition',
+      ];
+
+      for (const key of tableKeys) {
+        await saveTable(key as string);
+      }
+
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error('Lỗi khi tạo metadata:', err);
+      throw err;
+    } finally {
+      await queryRunner.release();
     }
   }
 }

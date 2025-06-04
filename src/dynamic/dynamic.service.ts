@@ -2,12 +2,16 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import * as vm from 'vm';
 import { DataSourceService } from '../data-source/data-source.service';
 import { JwtService } from '@nestjs/jwt';
+import { Route_definition } from '../entities/route_definition.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class DynamicService {
@@ -15,6 +19,8 @@ export class DynamicService {
   constructor(
     private dataSourceService: DataSourceService,
     private jwtService: JwtService,
+    @InjectRepository(Route_definition)
+    private routeRepo: Repository<Route_definition>,
   ) {}
 
   async dynamicService(req: Request) {
@@ -22,31 +28,30 @@ export class DynamicService {
       const path = req.path;
       const method = req.method;
 
-      const curRouteRepo = this.dataSourceService.getRepository('route');
-      const curRoute: any = await curRouteRepo?.findOne({
+      const curRoute = await this.routeRepo.findOne({
         where: { path, method },
       });
 
-      if (!curRoute) {
-        throw new BadRequestException(`[${method}] ${path} không tồn tại!`);
-      }
-
-      const curRepo = this.dataSourceService.getRepository(
-        curRoute.targetTable?.name,
-      );
+      if (!curRoute || !curRoute.isEnabled) throw new NotFoundException();
+      const repoMap = curRoute.targetTables.reduce((acc, table) => {
+        acc[`$${table.name}Repo`] = this.dataSourceService.getRepository(
+          table.name,
+        );
+        return acc;
+      }, {});
 
       const context = {
         $req: req,
         $body: req.body,
         $jwt: (payload: any, ext: string) =>
           this.jwtService.sign(payload, { expiresIn: ext }),
-        ...(curRepo && { $repo: curRepo }),
         throw400: (message: string) => {
           throw new BadRequestException(message);
         },
         throw401: () => {
           throw new UnauthorizedException();
         },
+        ...repoMap,
       };
 
       // Tạo sandbox và chạy script
@@ -59,15 +64,18 @@ export class DynamicService {
       this.logger.error('❌ Script lỗi:', error.message);
       this.logger.debug(error.stack);
 
-      if (error instanceof UnauthorizedException) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
         throw error; // Trả nguyên trạng
       }
 
-      if (error instanceof BadRequestException) {
-        throw error; // Trả nguyên trạng
-      }
-
-      throw new BadRequestException(`Lỗi script database hoặc handler.`);
+      throw new BadRequestException(
+        `Lỗi script database hoặc handler:`,
+        error.message,
+      );
     }
   }
 }

@@ -1,4 +1,4 @@
-import { TableDefinition } from '../entities/table.entity';
+import { Table_definition } from './entities/table_definition.entity';
 import {
   Column,
   Entity,
@@ -7,18 +7,10 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-@Entity()
+@Entity('relation_definition')
 export class RelationDefinition {
   @PrimaryGeneratedColumn('increment')
   id: number;
-
-  @ManyToOne(() => TableDefinition, { onDelete: 'CASCADE' })
-  @JoinColumn()
-  sourceTable: TableDefinition;
-
-  @ManyToOne(() => TableDefinition, { onDelete: 'CASCADE' })
-  @JoinColumn()
-  targetTable: TableDefinition;
 
   @Column({
     type: 'enum',
@@ -37,4 +29,15 @@ export class RelationDefinition {
 
   @Column({ default: true })
   isNullable: boolean;
+
+  @Column({ default: false, update: false })
+  isStatic: boolean;
+
+  @ManyToOne(() => Table_definition, { onDelete: 'CASCADE' })
+  @JoinColumn()
+  sourceTable: Table_definition;
+
+  @ManyToOne(() => Table_definition, { onDelete: 'CASCADE' })
+  @JoinColumn()
+  targetTable: Table_definition;
 }

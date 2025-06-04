@@ -20,5 +20,5 @@
     "resolveJsonModule": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "build-dynamic-entities.ts"] // Luôn loại trừ các thư mục này
+  "exclude": ["node_modules", "dist", "build-entities.ts"] // Luôn loại trừ các thư mục này
 }

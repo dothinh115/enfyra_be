@@ -2,7 +2,7 @@ import * as ts from 'typescript';
 import * as path from 'path';
 
 async function buildDynamicEntities() {
-  const configPath = path.resolve(__dirname, 'tsconfig.dynamic-entities.json');
+  const configPath = path.resolve(__dirname, 'tsconfig.entities.json');
   const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
   const parsedConfig = ts.parseJsonConfigFileContent(
     configFile.config,

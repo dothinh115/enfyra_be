@@ -1,11 +1,11 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
 
-@Entity("role")
-export class Role {
+@Entity("role_definition")
+export class Role_definition {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({type:'varchar', nullable: false, default: null})
+  @Column({type:'varchar', nullable: false})
   name: string;
 
 

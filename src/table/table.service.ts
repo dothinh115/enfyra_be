@@ -1,5 +1,5 @@
 import { AutoService } from '../auto/auto.service';
-import { TableDefinition } from '../entities/table.entity';
+import { Table_definition } from '../entities/table_definition.entity';
 import {
   CreateColumnDto,
   CreateRelationDto,
@@ -24,7 +24,7 @@ export class TableHanlderService {
     const manager = queryRunner.manager;
     try {
       const hasTable = await queryRunner.hasTable(body.name);
-      let result = await manager.findOne(TableDefinition, {
+      let result = await manager.findOne(Table_definition, {
         where: {
           name: body.name,
         },
@@ -34,13 +34,13 @@ export class TableHanlderService {
       }
 
       // Tạo entity từ dữ liệu đã được xử lý
-      const tableEntity = manager.create(TableDefinition, {
+      const tableEntity = manager.create(Table_definition, {
         name: body.name,
         columns: this.normalizeColumnsWithAutoId(body.columns),
         relations: body.relations ? this.prepareRelations(body.relations) : [],
       } as any);
 
-      if (!result) result = await manager.save(TableDefinition, tableEntity);
+      if (!result) result = await manager.save(Table_definition, tableEntity);
       await queryRunner.commitTransaction();
       await this.autoService.pullMetadataFromDb();
 
@@ -62,7 +62,7 @@ export class TableHanlderService {
     await queryRunner.startTransaction();
     const manager = queryRunner.manager;
     try {
-      const exists = await manager.findOne(TableDefinition, {
+      const exists = await manager.findOne(Table_definition, {
         where: {
           id,
         },
@@ -91,13 +91,13 @@ export class TableHanlderService {
       }
 
       // Tạo entity từ dữ liệu đã được xử lý
-      const tableEntity = manager.create(TableDefinition, {
+      const tableEntity = manager.create(Table_definition, {
         id: body.id,
         ...body,
         columns: this.normalizeColumnsWithAutoId(body.columns),
         relations: body.relations ? this.prepareRelations(body.relations) : [],
       });
-      const result = await manager.save(TableDefinition, tableEntity);
+      const result = await manager.save(Table_definition, tableEntity);
 
       await queryRunner.commitTransaction();
       await this.autoService.pullMetadataFromDb();
@@ -152,7 +152,7 @@ export class TableHanlderService {
 
   async find() {
     try {
-      const repo = this.dataSouceService.getRepository(TableDefinition);
+      const repo = this.dataSouceService.getRepository(Table_definition);
       return await repo.find();
     } catch (error) {
       throw new BadRequestException(error.message);
@@ -161,7 +161,7 @@ export class TableHanlderService {
 
   async findOne(id: number) {
     try {
-      const repo = this.dataSouceService.getRepository(TableDefinition);
+      const repo = this.dataSouceService.getRepository(Table_definition);
       return await repo.findOne({
         where: { id },
       });
@@ -171,7 +171,7 @@ export class TableHanlderService {
   }
 
   async delete(id: number) {
-    const repo = this.dataSouceService.getRepository(TableDefinition);
+    const repo = this.dataSouceService.getRepository(Table_definition);
 
     try {
       const exists = await repo.findOne({

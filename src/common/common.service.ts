@@ -1,13 +1,20 @@
 import { DBToTSTypeMap, TSToDBTypeMap } from '../utils/type';
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Project, SyntaxKind } from 'ts-morph';
 import { knownGlobalImports } from '../utils/common';
 import * as ts from 'typescript';
+import { EntityTarget } from 'typeorm';
+import { DataSourceService } from '../data-source/data-source.service';
 
 @Injectable()
 export class CommonService {
+  constructor(
+    @Inject(forwardRef(() => DataSourceService))
+    private dataSourceService: DataSourceService,
+  ) {}
+
   capitalizeFirstLetterEachLine(text: string): string {
     return text
       .split('\n')
@@ -190,7 +197,7 @@ export class CommonService {
   async autoFixMissingImports(dirPath: string): Promise<void> {
     const files = this.getAllTsFiles(dirPath);
     const exportMap = await this.buildExportMapAsync(
-      ['src/entities', 'src/dynamic-entities'],
+      ['src/entities'],
       files[0],
     );
     for (const filePath of files) {
@@ -388,5 +395,11 @@ export class CommonService {
         throw error;
       }
     }
+  }
+
+  getTableNameFromEntity(entity: EntityTarget<any>): string {
+    const dataSource = this.dataSourceService.getDataSource();
+    const metadata = dataSource.getMetadata(entity);
+    return metadata.tableName;
   }
 }

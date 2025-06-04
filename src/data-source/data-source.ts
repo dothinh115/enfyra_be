@@ -19,9 +19,7 @@ export const createDataSource: (entities: any[]) => DataSource = (
     synchronize: false,
     logging: false,
     entities,
-    migrations: [
-      path.resolve(__dirname, '..', '..', 'src', 'migrations', '*.js'),
-    ],
+    migrations: [path.resolve('src', 'migrations', '*.js')],
   });
 };
 
@@ -34,16 +32,6 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME,
   synchronize: false,
   logging: false,
-  entities: [
-    path.resolve(
-      __dirname,
-      '..',
-      '..',
-      'dist',
-      'dynamic-entities',
-      '*.entity.js',
-    ),
-    path.resolve(__dirname, '..', '..', 'dist', 'entities', '*.entity.js'),
-  ],
+  entities: [path.resolve('dist', 'entities', '*.entity.js')],
   migrations: [path.resolve(__dirname, '..', 'migrations', '*.{js,ts}')],
 });
