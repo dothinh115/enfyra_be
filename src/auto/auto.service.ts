@@ -482,11 +482,6 @@ export class AutoService {
         a.propertyName.localeCompare(b.propertyName),
       );
     });
-    // this.logger.log(`Xoá entities cũ`);
-    // await this.commonService.removeOldFile(
-    //   path.resolve('src', 'entities'),
-    //   this.logger,
-    // );
 
     const inverseRelationMap = this.buildInverseRelationMap();
     await this.getInverseRelationMetadatas(inverseRelationMap, tables);
@@ -511,5 +506,37 @@ export class AutoService {
     await this.dataSourceService.reloadDataSource();
     await this.autoGenerateMigrationFile();
     await this.autoRunMigration();
+
+    const entityDir = path.resolve('src', 'entities');
+    const distEntityDir = path.resolve('dist', 'entities');
+
+    const validFileNames = tables.map(
+      (table) => `${table.name.toLowerCase()}.entity.ts`,
+    );
+
+    // Xoá file .ts không hợp lệ trong src/entities
+    const existingFiles = fs.readdirSync(entityDir);
+    for (const file of existingFiles) {
+      if (!file.endsWith('.entity.ts')) continue;
+      if (!validFileNames.includes(file)) {
+        const fullPath = path.join(entityDir, file);
+        fs.unlinkSync(fullPath);
+        this.logger.warn(`🗑️ Đã xoá entity không hợp lệ: ${file}`);
+      }
+    }
+
+    // Xoá file .js tương ứng trong dist/entities
+    if (fs.existsSync(distEntityDir)) {
+      const distFiles = fs.readdirSync(distEntityDir);
+      for (const file of distFiles) {
+        if (!file.endsWith('.entity.js')) continue;
+        const correspondingTsFile = file.replace(/\.js$/, '.ts');
+        if (!validFileNames.includes(correspondingTsFile)) {
+          const fullPath = path.join(distEntityDir, file);
+          fs.unlinkSync(fullPath);
+          this.logger.warn(`🗑️ Đã xoá JS không hợp lệ: ${file}`);
+        }
+      }
+    }
   }
 }
