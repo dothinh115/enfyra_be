@@ -61,44 +61,89 @@ export class TableHanlderService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     const manager = queryRunner.manager;
+
     try {
       const exists = await manager.findOne(Table_definition, {
-        where: {
-          id,
-        },
+        where: { id },
         relations: ['columns', 'relations'],
       });
+
       if (!exists) {
         throw new BadRequestException(`Table ${body.name} không tồn tại.`);
       }
 
-      const oldColumn = exists.columns;
-      const newColumn = body.columns.filter((col) => col.id);
-      for (const newCol of newColumn) {
-        const oldCol = oldColumn.find((col) => col.id === newCol.id);
+      const oldColumns = exists.columns;
+      const oldRelations = exists.relations;
 
-        if (!oldCol) {
-          console.warn(
-            `⚠️ Không tìm thấy column với id = ${newCol.id}, bỏ qua.`,
-          );
-          continue;
-        }
-        if (newCol.name !== oldCol.name) {
-          await queryRunner.query(
-            `ALTER TABLE \`${exists.name}\` RENAME COLUMN \`${oldCol.name}\` TO \`${newCol.name}\`;`,
+      const newColumns = body.columns || [];
+      const newRelations = body.relations || [];
+
+      // Detect deleted columns
+      for (const oldCol of oldColumns) {
+        const stillExists = newColumns.find((col) => col.id === oldCol.id);
+        if (!stillExists && oldCol.isStatic) {
+          throw new BadRequestException(
+            `Không thể xoá column static: ${oldCol.name}`,
           );
         }
       }
 
-      // Tạo entity từ dữ liệu đã được xử lý
+      // Detect updated columns
+      for (const newCol of newColumns) {
+        if (!newCol.id) continue; // Skip newly added columns
+        const oldCol = oldColumns.find((col) => col.id === newCol.id);
+        if (!oldCol) continue;
+        if (oldCol.isStatic) {
+          if (newCol.name !== oldCol.name || newCol.type !== oldCol.type) {
+            throw new BadRequestException(
+              `Không thể sửa column static: ${oldCol.name}`,
+            );
+          }
+        } else {
+          if (newCol.name !== oldCol.name) {
+            await queryRunner.query(
+              `ALTER TABLE \`${exists.name}\` RENAME COLUMN \`${oldCol.name}\` TO \`${newCol.name}\`;`,
+            );
+          }
+        }
+      }
+
+      // Detect deleted relations
+      for (const oldRel of oldRelations) {
+        const stillExists = newRelations.find((rel) => rel.id === oldRel.id);
+        if (!stillExists && oldRel.isStatic) {
+          throw new BadRequestException(
+            `Không thể xoá relation static: ${oldRel.propertyName}`,
+          );
+        }
+      }
+
+      // Detect updated relations
+      for (const newRel of newRelations) {
+        if (!newRel.id) continue; // Skip new relations
+        const oldRel = oldRelations.find((rel) => rel.id === newRel.id);
+        if (!oldRel) continue;
+        if (oldRel.isStatic) {
+          if (
+            newRel.propertyName !== oldRel.propertyName ||
+            newRel.type !== oldRel.type
+          ) {
+            throw new BadRequestException(
+              `Không thể sửa relation static: ${oldRel.propertyName}`,
+            );
+          }
+        }
+      }
+
+      // Save updated entity with new + updated columns/relations
       const tableEntity = manager.create(Table_definition, {
         id: body.id,
         ...body,
         columns: this.normalizeColumnsWithAutoId(body.columns),
-        relations: body.relations ? this.prepareRelations(body.relations) : [],
+        relations: this.prepareRelations(body.relations),
       });
-      const result = await manager.save(Table_definition, tableEntity);
 
+      const result = await manager.save(Table_definition, tableEntity);
       await queryRunner.commitTransaction();
       await this.autoService.pullMetadataFromDb();
 

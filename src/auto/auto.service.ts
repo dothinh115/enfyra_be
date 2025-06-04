@@ -487,6 +487,12 @@ export class AutoService {
 
     if (tables.length === 0) return;
 
+    this.logger.log(`Xoá entities cũ`);
+    await this.commonService.removeOldFile(
+      path.resolve('src', 'entities'),
+      this.logger,
+    );
+
     const inverseRelationMap = this.buildInverseRelationMap();
     await this.getInverseRelationMetadatas(inverseRelationMap, tables);
 
@@ -503,9 +509,9 @@ export class AutoService {
     );
     this.logger.debug(`Đã fix import xong`);
 
-    // this.logger.log(`Test logic file vừa generate`);
-    // this.commonService.checkTsErrors(path.resolve('src', 'entities'));
-    // this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
+    this.logger.log(`Test logic file vừa generate`);
+    this.commonService.checkTsErrors(path.resolve('src', 'entities'));
+    this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
     await this.autoBuildToJs();
     await this.dataSourceService.reloadDataSource();
     await this.autoGenerateMigrationFile();

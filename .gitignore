@@ -5,16 +5,16 @@
 
 /src/migrations/*.ts
 
-/src/entities/*
-!/src/entities/table_definition.entity.ts
-!/src/entities/column_definition.entity.ts
-!/src/entities/relation_definition.entity.ts
-!/src/entities/hook_definition.entity.ts
-!/src/entities/route_definition.entity.ts
-!/src/entities/role_definition.entity.ts
-!/src/entities/user_definition.entity.ts
-!/src/entities/setting_definition.entity.ts
-!/src/entities/middleware_definition.entity.ts
+ /src/entities/*
+# !/src/entities/table_definition.entity.ts
+# !/src/entities/column_definition.entity.ts
+# !/src/entities/relation_definition.entity.ts
+# !/src/entities/hook_definition.entity.ts
+# !/src/entities/route_definition.entity.ts
+# !/src/entities/role_definition.entity.ts
+# !/src/entities/user_definition.entity.ts
+# !/src/entities/setting_definition.entity.ts
+# !/src/entities/middleware_definition.entity.ts
 
 # Logs
 logs
