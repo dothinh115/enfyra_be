@@ -7,12 +7,16 @@ import {
 } from '../table/dto/create-table.dto';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class TableHanlderService {
   constructor(
     private dataSouceService: DataSourceService,
     private autoService: AutoService,
+    @InjectRepository(Table_definition)
+    private tableDefRepo: Repository<Table_definition>,
   ) {}
 
   async createTable(body: CreateTableDto) {
@@ -216,20 +220,22 @@ export class TableHanlderService {
   }
 
   async delete(id: number) {
-    const repo = this.dataSouceService.getRepository(Table_definition);
-
     try {
-      const exists = await repo.findOne({
-        where: {
-          id,
-        },
+      const exists = await this.tableDefRepo.findOne({
+        where: { id },
       });
-      console.log(exists);
+
       if (!exists) {
         throw new BadRequestException(`Table với id ${id} không tồn tại.`);
       }
 
-      const result = await repo.remove(exists);
+      if (exists.isStatic) {
+        throw new BadRequestException(
+          `Không thể xoá bảng static (${exists.name}).`,
+        );
+      }
+
+      const result = await this.tableDefRepo.remove(exists);
 
       await this.autoService.pullMetadataFromDb();
       return result;

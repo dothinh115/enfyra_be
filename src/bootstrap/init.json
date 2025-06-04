@@ -48,7 +48,8 @@
             { "name": "isStatic", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "default", "type": "simple-json", "isNullable": true, "isStatic": true },
             { "name": "enumValues", "type": "simple-json", "isNullable": true, "isStatic": true },
-            { "name": "isUnique", "type": "boolean", "isNullable": true, "isStatic": true, "default": false }
+            { "name": "isUnique", "type": "boolean", "isNullable": true, "isStatic": true, "default": false },
+            { "name": "isUpdatable", "type": "boolean", "isNullable": false, "isStatic": true, "default": true }
         ],
         "relations": [
             {

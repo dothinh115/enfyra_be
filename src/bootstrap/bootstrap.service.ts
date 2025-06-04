@@ -253,20 +253,16 @@ export class BootstrapService implements OnApplicationBootstrap {
           table: { id: emptyTable.id },
         }));
 
-        const relations = (tableData.relations || []).map(async (rel) => ({
-          ...rel,
-          targetTable: {
-            id:
-              tableData.name === 'relation_definition' ||
-              tableData.name === 'column_definition'
-                ? (
-                    await this.tableDefRepo.findOne({
-                      where: { name: 'table_definition' },
-                    })
-                  )?.id
-                : emptyTable.id,
-          },
-        }));
+        const relations = await Promise.all(
+          (tableData.relations || []).map(async (rel) => ({
+            ...rel,
+            targetTable: {
+              id: await this.tableDefRepo.findOne({
+                where: { name: rel.targetTable },
+              }),
+            },
+          })),
+        );
 
         await this.tableDefRepo.save({
           id: emptyTable.id,
