@@ -1,41 +1,5 @@
 {
-    "defaultRole": {
-        "name": "Admin"
-    },
-    "defaultUser": {
-        "email": "dynamiq@admin.com",
-        "password": "1234",
-        "isRootUser": true
-    },
-    "defaultSetting": {
-        "isInit": false
-    },
-    "routeDefinition": {
-        "GET": {
-            "method": "GET",
-            "handler": "const result = await $repo.find(); return result"
-        },
-         "POST": {
-            "method": "POST",
-            "handler": "const result = await $repo.create($body); return result"
-        },
-         "PATCH": {
-            "method": "PATCH",
-            "handler": "const {id, ...data} = $body; const result = await $repo.update({id}, data); return result"
-        },
-         "DELETE": {
-            "method": "DELETE",
-            "handler": "const {id, ...data} = $body; const result = await $repo.update({id}, data); return result"
-        }
-    },
-    "adminGuardMiddleware": {
-        "name": "Route for root Admin",
-        "method": null,
-        "path": null,
-        "isEnabled": true,
-        "handler": "const user = $req.user; if(!user.isRootUser) return throw401();"
-    },
-    "column_definition": {
+     "column_definition": {
         "name": "column_definition",
         "isStatic": true,
         "columns": [
@@ -161,6 +125,3 @@
         ]
     }
 }
-
-
-

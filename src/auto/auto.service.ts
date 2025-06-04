@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { DataSourceService } from '../data-source/data-source.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { CommonService } from '../common/common.service';
@@ -47,13 +47,12 @@ export class AutoService {
       let classPart = `@Entity("${payload.name.toLowerCase()}")\n`;
 
       if (payload.unique && payload.unique.length) {
+        classPart += `@Unique([`;
+
         for (const unique of payload.unique) {
-          classPart += `@Unique([`;
-          for (const value of unique.value) {
-            classPart += `"${value}", `;
-          }
-          classPart += `])\n`;
+          classPart += `"${unique}", `;
         }
+        classPart += `])\n`;
       }
 
       // Nếu có index, loại bỏ những cái trùng với unique
@@ -460,6 +459,29 @@ export class AutoService {
           ]);
         }
       }
+    }
+  }
+
+  async backup(payload: any) {
+    const scriptPath = path.resolve('get-snapshot.js');
+    try {
+      const filePath = path.resolve('schema-from-db.json');
+      const jsonStr = JSON.stringify(payload, null, 2);
+      fs.writeFileSync(filePath, jsonStr, { encoding: 'utf-8' });
+      execSync(`node ${scriptPath}`, { encoding: 'utf-8' });
+    } catch (err) {
+      this.logger.error('Lỗi khi chạy shell script:', err);
+    }
+  }
+
+  async restore() {
+    try {
+      execSync(
+        `node ${path.resolve('get-snapshot.js')} && node ${path.resolve('get-entities.js')} && node ${path.resolve('auto-import.js')}`,
+        { stdio: 'inherit' },
+      );
+    } catch (err) {
+      this.logger.error('Lỗi khi chạy shell script:', err);
     }
   }
 

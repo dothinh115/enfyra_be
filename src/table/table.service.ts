@@ -49,6 +49,10 @@ export class TableHanlderService {
 
       if (!result) result = await manager.save(Table_definition, tableEntity);
       await queryRunner.commitTransaction();
+      const tables = await this.tableDefRepo.find({
+        relations: ['relations', 'columns'],
+      });
+      await this.autoService.backup({ data: tables });
       await this.autoService.pullMetadataFromDb();
 
       return result;
@@ -245,7 +249,10 @@ export class TableHanlderService {
       }
 
       const result = await this.tableDefRepo.remove(exists);
-
+      const tables = await this.tableDefRepo.find({
+        relations: ['relations', 'columns'],
+      });
+      await this.autoService.backup({ data: tables });
       await this.autoService.pullMetadataFromDb();
       return result;
     } catch (error) {

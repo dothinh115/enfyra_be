@@ -41,6 +41,7 @@
     "crypto": "^1.0.1",
     "ioredis": "^5.6.1",
     "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
     "mysql2": "^3.14.1",
     "p-limit": "^6.2.0",
     "passport": "^0.7.0",

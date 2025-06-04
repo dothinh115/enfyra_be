@@ -13,6 +13,9 @@ export class Table_definition {
   @Column({ type: "varchar", nullable: false, unique: true })
   name: string;
 
+  @Column({ type: "simple-json", nullable: true })
+  unique: any;
+
 
   @CreateDateColumn()
   createdAt: Date;
