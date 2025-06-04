@@ -482,11 +482,11 @@ export class AutoService {
         a.propertyName.localeCompare(b.propertyName),
       );
     });
-    this.logger.log(`Xoá entities cũ`);
-    await this.commonService.removeOldFile(
-      path.resolve('src', 'entities'),
-      this.logger,
-    );
+    // this.logger.log(`Xoá entities cũ`);
+    // await this.commonService.removeOldFile(
+    //   path.resolve('src', 'entities'),
+    //   this.logger,
+    // );
 
     const inverseRelationMap = this.buildInverseRelationMap();
     await this.getInverseRelationMetadatas(inverseRelationMap, tables);

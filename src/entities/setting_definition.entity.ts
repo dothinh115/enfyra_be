@@ -13,5 +13,5 @@ export class Setting_definition {
   createdAt: Date;
 
   @UpdateDateColumn()
-  UpdatedAt: Date;
+  updatedAt: Date;
 }

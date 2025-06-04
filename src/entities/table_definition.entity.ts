@@ -18,7 +18,7 @@ export class Table_definition {
   createdAt: Date;
 
   @UpdateDateColumn()
-  UpdatedAt: Date;
+  updatedAt: Date;
 
   @OneToMany(() => Column_definition, rel => rel.table,{ cascade: true, eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   columns: Column_definition[];

@@ -22,5 +22,5 @@ export class Hook_definition {
   createdAt: Date;
 
   @UpdateDateColumn()
-  UpdatedAt: Date;
+  updatedAt: Date;
 }

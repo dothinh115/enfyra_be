@@ -40,5 +40,5 @@ export class Relation_definition {
   createdAt: Date;
 
   @UpdateDateColumn()
-  UpdatedAt: Date;
+  updatedAt: Date;
 }

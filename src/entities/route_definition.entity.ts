@@ -30,5 +30,5 @@ export class Route_definition {
   createdAt: Date;
 
   @UpdateDateColumn()
-  UpdatedAt: Date;
+  updatedAt: Date;
 }
