@@ -12,6 +12,8 @@ import { JwtService } from '@nestjs/jwt';
 import { Route_definition } from '../entities/route_definition.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { QueryService } from '../query/query.service';
+import { match } from 'path-to-regexp';
 
 @Injectable()
 export class DynamicService {
@@ -21,22 +23,46 @@ export class DynamicService {
     private jwtService: JwtService,
     @InjectRepository(Route_definition)
     private routeRepo: Repository<Route_definition>,
+    private queryService: QueryService,
   ) {}
 
   async dynamicService(req: Request) {
     try {
       const path = req.path;
       const method = req.method;
-
-      const curRoute = await this.routeRepo.findOne({
-        where: { path, method },
+      let curRoute;
+      let params;
+      const routes = await this.routeRepo.find({
+        where: { method, isEnabled: true },
       });
 
-      if (!curRoute || !curRoute.isEnabled) throw new NotFoundException();
+      for (const route of routes) {
+        const matcher = match(route.path, { decode: decodeURIComponent });
+        const matched = matcher(path);
+        if (matched) {
+          curRoute = route;
+          params = matched.params;
+          break;
+        }
+      }
+
+      if (!curRoute) throw new NotFoundException();
       const repoMap = curRoute.targetTables.reduce((acc, table) => {
-        acc[`$${table.name}Repo`] = this.dataSourceService.getRepository(
-          table.name,
-        );
+        const repo = this.dataSourceService.getRepository(table.name);
+
+        acc[`$${table.name}Repo`] = repo;
+        return acc;
+      }, {});
+
+      const queryMap = curRoute.targetTables.reduce((acc, table) => {
+        const repository = this.dataSourceService.getRepository(table.name);
+
+        acc[`$${table.name}Query`] = async (id?: any) =>
+          await this.queryService.query({
+            repository,
+            query: req.query,
+            ...(id && { id }),
+          });
         return acc;
       }, {});
 
@@ -51,7 +77,9 @@ export class DynamicService {
         throw401: () => {
           throw new UnauthorizedException();
         },
+        ...params,
         ...repoMap,
+        ...queryMap,
       };
 
       // Tạo sandbox và chạy script

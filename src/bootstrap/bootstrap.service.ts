@@ -56,6 +56,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     await this.waitForDatabaseConnection();
     await this.createInitMetadata();
     await this.autoService.pullMetadataFromDb();
+    this.delay(2000);
     await Promise.all([
       await this.createDefaultRole(),
       await this.insertDefaultSettingIfEmpty(),
@@ -127,21 +128,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     if (Number(count) === 0) {
       this.logger.log(`Tạo user mặc định: ${initJson.defaultUser.email}`);
 
-      const roleRepo = this.dataSourceService.getRepository(Role_definition);
-      const role = await roleRepo.findOneBy({
-        name: initJson.defaultRole.name,
-      });
-
-      if (!role) {
-        throw new Error(
-          `Vai trò mặc định '${initJson.defaultRole.name}' không tồn tại.`,
-        );
-      }
-
-      const user = userRepo.create({
-        ...initJson.defaultUser,
-        role,
-      });
+      const user = userRepo.create(initJson.defaultUser);
 
       await userRepo.save(user);
       this.logger.log(`User mặc định đã được tạo.`);
@@ -257,9 +244,11 @@ export class BootstrapService implements OnApplicationBootstrap {
           (tableData.relations || []).map(async (rel) => ({
             ...rel,
             targetTable: {
-              id: await this.tableDefRepo.findOne({
-                where: { name: rel.targetTable },
-              }),
+              id: (
+                await this.tableDefRepo.findOne({
+                  where: { name: rel.targetTable },
+                })
+              )?.id,
             },
           })),
         );

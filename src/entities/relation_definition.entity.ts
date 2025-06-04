@@ -1,43 +1,43 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Table_definition } from "./table_definition.entity";
 
 @Entity("relation_definition")
 export class Relation_definition {
-  @Column({ type: "boolean", nullable: false, default: false })
-  isInverseEager: boolean;
+  @PrimaryGeneratedColumn('increment')
+  id: number;
+
+  @Column({ type: "enum", nullable: false, enum: ['one-to-one', 'many-to-one', 'one-to-many', 'many-to-many'] })
+  type: 'one-to-one' | 'many-to-one' | 'one-to-many' | 'many-to-many';
+
+  @Column({ type: "varchar", nullable: false })
+  propertyName: string;
+
+  @Column({ type: "varchar", nullable: true })
+  inversePropertyName: string;
 
   @Column({ type: "boolean", nullable: false, default: false })
-  isInverseCascade: boolean;
-
-  @Column({ type: "boolean", nullable: false, default: false })
-  isCascade: boolean;
-
-  @Column({ type: "enum", nullable: true, enum: ['CASCADE', 'SET NULL', 'NO ACTION', 'RESTRICT'], default: "NO ACTION" })
-  onDelete: 'CASCADE' | 'SET NULL' | 'NO ACTION' | 'RESTRICT';
-
-  @Column({ type: "enum", nullable: true, enum: ['CASCADE', 'SET NULL', 'NO ACTION', 'RESTRICT'], default: "NO ACTION" })
-  onUpdate: 'CASCADE' | 'SET NULL' | 'NO ACTION' | 'RESTRICT';
-
-  @Column({ type: "boolean", nullable: false, default: false })
-  isStatic: boolean;
+  isEager: boolean;
 
   @Column({ type: "boolean", nullable: false, default: true })
   isNullable: boolean;
 
   @Column({ type: "boolean", nullable: false, default: false })
-  isEager: boolean;
+  isStatic: boolean;
 
-  @Column({ type: "varchar", nullable: true })
-  inversePropertyName: string;
+  @Column({ type: "enum", nullable: true, enum: ['CASCADE', 'SET NULL', 'NO ACTION', 'RESTRICT'], default: "NO ACTION" })
+  onUpdate: 'CASCADE' | 'SET NULL' | 'NO ACTION' | 'RESTRICT';
 
-  @Column({ type: "varchar", nullable: false })
-  propertyName: string;
+  @Column({ type: "enum", nullable: true, enum: ['CASCADE', 'SET NULL', 'NO ACTION', 'RESTRICT'], default: "NO ACTION" })
+  onDelete: 'CASCADE' | 'SET NULL' | 'NO ACTION' | 'RESTRICT';
 
-  @Column({ type: "enum", nullable: false, enum: ['one-to-one', 'many-to-one', 'one-to-many', 'many-to-many'] })
-  type: 'one-to-one' | 'many-to-one' | 'one-to-many' | 'many-to-many';
+  @Column({ type: "boolean", nullable: false, default: false })
+  isCascade: boolean;
 
-  @PrimaryGeneratedColumn('increment')
-  id: number;
+  @Column({ type: "boolean", nullable: false, default: false })
+  isInverseCascade: boolean;
+
+  @Column({ type: "boolean", nullable: false, default: false })
+  isInverseEager: boolean;
 
 
   @ManyToOne(() => Table_definition, { onDelete: 'NO ACTION', onUpdate: 'NO ACTION', nullable: true } )

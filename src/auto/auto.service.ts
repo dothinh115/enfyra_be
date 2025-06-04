@@ -90,7 +90,7 @@ export class AutoService {
           const strategy =
             column.type === 'int'
               ? `'increment'`
-              : column.type === 'varchar'
+              : column.type === 'uuid'
                 ? `"uuid"`
                 : '';
           classPart += `  @PrimaryGeneratedColumn(${strategy})\n`;

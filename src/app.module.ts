@@ -15,6 +15,7 @@ import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { MiddlewareService } from './middleware/middleware.service';
+import { QueryModule } from './query/query.module';
 
 @Global()
 @Module({
@@ -30,6 +31,7 @@ import { MiddlewareService } from './middleware/middleware.service';
     CommonModule,
     DataSourceModule,
     AutoGenerateModule,
+    QueryModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {

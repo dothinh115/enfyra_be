@@ -9,6 +9,8 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { QueryService } from '../query/query.service';
+import { TQuery } from '../utils/type';
 
 @Injectable()
 export class TableHanlderService {
@@ -17,6 +19,7 @@ export class TableHanlderService {
     private autoService: AutoService,
     @InjectRepository(Table_definition)
     private tableDefRepo: Repository<Table_definition>,
+    private queryService: QueryService,
   ) {}
 
   async createTable(body: CreateTableDto) {
@@ -71,6 +74,7 @@ export class TableHanlderService {
         where: { id },
         relations: ['columns', 'relations'],
       });
+      console.dir(exists, { depth: null });
 
       if (!exists) {
         throw new BadRequestException(`Table ${body.name} không tồn tại.`);
@@ -92,7 +96,6 @@ export class TableHanlderService {
         }
       }
 
-      // Detect updated columns
       for (const newCol of newColumns) {
         if (!newCol.id) continue; // Skip newly added columns
         const oldCol = oldColumns.find((col) => col.id === newCol.id);
@@ -172,7 +175,10 @@ export class TableHanlderService {
   normalizeColumnsWithAutoId(columns: CreateColumnDto[]): CreateColumnDto[] {
     // Tìm xem user có cố gắng định nghĩa cột id không
     const userIdCol = columns.find((col) => col.name === 'id');
-    const idType = userIdCol?.type === 'varchar' ? 'uuid' : 'int';
+    const idType =
+      userIdCol?.type === 'varchar' || userIdCol?.type === 'uuid'
+        ? 'uuid'
+        : 'int';
 
     // Loại bỏ cột id do user định nghĩa
     const filtered = columns.filter((col) => col.name !== 'id');
@@ -182,7 +188,7 @@ export class TableHanlderService {
       idType === 'uuid'
         ? {
             name: 'id',
-            type: 'varchar',
+            type: 'uuid',
             isPrimary: true,
             isGenerated: true,
             isNullable: false,
@@ -199,20 +205,23 @@ export class TableHanlderService {
     return [idColumn, ...filtered];
   }
 
-  async find() {
+  async find(query: TQuery) {
     try {
-      const repo = this.dataSouceService.getRepository(Table_definition);
-      return await repo.find();
+      return await this.queryService.query({
+        query,
+        repository: this.tableDefRepo,
+      });
     } catch (error) {
       throw new BadRequestException(error.message);
     }
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, query: TQuery) {
     try {
-      const repo = this.dataSouceService.getRepository(Table_definition);
-      return await repo.findOne({
-        where: { id },
+      return await this.queryService.query({
+        query,
+        repository: this.tableDefRepo,
+        id,
       });
     } catch (error) {
       throw new BadRequestException(error.message);

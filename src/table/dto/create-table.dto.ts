@@ -8,7 +8,7 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsSafeIdentifier } from '../../validator/is-safe-identifer.validator';
 import { PrimaryKeyValidCheck } from '../../validator/primary-key-valid-check.validator';
 
@@ -31,6 +31,7 @@ export class CreateColumnDto {
     'float',
     'simple-json',
     'enum',
+    'uuid',
   ])
   type: string;
 

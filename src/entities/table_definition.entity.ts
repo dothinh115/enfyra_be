@@ -1,17 +1,17 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
 import { Column_definition } from "./column_definition.entity";
 import { Relation_definition } from "./relation_definition.entity";
 
 @Entity("table_definition")
 export class Table_definition {
-  @Column({ type: "boolean", nullable: false, default: false })
-  isStatic: boolean;
+  @PrimaryGeneratedColumn('increment')
+  id: number;
 
   @Column({ type: "varchar", nullable: false, unique: true })
   name: string;
 
-  @PrimaryGeneratedColumn('increment')
-  id: number;
+  @Column({ type: "boolean", nullable: false, default: false })
+  isStatic: boolean;
 
 
   @CreateDateColumn()
