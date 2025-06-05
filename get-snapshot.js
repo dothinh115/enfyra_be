@@ -48,7 +48,7 @@ function generateSnapshotFromPayload(payload) {
 }
 
 function main() {
-  const payload = require('./payload.json');
+  const payload = require('./schema-from-db.json');
 
   const snapshot = generateSnapshotFromPayload(payload);
 

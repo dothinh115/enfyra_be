@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
 
-@Entity("hook_definition")
+@Entity('hook_definition')
 export class Hook_definition {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -16,7 +16,6 @@ export class Hook_definition {
 
   @Column({ type: "varchar", nullable: false, default: "beforeHandler" })
   type: string;
-
 
   @CreateDateColumn()
   createdAt: Date;

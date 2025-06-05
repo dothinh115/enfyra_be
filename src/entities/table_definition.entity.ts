@@ -1,8 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Column_definition } from "./column_definition.entity";
 import { Relation_definition } from "./relation_definition.entity";
 
-@Entity("table_definition")
+@Entity('table_definition')
 export class Table_definition {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -16,16 +16,15 @@ export class Table_definition {
   @Column({ type: "simple-json", nullable: true })
   unique: any;
 
+  @OneToMany(() => Column_definition, rel => rel.table, { cascade: true, eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  columns: Column_definition[];
+
+  @OneToMany(() => Relation_definition, rel => rel.sourceTable, { cascade: true, eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  relations: Relation_definition[];
 
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @OneToMany(() => Column_definition, rel => rel.table,{ cascade: true, eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-  columns: Column_definition[];
-
-  @OneToMany(() => Relation_definition, rel => rel.sourceTable,{ cascade: true, eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-  relations: Relation_definition[];
 }

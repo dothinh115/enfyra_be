@@ -14,7 +14,6 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
-import { MiddlewareService } from './middleware/middleware.service';
 import { QueryModule } from './query/query.module';
 
 @Global()
@@ -47,7 +46,6 @@ import { QueryModule } from './query/query.module';
     RabbitMQRegistry,
     JwtStrategy,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: MiddlewareService },
   ],
   exports: [RabbitMQRegistry, DataSourceModule, JwtModule],
 })

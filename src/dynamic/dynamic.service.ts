@@ -66,6 +66,8 @@ export class DynamicService {
         return acc;
       }, {});
 
+      const logs: any[] = [];
+
       const context = {
         $req: req,
         $body: req.body,
@@ -76,6 +78,22 @@ export class DynamicService {
         },
         throw401: () => {
           throw new UnauthorizedException();
+        },
+        log: (...args) => {
+          for (const arg of args) {
+            if (
+              typeof arg === 'object' &&
+              arg !== null &&
+              !Array.isArray(arg) &&
+              !(arg instanceof Date)
+            ) {
+              logs.push(arg); // giữ nguyên object
+            } else {
+              logs.push(
+                typeof arg === 'string' ? arg : JSON.stringify(arg, null, 2),
+              );
+            }
+          }
         },
         ...params,
         ...repoMap,

@@ -1,8 +1,8 @@
 import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Table_definition } from "./table_definition.entity";
 
-@Entity("route_definition")
-@Unique(["path", "method", ])
+@Entity('route_definition')
+@Unique(["path", "method"])
 export class Route_definition {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -22,8 +22,7 @@ export class Route_definition {
   @Column({ type: "varchar", nullable: false })
   path: string;
 
-
-  @ManyToMany(() => Table_definition, { eager: true, nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' } )
+  @ManyToMany(() => Table_definition, { eager: true, nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   @JoinTable()
   targetTables: Table_definition[];
 

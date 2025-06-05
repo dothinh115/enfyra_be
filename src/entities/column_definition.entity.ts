@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Table_definition } from "./table_definition.entity";
 
-@Entity("column_definition")
+@Entity('column_definition')
 export class Column_definition {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -15,7 +15,7 @@ export class Column_definition {
   @Column({ type: "boolean", nullable: false, default: false })
   isGenerated: boolean;
 
-  @Column({ type: "boolean", nullable: false, default: true })
+  @Column({ type: "boolean", nullable: true, default: true })
   isNullable: boolean;
 
   @Column({ type: "boolean", nullable: false, default: false })
@@ -36,8 +36,7 @@ export class Column_definition {
   @Column({ type: "varchar", nullable: false })
   type: string;
 
-
-  @ManyToOne(() => Table_definition, rel => rel.columns , { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' } )
+  @ManyToOne(() => Table_definition, rel => rel.columns, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   @JoinColumn()
   table: Table_definition;
 

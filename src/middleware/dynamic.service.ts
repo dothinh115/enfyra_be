@@ -15,7 +15,7 @@ import * as vm from 'vm';
 import { Request } from 'express';
 
 @Injectable()
-export class MiddlewareService implements CanActivate {
+export class DynamicMiddleware implements CanActivate {
   constructor(
     @InjectRepository(Middleware_definition)
     private middlewareRepo: Repository<Middleware_definition>,

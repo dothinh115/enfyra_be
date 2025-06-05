@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
 
-@Entity("middleware_definition")
+@Entity('middleware_definition')
 export class Middleware_definition {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -19,7 +19,6 @@ export class Middleware_definition {
 
   @Column({ type: "varchar", nullable: true })
   path: string;
-
 
   @CreateDateColumn()
   createdAt: Date;

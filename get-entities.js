@@ -21,7 +21,7 @@ const knownGlobalImports = {
 };
 
 function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
+  return str?.charAt(0).toUpperCase() + str?.slice(1);
 }
 
 function dbTypeToTSType(dbType) {
@@ -161,7 +161,7 @@ function generateEntityCode(name, def, inverseMap) {
     } else if (iRel.type === 'one-to-one') {
       addDecorator('OneToOne');
       addDecorator('JoinColumn');
-      decorator = `@OneToOne(() => ${target}${cascade})\n  @JoinColumn()`;
+      decorator = `@OneToOne(() => ${target}${cascade})`;
     } else if (iRel.type === 'one-to-many') {
       addDecorator('OneToMany');
       decorator = `@OneToMany(() => ${target}, x => x.${iRel.inversePropertyName}${cascade})`;

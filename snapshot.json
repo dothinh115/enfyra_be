@@ -1,5 +1,5 @@
 {
-     "column_definition": {
+    "column_definition": {
         "name": "column_definition",
         "isStatic": true,
         "columns": [
@@ -8,7 +8,7 @@
             { "name": "type", "type": "varchar", "isNullable": false, "isStatic": true },
             { "name": "isGenerated", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "isPrimary", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "isNullable", "type": "boolean", "isNullable": false, "isStatic": true, "default": true },
+            { "name": "isNullable", "type": "boolean", "isStatic": true, "default": true },
             { "name": "isStatic", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "default", "type": "simple-json", "isNullable": true, "isStatic": true },
             { "name": "enumValues", "type": "simple-json", "isNullable": true, "isStatic": true },
@@ -54,7 +54,6 @@
             { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true, "isUnique": true },
             { "name": "isStatic", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "unique", "type": "simple-json", "isNullable": true, "isStatic": true }
-
         ]
     },
     "user_definition": 
@@ -67,7 +66,9 @@
             { "name": "password", "type": "varchar", "isNullable": false, "isStatic": true, "default": null },
             { "name": "isRootUser", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
         ],
-        "relations": []
+        "relations": [
+            { "propertyName": "role", "type": "many-to-one", "targetTable": "role_definition", "isStatic": true, "inversePropertyName": "users" }
+        ]
     },
     "setting_definition": {
         "name": "setting_definition",
@@ -97,8 +98,7 @@
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
             { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true, "default": null }
-        ],
-        "relations": []
+        ]
     },
     "middleware_definition": {
         "name": "middleware_definition",

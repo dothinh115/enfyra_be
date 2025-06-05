@@ -56,6 +56,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     // return;
     await this.waitForDatabaseConnection();
     await this.createInitMetadata();
+
     await this.autoService.pullMetadataFromDb();
     this.delay(2000);
     await Promise.all([
@@ -223,6 +224,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     const resolveTableReference = async (
       ref: any,
     ): Promise<{ id: number } | null> => {
+      this.logger.log(`Tìm tên bảng ${ref}`);
       if (!ref) return null;
 
       if (typeof ref === 'string') {
@@ -335,12 +337,12 @@ export class BootstrapService implements OnApplicationBootstrap {
         // Xử lý relations, resolve targetTable field
         const relations = await Promise.all(
           (tableData.relations || []).map(async (rel: any) => {
-            const resolvedSourceTable = await resolveTableReference(
-              rel.sourceTable,
-            );
-            const resolvedTargetTable = await resolveTableReference(
-              rel.targetTable,
-            );
+            const resolvedSourceTable = (
+              await resolveTableReference(tableData.name)
+            ).id;
+            const resolvedTargetTable = (
+              await resolveTableReference(rel.targetTable)
+            ).id;
 
             return {
               ...rel,

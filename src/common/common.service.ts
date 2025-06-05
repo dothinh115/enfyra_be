@@ -16,7 +16,7 @@ export class CommonService {
     private dataSourceService: DataSourceService,
   ) {}
 
-  capitalizeFirstLetterEachLine(text: string): string {
+  capitalize(text: string): string {
     return text
       .split('\n')
       .map((line) => {

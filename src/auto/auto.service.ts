@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  forwardRef,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs';
 import { exec, execSync } from 'child_process';
@@ -30,263 +24,147 @@ export class AutoService {
   }
 
   async entityAutoGenerate(
-    payload: CreateTableDto,
+    payload: any,
     inverseRelationMap?: TInverseRelationMap,
   ) {
-    this.logger.debug('--- Bắt đầu xử lý tableChangesHandler ---');
+    const className = this.commonService.capitalize(payload.name);
+    let code = `@Entity('${payload.name.toLowerCase()}')\n`;
 
-    try {
-      this.logger.debug('Đang tải các Entities hiện có...');
-      const entityDir = path.resolve('src', 'entities');
-
-      const repo =
-        this.dataSourceService.getRepository<Table_definition>(
-          Table_definition,
-        );
-
-      let classPart = `@Entity("${payload.name.toLowerCase()}")\n`;
-
-      if (payload.unique && payload.unique.length) {
-        classPart += `@Unique([`;
-
-        for (const unique of payload.unique) {
-          classPart += `"${unique}", `;
-        }
-        classPart += `])\n`;
-      }
-
-      // Nếu có index, loại bỏ những cái trùng với unique
-      if (payload.index && payload.index.length) {
-        // Chuẩn hóa unique để so sánh
-        const uniqueKeys = (payload.unique || []).map((u) =>
-          [...u.value].sort().join('|'),
-        );
-
-        for (const index of payload.index) {
-          const key = [...index.value].sort().join('|');
-          if (uniqueKeys.includes(key)) {
-            continue; // Bỏ qua nếu trùng với unique
-          }
-
-          classPart += `@Index([`;
-          for (const value of index.value) {
-            classPart += `"${value}", `;
-          }
-          classPart += `])\n`;
-        }
-      }
-
-      classPart += `export class ${this.commonService.capitalizeFirstLetterEachLine(payload.name)} {\n`;
-      this.logger.debug(
-        `Tên Class Entity: ${this.commonService.capitalizeFirstLetterEachLine(payload.name)}`,
-      );
-
-      for (const column of payload.columns) {
-        this.logger.debug(
-          `Đang xử lý cột: ${column.name} (Type: ${column.type}, Primary: ${column.isPrimary}, Nullable: ${column.isNullable})`,
-        );
-        if (column.isPrimary) {
-          const strategy =
-            column.type === 'int'
-              ? `'increment'`
-              : column.type === 'uuid'
-                ? `"uuid"`
-                : '';
-          classPart += `  @PrimaryGeneratedColumn(${strategy})\n`;
-        } else {
-          const options: string[] = [];
-          options.push(`type: "${column.type}"`);
-          options.push(`nullable: ${String(column.isNullable)}`);
-          if (column.isUnique) options.push(`unique: true`);
-          if (column.type === 'enum')
-            options.push(
-              `enum: [${column.enumValues.map((v) => `'${v}'`).join(', ')}]`,
-            );
-          if (column.default !== undefined && column.default !== null) {
-            if (typeof column.default === 'string')
-              options.push(`default: "${column.default}"`);
-            else options.push(`default: ${column.default}`);
-          }
-          const optionsBlock = `{ ${options.join(', ')} }`;
-
-          classPart += `  @Column(`;
-          classPart += optionsBlock;
-          classPart += `)\n`;
-          if (column.index) {
-            classPart += `@Index()`;
-          }
-        }
-        classPart += `  ${column.name}: ${column.type === 'enum' ? column.enumValues.map((v) => `'${v}'`).join(' | ') : this.commonService.dbTypeToTSType(column.type)};\n\n`; // Thêm 2 dấu cách và dòng trống
-      }
-
-      if (payload.relations && payload.relations.length > 0) {
-        // Kiểm tra payload.relations tồn tại và có phần tử
-        this.logger.debug(`Đang xử lý ${payload.relations.length} quan hệ.`);
-
-        for (const relation of payload.relations) {
-          let targetTable: any = await repo.findOne({
-            where: {
-              id: (relation.targetTable as any)?.id || null,
-            },
-          });
-          if (!targetTable) {
-            throw new BadRequestException(
-              `Lỗi, ko có targetTable của ${relation.propertyName}`,
-            );
-          }
-          this.logger.debug(
-            `  - Quan hệ: ${relation.propertyName} (${relation.type} to ${targetTable.name})`,
-          );
-
-          const type =
-            relation.type === 'many-to-many'
-              ? `ManyToMany`
-              : relation.type === 'one-to-one'
-                ? `OneToOne`
-                : relation.type === 'many-to-one'
-                  ? `ManyToOne`
-                  : `OneToMany`;
-          if (
-            relation.type !== 'many-to-many' &&
-            relation.type !== 'one-to-one' &&
-            relation.index
-          ) {
-            classPart += `\n  @Index()\n`;
-          }
-          classPart += `\n  @${type}(() => ${this.commonService.capitalizeFirstLetterEachLine(targetTable.name)}`;
-          if (relation.inversePropertyName) {
-            classPart += `, rel => rel.${relation.inversePropertyName} `;
-          }
-          const options: string[] = [];
-          if (relation.isEager) options.push(`eager: true`);
-
-          if (
-            relation.isNullable !== undefined &&
-            relation.type !== 'one-to-many'
-          )
-            options.push(`nullable: ${relation.isNullable}`);
-          if (
-            relation.type === 'one-to-many' ||
-            relation.type === 'many-to-many'
-          ) {
-            options.push(`cascade: true`);
-          }
-          options.push(`onDelete: 'CASCADE'`);
-          options.push(`onUpdate: 'CASCADE'`);
-
-          const optionBlock = options.length
-            ? `, { ${options.join(', ')} }`
-            : '';
-          classPart += optionBlock;
-          classPart += ` )\n`;
-
-          if (
-            relation.type === 'many-to-many' &&
-            inverseRelationMap !== undefined &&
-            !inverseRelationMap.has(payload.name)
-          ) {
-            classPart += `  @JoinTable()\n`;
-          } else if (relation.type === 'many-to-one') {
-            classPart += `  @JoinColumn()\n`;
-          }
-
-          const relationType =
-            relation.type === 'one-to-many' || relation.type === 'many-to-many'
-              ? '[]'
-              : '';
-          classPart += `  ${relation.propertyName}: ${this.commonService.capitalizeFirstLetterEachLine(targetTable.name)}${relationType};\n`;
-        }
-      } else {
-        this.logger.debug('Không có quan hệ nào trong payload.');
-      }
-      classPart += `\n  @CreateDateColumn()\n`;
-      classPart += `  createdAt: Date;\n\n`;
-      classPart += `  @UpdateDateColumn()\n`;
-      classPart += `  updatedAt: Date;\n`;
-
-      //nếu có quan hệ ngược
-      if (
-        inverseRelationMap !== undefined &&
-        inverseRelationMap.has(payload.name)
-      ) {
-        const inverseRelationData = inverseRelationMap.get(payload.name);
-        for (const iRel of inverseRelationData) {
-          const type =
-            iRel.type === 'many-to-many'
-              ? `ManyToMany`
-              : iRel.type === 'one-to-one'
-                ? `OneToOne`
-                : iRel.type === 'many-to-one'
-                  ? `ManyToOne`
-                  : `OneToMany`;
-          const options: string[] = [];
-          if (iRel.type === 'many-to-many' || iRel.type === 'one-to-many')
-            options.push(`cascade: true`);
-          if (iRel.isEager) options.push(`eager: true`);
-          options.push(`onDelete: 'CASCADE'`);
-          options.push(`onUpdate: 'CASCADE'`);
-          let optionsBlock: string = '';
-          if (options.length) {
-            optionsBlock += `,{ ${options.join(`, `)} }`;
-          }
-
-          classPart += `\n  @${type}(() => ${iRel.targetClass}, rel => rel.${iRel.inversePropertyName}`;
-          classPart += optionsBlock;
-          classPart += `)\n`;
-          if (iRel.type === 'many-to-one') {
-            classPart += `  @JoinColumn()\n`;
-          }
-          classPart += `  ${iRel.propertyName}: ${iRel.targetClass}`;
-          if (iRel.type === 'one-to-many' || iRel.type === 'many-to-many') {
-            classPart += `[]`;
-          }
-          classPart += `;\n`;
-        }
-        //xoá sau khi generate quan hệ ngược xong
-        inverseRelationMap.delete(payload.name);
-      }
-      classPart += `}`;
-
-      const fileContent = classPart;
-
-      this.logger.debug('--- Bắt đầu xử lý ghi file ---');
-      const dir = path.dirname(entityDir);
-      this.logger.debug(`Thư mục đích: ${dir}`);
-      const entityFilePath = path.resolve(
-        entityDir,
-        `${payload.name.toLowerCase()}.entity.ts`,
-      );
-
-      // Kiểm tra và xóa file cũ
-      if (fs.existsSync(entityFilePath)) {
-        this.logger.debug(`File đã tồn tại: ${entityFilePath}. Đang xóa...`);
-        fs.unlinkSync(entityFilePath);
-        this.logger.log('🧹 File cũ đã được xoá:', entityFilePath);
-      } else {
-        this.logger.debug(`File không tồn tại: ${entityFilePath}. Sẽ tạo mới.`);
-      }
-
-      // Kiểm tra và tạo thư mục
-      if (!fs.existsSync(dir)) {
-        this.logger.debug(`Thư mục không tồn tại: ${dir}. Đang tạo...`);
-        fs.mkdirSync(dir, { recursive: true });
-        this.logger.log('📁 Tạo thư mục:', dir);
-      } else {
-        this.logger.debug(`Thư mục đã tồn tại: ${dir}.`);
-      }
-
-      this.logger.debug(`Nội dung file Entity cuối cùng:\n${fileContent}`);
-      fs.writeFileSync(entityFilePath, fileContent);
-      this.logger.log('✅ Ghi file thành công:', entityDir);
-
-      this.logger.debug('--- Kết thúc xử lý tableChangesHandler ---');
-      return { message: `Tạo bảng ${payload.name} thành công!` };
-    } catch (error) {
-      // Đảm bảo log toàn bộ thông tin lỗi
-      this.logger.error('❌ Lỗi khi xử lý file:', error.message, error.stack);
-      // Ném lại lỗi để NestJS có thể bắt và xử lý ở tầng cao hơn (ví dụ: Exception Filter)
-      throw error;
+    if (payload.unique?.length) {
+      const uniques = payload.unique.map((u) => `"${u}"`).join(', ');
+      code += `@Unique([${uniques}])\n`;
     }
+
+    if (payload.index?.length) {
+      const uniqueKeys = (payload.unique || []).map((u) =>
+        [...u.value].sort().join('|'),
+      );
+      for (const index of payload.index) {
+        const key = [...index.value].sort().join('|');
+        if (!uniqueKeys.includes(key)) {
+          const indexFields = index.value.map((v) => `"${v}"`).join(', ');
+          code += `@Index([${indexFields}])\n`;
+        }
+      }
+    }
+
+    code += `export class ${className} {\n`;
+
+    for (const col of payload.columns) {
+      if (col.isPrimary) {
+        const strategy = col.type === 'uuid' ? `'uuid'` : `'increment'`;
+        code += `  @PrimaryGeneratedColumn(${strategy})\n`;
+      } else {
+        const options = [`type: "${col.type}"`, `nullable: ${col.isNullable}`];
+        if (col.isUnique) options.push('unique: true');
+        if (col.type === 'enum' && col.enumValues)
+          options.push(
+            `enum: [${col.enumValues.map((v) => `'${v}'`).join(', ')}]`,
+          );
+        if (col.default !== undefined && col.default !== null) {
+          if (typeof col.default === 'string')
+            options.push(`default: "${col.default}"`);
+          else options.push(`default: ${col.default}`);
+        }
+        code += `  @Column({ ${options.join(', ')} })\n`;
+        if (col.index) code += `  @Index()\n`;
+      }
+      const tsType =
+        col.type === 'enum'
+          ? col.enumValues.map((v) => `'${v}'`).join(' | ')
+          : this.commonService.dbTypeToTSType(col.type);
+      code += `  ${col.name}: ${tsType};\n\n`;
+    }
+
+    if (payload.relations?.length) {
+      for (const rel of payload.relations) {
+        const target = this.commonService.capitalize(
+          rel.targetTable?.name || '',
+        );
+        const typeMap = {
+          'many-to-many': 'ManyToMany',
+          'one-to-one': 'OneToOne',
+          'many-to-one': 'ManyToOne',
+          'one-to-many': 'OneToMany',
+        };
+        const type = typeMap[rel.type] || 'ManyToOne';
+        const options = [];
+        if (rel.isEager) options.push('eager: true');
+        if (rel.isNullable !== undefined && rel.type !== 'one-to-many')
+          options.push(`nullable: ${rel.isNullable}`);
+        if (['many-to-many', 'one-to-many'].includes(rel.type))
+          options.push('cascade: true');
+        options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
+        const optionsBlock = options.length
+          ? `, { ${options.join(', ')} }`
+          : '';
+
+        code += `  @${type}(() => ${target}${rel.inversePropertyName ? `, rel => rel.${rel.inversePropertyName}` : ''}${optionsBlock})\n`;
+
+        if (rel.type === 'many-to-many') {
+          if (inverseRelationMap && !inverseRelationMap.has(payload.name)) {
+            code += `  @JoinTable()\n`;
+          }
+        } else if (['many-to-one', 'one-to-one'].includes(rel.type)) {
+          code += `  @JoinColumn()\n`;
+        }
+
+        const suffix = ['many-to-many', 'one-to-many'].includes(rel.type)
+          ? '[]'
+          : '';
+        code += `  ${rel.propertyName}: ${target}${suffix};\n\n`;
+      }
+    }
+
+    if (inverseRelationMap?.has(payload.name)) {
+      const inverseRelations = inverseRelationMap.get(payload.name);
+      for (const rel of inverseRelations) {
+        const type =
+          rel.type === 'many-to-many'
+            ? 'ManyToMany'
+            : rel.type === 'one-to-one'
+              ? 'OneToOne'
+              : rel.type === 'many-to-one'
+                ? 'ManyToOne'
+                : 'OneToMany';
+        const options = [];
+        if (['many-to-many', 'one-to-many'].includes(rel.type))
+          options.push('cascade: true');
+        if (rel.isEager) options.push('eager: true');
+        options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
+        const optionBlock = options.length ? `, { ${options.join(', ')} }` : '';
+
+        code += `  @${type}(() => ${rel.targetClass}, rel => rel.${rel.inversePropertyName}${optionBlock})\n`;
+        if (rel.type === 'many-to-one') code += `  @JoinColumn()\n`;
+
+        const suffix = ['many-to-many', 'one-to-many'].includes(rel.type)
+          ? '[]'
+          : '';
+        code += `  ${rel.propertyName}: ${rel.targetClass}${suffix};\n\n`;
+      }
+      inverseRelationMap.delete(payload.name);
+    }
+
+    code += `  @CreateDateColumn()\n  createdAt: Date;\n\n`;
+    code += `  @UpdateDateColumn()\n  updatedAt: Date;\n`;
+    code += `}\n`;
+
+    // 🔽 Ghi file
+    const entityDir = path.resolve('src', 'entities');
+    const entityPath = path.resolve(
+      entityDir,
+      `${payload.name.toLowerCase()}.entity.ts`,
+    );
+
+    // Đảm bảo thư mục tồn tại
+    if (!fs.existsSync(entityDir)) {
+      fs.mkdirSync(entityDir, { recursive: true });
+    }
+
+    fs.writeFileSync(entityPath, code);
+    this.logger?.log(`✅ Ghi entity file thành công: ${entityPath}`);
+
+    return code;
   }
 
   async autoBuildToJs() {
@@ -452,9 +330,7 @@ export class AutoService {
               isEager: relation.isInverseEager,
               isNullable: relation.isNullable,
               index: relation.index,
-              targetClass: this.commonService.capitalizeFirstLetterEachLine(
-                table.name,
-              ),
+              targetClass: this.commonService.capitalize(table.name),
             },
           ]);
         }
@@ -491,6 +367,9 @@ export class AutoService {
     let tables: any[] = await tableRepo.find({
       relations: ['relations', 'relations.targetTable', 'columns'],
     });
+
+    const test = tables.find((table) => table === 'table_alias_definition');
+    console.dir(test, { depth: null });
 
     if (tables.length === 0) return;
     tables.forEach((table) => {
