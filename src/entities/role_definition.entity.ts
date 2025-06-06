@@ -9,7 +9,7 @@ export class Role_definition {
   @Column({ type: "varchar", nullable: false })
   name: string;
 
-  @OneToMany(() => User_definition, rel => rel.role, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  @OneToMany(() => User_definition, rel => rel.role, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   users: User_definition[];
 
   @CreateDateColumn()

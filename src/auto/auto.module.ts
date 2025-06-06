@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { AutoService } from './auto.service';
+import { AutoService } from './auto-entity.service';
 
 @Global()
 @Module({

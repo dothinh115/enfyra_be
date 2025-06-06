@@ -1,4 +1,4 @@
-import { AutoService } from '../auto/auto.service';
+import { AutoService } from '../auto/auto-entity.service';
 import { Table_definition } from '../entities/table_definition.entity';
 import {
   CreateColumnDto,
@@ -9,7 +9,6 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { QueryService } from '../query/query.service';
 import { TQuery } from '../utils/type';
 
 @Injectable()
@@ -19,7 +18,6 @@ export class TableHanlderService {
     private autoService: AutoService,
     @InjectRepository(Table_definition)
     private tableDefRepo: Repository<Table_definition>,
-    private queryService: QueryService,
   ) {}
 
   async createTable(body: CreateTableDto) {
@@ -209,28 +207,9 @@ export class TableHanlderService {
     return [idColumn, ...filtered];
   }
 
-  async find(query: TQuery) {
-    try {
-      return await this.queryService.query({
-        query,
-        repository: this.tableDefRepo,
-      });
-    } catch (error) {
-      throw new BadRequestException(error.message);
-    }
-  }
+  async find(query: TQuery) {}
 
-  async findOne(id: number, query: TQuery) {
-    try {
-      return await this.queryService.query({
-        query,
-        repository: this.tableDefRepo,
-        id,
-      });
-    } catch (error) {
-      throw new BadRequestException(error.message);
-    }
-  }
+  async findOne(id: number, query: TQuery) {}
 
   async delete(id: number) {
     try {

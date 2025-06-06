@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import * as cors from 'cors';
+import * as express from 'express';
 
 async function ensureDatabaseExists() {
   const DB_TYPE = (process.env.DB_TYPE || 'mysql') as 'mysql' | 'postgres';
@@ -52,6 +54,20 @@ async function bootstrap() {
   await ensureDatabaseExists();
 
   const app = await NestFactory.create(AppModule);
+
+  app.use(
+    cors({
+      origin: ['*'],
+      credentials: true,
+      methods: ['POST', 'GET', 'OPTIONS'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'x-apollo-operation-name',
+      ],
+    }),
+  );
+  app.use(express.json());
 
   app.useGlobalPipes(
     new ValidationPipe({

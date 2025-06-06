@@ -2,7 +2,7 @@ import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { TableHanlderService } from '../table/table.service';
 import { Table_definition } from '../entities/table_definition.entity';
-import { AutoService } from '../auto/auto.service';
+import { AutoService } from '../auto/auto-entity.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { Repository } from 'typeorm';
 import { CommonService } from '../common/common.service';

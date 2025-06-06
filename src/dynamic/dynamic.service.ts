@@ -12,9 +12,12 @@ import { JwtService } from '@nestjs/jwt';
 import { Route_definition } from '../entities/route_definition.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { QueryService } from '../query/query.service';
 import { match } from 'path-to-regexp';
-
+import * as qs from 'qs';
+import {
+  collapseIdOnlyFields,
+  extractRelationsAndFieldsAndWhere,
+} from '../utils/common';
 @Injectable()
 export class DynamicService {
   private logger = new Logger(DynamicService.name);
@@ -23,7 +26,6 @@ export class DynamicService {
     private jwtService: JwtService,
     @InjectRepository(Route_definition)
     private routeRepo: Repository<Route_definition>,
-    private queryService: QueryService,
   ) {}
 
   async dynamicService(req: Request) {
@@ -37,7 +39,9 @@ export class DynamicService {
       });
 
       for (const route of routes) {
-        const matcher = match(route.path, { decode: decodeURIComponent });
+        const matcher = match(`/api/${route.path.replace(/^\//, '')}`, {
+          decode: decodeURIComponent,
+        });
         const matched = matcher(path);
         if (matched) {
           curRoute = route;
@@ -54,18 +58,56 @@ export class DynamicService {
         return acc;
       }, {});
 
-      const queryMap = curRoute.targetTables.reduce((acc, table) => {
-        const repository = this.dataSourceService.getRepository(table.name);
+      // const queryMap = curRoute.targetTables.reduce((acc, table) => {
+      //   const repository = this.dataSourceService.getRepository(table.name);
 
-        acc[`$${table.name}Query`] = async (id?: any) =>
-          await this.queryService.query({
-            repository,
-            query: req.query,
-            ...(id && { id }),
-          });
-        return acc;
-      }, {});
+      //   acc[`$${table.name}Query`] = async (id?: any) =>
+      //     await this.queryService.query({
+      //       repository,
+      //       query: req.query,
+      //       ...(id && { id }),
+      //     });
+      //   return acc;
+      // }, {});
+      const url = req.originalUrl || req.url;
+      let reqQuery: any;
 
+      if (url.includes('?')) {
+        const [path, queryString] = url.split('?');
+        const parsed = qs.parse(queryString, { depth: 10 });
+
+        // Gán từng key vào req.query (tránh gán thẳng gây lỗi)
+        Object.assign(req.query, parsed);
+
+        // Debug log kết quả đã parse
+        reqQuery = parsed;
+      }
+      let filter = {};
+      let fields = '';
+      if (reqQuery?.filter) {
+        filter = reqQuery.filter;
+      }
+      if (reqQuery?.fields) {
+        fields = reqQuery.fields;
+      }
+
+      const repo = this.dataSourceService.getRepository('category');
+      const extractResult = extractRelationsAndFieldsAndWhere({
+        fields,
+        filter,
+        rootTableName: 'category',
+        dataSource: this.dataSourceService.getDataSource(),
+      });
+
+      const qb = repo.createQueryBuilder('category');
+      qb.select(extractResult.select);
+      for (const join of extractResult.joinArr) {
+        qb.leftJoin(join.path, join.alias);
+      }
+      qb.where(extractResult.where).setParameters(extractResult.params);
+      console.log(qb.getQuery(), qb.getParameters());
+      const result = await qb.getMany();
+      return collapseIdOnlyFields(result);
       const logs: any[] = [];
 
       const context = {
@@ -97,18 +139,18 @@ export class DynamicService {
         },
         ...params,
         ...repoMap,
-        ...queryMap,
       };
 
       // Tạo sandbox và chạy script
       const script = new vm.Script(`(async () => { ${curRoute.handler} })()`);
       const vmContext = vm.createContext(context);
-      const result = await script.runInContext(vmContext, { timeout: 3000 });
+      // const result = await script.runInContext(vmContext, { timeout: 3000 });
 
-      return result;
+      return {};
     } catch (error) {
       this.logger.error('❌ Script lỗi:', error.message);
       this.logger.debug(error.stack);
+      console.dir(error, { depth: null });
 
       if (
         error instanceof UnauthorizedException ||

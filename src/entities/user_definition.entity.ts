@@ -15,7 +15,7 @@ export class User_definition {
   @Column({ type: "varchar", nullable: false })
   password: string;
 
-  @ManyToOne(() => Role_definition, rel => rel.users, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  @ManyToOne(() => Role_definition, rel => rel.users, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   @JoinColumn()
   role: Role_definition;
 

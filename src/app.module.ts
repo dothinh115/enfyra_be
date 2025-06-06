@@ -14,7 +14,6 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
-import { QueryModule } from './query/query.module';
 
 @Global()
 @Module({
@@ -30,7 +29,6 @@ import { QueryModule } from './query/query.module';
     CommonModule,
     DataSourceModule,
     AutoGenerateModule,
-    QueryModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {

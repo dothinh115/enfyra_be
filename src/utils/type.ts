@@ -72,11 +72,12 @@ export type TSToDBTypeMap = {
 export type TInverseRelation = {
   propertyName: string;
   type: string;
-  isEager: boolean;
-  isNullable: boolean;
-  index: boolean;
+  isEager?: boolean;
+  isNullable?: boolean;
+  index?: boolean;
   inversePropertyName: string;
   targetClass: string;
+  targetGraphQLType?: string;
 };
 
 export type TInverseRelationMap = Map<string, TInverseRelation[]>;

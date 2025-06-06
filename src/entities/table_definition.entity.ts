@@ -7,6 +7,9 @@ export class Table_definition {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
+  @Column({ type: "varchar", nullable: true, unique: true })
+  alias: string;
+
   @Column({ type: "boolean", nullable: false, default: false })
   isStatic: boolean;
 
@@ -16,10 +19,10 @@ export class Table_definition {
   @Column({ type: "simple-json", nullable: true })
   unique: any;
 
-  @OneToMany(() => Column_definition, rel => rel.table, { cascade: true, eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  @OneToMany(() => Column_definition, rel => rel.table, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   columns: Column_definition[];
 
-  @OneToMany(() => Relation_definition, rel => rel.sourceTable, { cascade: true, eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  @OneToMany(() => Relation_definition, rel => rel.sourceTable, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   relations: Relation_definition[];
 
   @CreateDateColumn()

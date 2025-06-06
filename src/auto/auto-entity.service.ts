@@ -1,12 +1,11 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs';
-import { exec, execSync } from 'child_process';
+import { execSync } from 'child_process';
 import { DataSourceService } from '../data-source/data-source.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { CommonService } from '../common/common.service';
 import { Table_definition } from '../entities/table_definition.entity';
-import { DataSource } from 'typeorm';
 import { TInverseRelation, TInverseRelationMap } from '../utils/type';
 
 @Injectable()
@@ -19,22 +18,22 @@ export class AutoService {
     private dataSourceService: DataSourceService,
   ) {}
 
-  buildInverseRelationMap() {
-    return new Map<string, TInverseRelation[]>();
-  }
-
-  async entityAutoGenerate(
-    payload: any,
+  async entityGenerate(
+    payload: CreateTableDto,
     inverseRelationMap?: TInverseRelationMap,
   ) {
-    const className = this.commonService.capitalize(payload.name);
+    const capitalize = this.commonService.capitalize;
+    const dbTypeToTSType = this.commonService.dbTypeToTSType;
+    const className = capitalize(payload.name);
     let code = `@Entity('${payload.name.toLowerCase()}')\n`;
 
+    // Unique
     if (payload.unique?.length) {
       const uniques = payload.unique.map((u) => `"${u}"`).join(', ');
       code += `@Unique([${uniques}])\n`;
     }
 
+    // Index
     if (payload.index?.length) {
       const uniqueKeys = (payload.unique || []).map((u) =>
         [...u.value].sort().join('|'),
@@ -50,125 +49,113 @@ export class AutoService {
 
     code += `export class ${className} {\n`;
 
+    // Columns
     for (const col of payload.columns) {
       if (col.isPrimary) {
         const strategy = col.type === 'uuid' ? `'uuid'` : `'increment'`;
         code += `  @PrimaryGeneratedColumn(${strategy})\n`;
       } else {
-        const options = [`type: "${col.type}"`, `nullable: ${col.isNullable}`];
-        if (col.isUnique) options.push('unique: true');
+        const opts = [`type: "${col.type}"`, `nullable: ${col.isNullable}`];
+        if (col.isUnique) opts.push(`unique: true`);
         if (col.type === 'enum' && col.enumValues)
-          options.push(
+          opts.push(
             `enum: [${col.enumValues.map((v) => `'${v}'`).join(', ')}]`,
           );
-        if (col.default !== undefined && col.default !== null) {
-          if (typeof col.default === 'string')
-            options.push(`default: "${col.default}"`);
-          else options.push(`default: ${col.default}`);
-        }
-        code += `  @Column({ ${options.join(', ')} })\n`;
+        if (col.default !== undefined && col.default !== null)
+          opts.push(
+            typeof col.default === 'string'
+              ? `default: "${col.default}"`
+              : `default: ${col.default}`,
+          );
+        code += `  @Column({ ${opts.join(', ')} })\n`;
         if (col.index) code += `  @Index()\n`;
       }
+
       const tsType =
         col.type === 'enum'
           ? col.enumValues.map((v) => `'${v}'`).join(' | ')
-          : this.commonService.dbTypeToTSType(col.type);
+          : dbTypeToTSType(col.type);
       code += `  ${col.name}: ${tsType};\n\n`;
     }
 
-    if (payload.relations?.length) {
-      for (const rel of payload.relations) {
-        const target = this.commonService.capitalize(
-          rel.targetTable?.name || '',
-        );
-        const typeMap = {
-          'many-to-many': 'ManyToMany',
-          'one-to-one': 'OneToOne',
-          'many-to-one': 'ManyToOne',
-          'one-to-many': 'OneToMany',
-        };
-        const type = typeMap[rel.type] || 'ManyToOne';
-        const options = [];
-        if (rel.isEager) options.push('eager: true');
-        if (rel.isNullable !== undefined && rel.type !== 'one-to-many')
-          options.push(`nullable: ${rel.isNullable}`);
-        if (['many-to-many', 'one-to-many'].includes(rel.type))
-          options.push('cascade: true');
-        options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
-        const optionsBlock = options.length
-          ? `, { ${options.join(', ')} }`
-          : '';
+    // Relation generator
+    const generateRelation = (rel: any, isInverse = false) => {
+      const typeMap = {
+        'many-to-many': 'ManyToMany',
+        'one-to-one': 'OneToOne',
+        'many-to-one': 'ManyToOne',
+        'one-to-many': 'OneToMany',
+      };
+      const type = typeMap[rel.type] || 'ManyToOne';
+      const target = capitalize(rel.targetTable?.name || rel.targetClass || '');
 
-        code += `  @${type}(() => ${target}${rel.inversePropertyName ? `, rel => rel.${rel.inversePropertyName}` : ''}${optionsBlock})\n`;
+      const opts = [];
+      if (rel.isEager) opts.push('eager: true');
+      if (rel.isNullable !== undefined && rel.type !== 'one-to-many')
+        opts.push(`nullable: ${rel.isNullable}`);
+      if (['many-to-many', 'many-to-one'].includes(rel.type) && !isInverse)
+        opts.push(`cascade: true`);
+      opts.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
+      const optStr = opts.length ? `, { ${opts.join(', ')} }` : '';
 
-        if (rel.type === 'many-to-many') {
-          if (inverseRelationMap && !inverseRelationMap.has(payload.name)) {
-            code += `  @JoinTable()\n`;
-          }
-        } else if (['many-to-one', 'one-to-one'].includes(rel.type)) {
-          code += `  @JoinColumn()\n`;
-        }
-
-        const suffix = ['many-to-many', 'one-to-many'].includes(rel.type)
-          ? '[]'
-          : '';
-        code += `  ${rel.propertyName}: ${target}${suffix};\n\n`;
+      let relationCode = `  @${type}(() => ${target}`;
+      if (rel.inversePropertyName) {
+        relationCode += `, rel => rel.${rel.inversePropertyName}`;
       }
+      relationCode += `${optStr})\n`;
+
+      if (rel.type === 'many-to-many') {
+        if (
+          !isInverse &&
+          (!inverseRelationMap || !inverseRelationMap.has(payload.name))
+        ) {
+          relationCode += `  @JoinTable()\n`;
+        }
+      } else if (['many-to-one', 'one-to-one'].includes(rel.type)) {
+        relationCode += `  @JoinColumn()\n`;
+      }
+
+      const suffix = ['many-to-many', 'one-to-many'].includes(rel.type)
+        ? '[]'
+        : '';
+      relationCode += `  ${rel.propertyName}: ${target}${suffix};\n\n`;
+
+      return relationCode;
+    };
+
+    // Normal relations
+    for (const rel of payload.relations || []) {
+      code += generateRelation(rel);
     }
 
+    // Inverse relations
     if (inverseRelationMap?.has(payload.name)) {
       const inverseRelations = inverseRelationMap.get(payload.name);
       for (const rel of inverseRelations) {
-        const type =
-          rel.type === 'many-to-many'
-            ? 'ManyToMany'
-            : rel.type === 'one-to-one'
-              ? 'OneToOne'
-              : rel.type === 'many-to-one'
-                ? 'ManyToOne'
-                : 'OneToMany';
-        const options = [];
-        if (['many-to-many', 'one-to-many'].includes(rel.type))
-          options.push('cascade: true');
-        if (rel.isEager) options.push('eager: true');
-        options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
-        const optionBlock = options.length ? `, { ${options.join(', ')} }` : '';
-
-        code += `  @${type}(() => ${rel.targetClass}, rel => rel.${rel.inversePropertyName}${optionBlock})\n`;
-        if (rel.type === 'many-to-one') code += `  @JoinColumn()\n`;
-
-        const suffix = ['many-to-many', 'one-to-many'].includes(rel.type)
-          ? '[]'
-          : '';
-        code += `  ${rel.propertyName}: ${rel.targetClass}${suffix};\n\n`;
+        code += generateRelation(rel, true);
       }
       inverseRelationMap.delete(payload.name);
     }
 
+    // Timestamps
     code += `  @CreateDateColumn()\n  createdAt: Date;\n\n`;
     code += `  @UpdateDateColumn()\n  updatedAt: Date;\n`;
     code += `}\n`;
 
-    // 🔽 Ghi file
+    // Write to file
     const entityDir = path.resolve('src', 'entities');
     const entityPath = path.resolve(
       entityDir,
       `${payload.name.toLowerCase()}.entity.ts`,
     );
-
-    // Đảm bảo thư mục tồn tại
-    if (!fs.existsSync(entityDir)) {
-      fs.mkdirSync(entityDir, { recursive: true });
-    }
-
+    if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
     fs.writeFileSync(entityPath, code);
-    this.logger?.log(`✅ Ghi entity file thành công: ${entityPath}`);
 
+    console.log(`✅ Ghi entity file thành công: ${entityPath}`);
     return code;
   }
 
-  async autoBuildToJs() {
-    const filePath = path.resolve('build-entities.ts');
+  async buildToJs(filePath: string) {
     const script = `npx ts-node ${filePath}`;
     this.logger.log('Chuẩn bị build file js');
     this.logger.log('script', script);
@@ -181,7 +168,7 @@ export class AutoService {
     }
   }
 
-  async autoGenerateMigrationFile() {
+  async generateMigrationFile() {
     const migrationDir = path.resolve('src', 'migrations', 'AutoMigration');
     const appDataSourceDir = path.resolve(
       'src',
@@ -214,7 +201,7 @@ export class AutoService {
     }
   }
 
-  async autoRunMigration() {
+  async runMigration() {
     this.logger.log('Chuẩn bị run migration');
     const dataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
     const script = `npm run typeorm -- migration:run -d ${dataSourceDir}`;
@@ -225,18 +212,6 @@ export class AutoService {
       this.logger.debug('Run migration thành công!');
     } catch (error) {
       this.logger.error('Lỗi khi chạy shell script:', error);
-    }
-  }
-
-  async afterEffect() {
-    try {
-      await this.autoBuildToJs();
-      await this.autoGenerateMigrationFile();
-      await this.clearMigrationsTable();
-      await this.autoRunMigration();
-    } catch (error) {
-      this.logger.error('Lỗi trong afterEffect:', error);
-      throw error;
     }
   }
 
@@ -280,71 +255,12 @@ export class AutoService {
     await queryRunner.release();
   }
 
-  getEntityClassByTableName(
-    dataSource: DataSource,
-    tableName: string,
-  ): Function | undefined {
-    const entityMetadata = dataSource.entityMetadatas.find(
-      (meta) =>
-        meta.tableName === tableName || meta.givenTableName === tableName,
-    );
-
-    return entityMetadata?.target as Function | undefined;
-  }
-
-  async getInverseRelationMetadatas(
-    inverseRelationMap: TInverseRelationMap,
-    tables: CreateTableDto[],
-  ) {
-    for (const table of tables) {
-      for (const relation of table.relations) {
-        if (relation.inversePropertyName) {
-          let type = 'one-to-one';
-          if (relation.type === 'many-to-many') type = 'many-to-many';
-          if (relation.type === 'one-to-many') type = 'many-to-one';
-          if (relation.type === 'many-to-one') type = 'one-to-many';
-
-          const repo =
-            this.dataSourceService.getRepository<Table_definition>(
-              Table_definition,
-            );
-          const targetTable = await repo.findOne({
-            where: {
-              id: (relation.targetTable as any).id,
-            },
-          });
-          if (!targetTable) {
-            this.logger.warn(
-              `Không tìm thấy targetTable cho relation ${relation.propertyName} trong bảng ${table.name}`,
-            );
-            continue;
-          }
-          const existed = inverseRelationMap.get(targetTable.name) ?? [];
-
-          inverseRelationMap.set(targetTable.name, [
-            ...existed,
-            {
-              propertyName: relation.inversePropertyName,
-              inversePropertyName: relation.propertyName,
-              type,
-              isEager: relation.isInverseEager,
-              isNullable: relation.isNullable,
-              index: relation.index,
-              targetClass: this.commonService.capitalize(table.name),
-            },
-          ]);
-        }
-      }
-    }
-  }
-
   async backup(payload: any) {
     const scriptPath = path.resolve('get-snapshot.js');
     try {
       const filePath = path.resolve('schema-from-db.json');
       const jsonStr = JSON.stringify(payload, null, 2);
       fs.writeFileSync(filePath, jsonStr, { encoding: 'utf-8' });
-      execSync(`node ${scriptPath}`, { encoding: 'utf-8' });
     } catch (err) {
       this.logger.error('Lỗi khi chạy shell script:', err);
     }
@@ -361,15 +277,41 @@ export class AutoService {
     }
   }
 
+  buildInverseRelationMap(allTables: any[]): TInverseRelationMap {
+    const capitalize = this.commonService.capitalize;
+    const inverseRelationType = this.commonService.inverseRelationType;
+    const map: TInverseRelationMap = new Map();
+
+    for (const table of allTables) {
+      const tableName = table.name;
+      const relations = table.relations || [];
+
+      for (const rel of relations) {
+        if (!rel.inversePropertyName || !rel.targetTable?.name) continue;
+
+        const targetName = rel.targetTable.name;
+        const inverseEntry: TInverseRelation = {
+          targetClass: `${capitalize(tableName)}`,
+          targetGraphQLType: `${capitalize(tableName)}Type`,
+          propertyName: rel.inversePropertyName,
+          inversePropertyName: rel.propertyName,
+          type: inverseRelationType(rel.type),
+        };
+
+        if (!map.has(targetName)) map.set(targetName, []);
+        map.get(targetName)!.push(inverseEntry);
+      }
+    }
+
+    return map;
+  }
+
   async pullMetadataFromDb() {
     const tableRepo = this.dataSourceService.getRepository(Table_definition);
 
     let tables: any[] = await tableRepo.find({
       relations: ['relations', 'relations.targetTable', 'columns'],
     });
-
-    const test = tables.find((table) => table === 'table_alias_definition');
-    console.dir(test, { depth: null });
 
     if (tables.length === 0) return;
     tables.forEach((table) => {
@@ -384,29 +326,28 @@ export class AutoService {
       );
     });
 
-    const inverseRelationMap = this.buildInverseRelationMap();
-    await this.getInverseRelationMetadatas(inverseRelationMap, tables);
+    const inverseRelationMap = this.buildInverseRelationMap(tables);
 
     await Promise.all(
       tables.map(
-        async (table) =>
-          await this.entityAutoGenerate(table, inverseRelationMap),
+        async (table) => await this.entityGenerate(table, inverseRelationMap),
       ),
     );
 
     this.logger.log(`Chuẩn bị fix import`);
     await this.commonService.autoFixMissingImports(
       path.resolve('src', 'entities'),
+      [path.resolve('src', 'entities')],
     );
     this.logger.debug(`Đã fix import xong`);
 
     // this.logger.log(`Test logic file vừa generate`);
     // this.commonService.checkTsErrors(path.resolve('src', 'entities'));
     // this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
-    await this.autoBuildToJs();
+    await this.buildToJs(path.resolve('build-entities.ts'));
     await this.dataSourceService.reloadDataSource();
-    await this.autoGenerateMigrationFile();
-    await this.autoRunMigration();
+    await this.generateMigrationFile();
+    await this.runMigration();
 
     const entityDir = path.resolve('src', 'entities');
     const distEntityDir = path.resolve('dist', 'entities');

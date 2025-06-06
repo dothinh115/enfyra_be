@@ -16,15 +16,12 @@ export class CommonService {
     private dataSourceService: DataSourceService,
   ) {}
 
-  capitalize(text: string): string {
-    return text
-      .split('\n')
-      .map((line) => {
-        line = line.trim();
-        if (!line) return '';
-        return line.charAt(0).toUpperCase() + line.slice(1);
-      })
-      .join('\n');
+  capitalize(str: string): string {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  lowerFirst(str: string): string {
+    return str.charAt(0).toLowerCase() + str.slice(1);
   }
 
   dbTypeToTSType(dbType: string): string {
@@ -63,6 +60,24 @@ export class CommonService {
       any: 'json',
     };
     return map[tsType] ?? 'text';
+  }
+
+  mapToGraphQLType(dbType: string): string {
+    const map: Record<string, string> = {
+      int: 'Number',
+      integer: 'Number',
+      float: 'Number',
+      double: 'Number',
+      decimal: 'Number',
+      uuid: 'String',
+      varchar: 'String',
+      text: 'String',
+      boolean: 'Boolean',
+      bool: 'Boolean',
+      'simple-json': 'String',
+      enum: 'String',
+    };
+    return map[dbType] || 'String';
   }
 
   async loadDynamicEntities(entityDir: string) {
@@ -239,12 +254,12 @@ export class CommonService {
     );
   }
 
-  async autoFixMissingImports(dirPath: string): Promise<void> {
+  async autoFixMissingImports(
+    dirPath: string,
+    scanDir: string[],
+  ): Promise<void> {
     const files = this.getAllTsFiles(dirPath);
-    const exportMap = await this.buildExportMapAsync(
-      ['src/entities'],
-      files[0],
-    );
+    const exportMap = await this.buildExportMapAsync(scanDir, files[0]);
     const project = new Project({ compilerOptions: { target: 3, module: 1 } });
     const limit = pLimit(5);
 
@@ -393,5 +408,15 @@ export class CommonService {
     const dataSource = this.dataSourceService.getDataSource();
     const metadata = dataSource.getMetadata(entity);
     return metadata.tableName;
+  }
+
+  inverseRelationType(type: string): string {
+    const map: Record<string, string> = {
+      'many-to-one': 'one-to-many',
+      'one-to-many': 'many-to-one',
+      'one-to-one': 'one-to-one',
+      'many-to-many': 'many-to-many',
+    };
+    return map[type] || 'many-to-one';
   }
 }
