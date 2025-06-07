@@ -66,6 +66,10 @@ export class CreateColumnDto {
   @IsOptional()
   @IsBoolean()
   isHidden?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isUpdatable?: boolean;
 }
 
 export class CreateRelationDto {

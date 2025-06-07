@@ -10,7 +10,7 @@ export class User_definition {
   @Column({ type: "varchar", nullable: false })
   email: string;
 
-  @Column({ type: "boolean", nullable: false, default: false })
+  @Column({ type: "boolean", nullable: false, default: false, update: false })
   isRootAdmin: boolean;
 
   @Column({ type: "varchar", nullable: false })

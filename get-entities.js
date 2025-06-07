@@ -121,6 +121,9 @@ function generateEntityCode(name, def, inverseMap) {
           `enum: [${col.enumValues.map((v) => `'${v}'`).join(', ')}]`,
         );
       }
+      if (col.isUpdatable === false) {
+        options.push(`update: false`);
+      }
       lines.push(`  @Column({ ${options.join(', ')} })`);
     }
 

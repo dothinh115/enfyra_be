@@ -72,6 +72,9 @@ export class AutoService {
               ? `default: "${col.default}"`
               : `default: ${col.default}`,
           );
+        if (col.isUpdatable === false) {
+          opts.push('update: false');
+        }
         code += `  @Column({ ${opts.join(', ')} })\n`;
         if (col.index) code += `  @Index()\n`;
       }
