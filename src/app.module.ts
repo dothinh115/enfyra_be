@@ -1,9 +1,8 @@
-import { forwardRef, Global, Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DynamicModule } from './dynamic/dynamic.module';
 import { TableModule } from './table/table.module';
-import { RouteModule } from './route/route.module';
 import * as path from 'path';
 import { RabbitMQRegistry } from './rabbitmq/rabbitmq.service';
 import { DataSourceModule } from './data-source/data-source.module';
@@ -28,7 +27,6 @@ import { HideFieldInterceptor } from './interceptors/hidden-field.interceptor';
     TableModule,
     DatabaseModule,
     DynamicModule,
-    RouteModule,
     CommonModule,
     DataSourceModule,
     AutoGenerateModule,
