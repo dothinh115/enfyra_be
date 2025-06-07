@@ -247,26 +247,30 @@ export class BootstrapService implements OnApplicationBootstrap {
         const tableId = tableNameToId[name];
         if (!tableId) continue;
 
-        const existingColumns = await queryRunner.manager.find(
-          Column_definition,
-          {
-            where: { table: { id: tableId } },
-          },
-        );
+        // Lấy danh sách column hiện có bằng queryBuilder để chắc chắn có table.id
+        const existingColumns = await queryRunner.manager
+          .getRepository(Column_definition)
+          .createQueryBuilder('c')
+          .leftJoin('c.table', 't')
+          .where('t.id = :tableId', { tableId })
+          .select(['c.name AS name'])
+          .getRawMany();
 
         const existingNames = new Set(existingColumns.map((col) => col.name));
-        const missingCols = (def.columns || []).filter(
-          (col: any) => !existingNames.has(col.name),
+
+        const newColumns = (def.columns || []).filter(
+          (col: any) => col.name && !existingNames.has(col.name),
         );
 
-        if (missingCols.length) {
-          const toInsert = missingCols.map((col: any) => ({
+        if (newColumns.length) {
+          const toInsert = newColumns.map((col: any) => ({
             ...col,
             table: { id: tableId },
+            isStatic: true,
           }));
           await queryRunner.manager.save(Column_definition, toInsert);
           this.logger.log(
-            `📌 Thêm ${missingCols.length} column mới cho ${name}`,
+            `📌 Thêm ${newColumns.length} column mới cho ${name}`,
           );
         } else {
           this.logger.log(`⏩ Không cần thêm column nào cho ${name}`);
@@ -279,51 +283,71 @@ export class BootstrapService implements OnApplicationBootstrap {
         const tableId = tableNameToId[name];
         if (!tableId) continue;
 
-        const existingRelations = await queryRunner.manager.find(
-          Relation_definition,
-          {
-            where: { sourceTable: { id: tableId } },
-            relations: ['targetTable'],
-          },
-        );
+        // 1. Lấy các relation hiện có (dùng query builder để chắc chắn có id)
+        const existingRelations = await queryRunner.manager
+          .getRepository(Relation_definition)
+          .createQueryBuilder('r')
+          .leftJoin('r.sourceTable', 'source')
+          .leftJoin('r.targetTable', 'target')
+          .select([
+            'r.propertyName AS propertyName',
+            'source.id AS sourceId',
+            'target.id AS targetId',
+            'r.type AS relationType',
+          ])
+          .where('source.id = :tableId', { tableId })
+          .getRawMany();
 
         const existingKeys = new Set(
           existingRelations.map((r) =>
             JSON.stringify({
-              sourceTable: r.sourceTable?.id,
-              targetTable: r.targetTable?.id,
+              sourceTable: r.sourceId,
+              targetTable: r.targetId,
               propertyName: r.propertyName,
-              relationType: r.type,
+              relationType: r.relationType,
             }),
           ),
         );
 
-        const newRelations = (def.relations || [])
-          .map((rel: any) => {
-            const targetId = tableNameToId[rel.targetTable];
-            if (!targetId) {
-              this.logger.warn(
-                `⚠️ Không resolve được targetTable: ${rel.targetTable} trong relation của ${name}`,
-              );
-              return null;
-            }
+        const newRelations: any[] = [];
 
-            const key = JSON.stringify({
-              sourceTable: tableId,
-              targetTable: targetId,
-              propertyName: rel.propertyName,
-              relationType: rel.relationType,
-            });
+        for (const rel of def.relations || []) {
+          if (!rel.propertyName || !rel.targetTable || !rel.type) {
+            this.logger.warn(
+              `⚠️ Relation thiếu propertyName, type hoặc targetTable trong ${name}`,
+            );
+            continue;
+          }
 
-            if (existingKeys.has(key)) return null;
+          const targetId = tableNameToId[rel.targetTable];
+          if (!targetId) {
+            this.logger.warn(
+              `⚠️ Không resolve được targetTable: ${rel.targetTable} trong relation của ${name}`,
+            );
+            continue;
+          }
 
-            return {
-              ...rel,
-              sourceTable: { id: tableId },
-              targetTable: { id: targetId },
-            };
-          })
-          .filter(Boolean);
+          const key = JSON.stringify({
+            sourceTable: tableId,
+            targetTable: targetId,
+            propertyName: rel.propertyName,
+            relationType: rel.type,
+          });
+
+          if (existingKeys.has(key)) {
+            this.logger.warn(
+              `⛔ Bỏ qua relation trùng: ${rel.propertyName} -> ${rel.targetTable}`,
+            );
+            continue;
+          }
+
+          newRelations.push({
+            ...rel,
+            sourceTable: { id: tableId },
+            targetTable: { id: targetId },
+            isStatic: true,
+          });
+        }
 
         if (newRelations.length) {
           await queryRunner.manager.save(Relation_definition, newRelations);
