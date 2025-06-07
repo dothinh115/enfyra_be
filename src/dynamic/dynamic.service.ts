@@ -91,23 +91,23 @@ export class DynamicService {
         fields = reqQuery.fields;
       }
 
-      const repo = this.dataSourceService.getRepository('category');
-      const extractResult = extractRelationsAndFieldsAndWhere({
-        fields,
-        filter,
-        rootTableName: 'category',
-        dataSource: this.dataSourceService.getDataSource(),
-      });
+      // const repo = this.dataSourceService.getRepository('category');
+      // const extractResult = extractRelationsAndFieldsAndWhere({
+      //   fields,
+      //   filter,
+      //   rootTableName: 'category',
+      //   dataSource: this.dataSourceService.getDataSource(),
+      // });
 
-      const qb = repo.createQueryBuilder('category');
-      qb.select(extractResult.select);
-      for (const join of extractResult.joinArr) {
-        qb.leftJoin(join.path, join.alias);
-      }
-      qb.where(extractResult.where).setParameters(extractResult.params);
-      console.log(qb.getQuery(), qb.getParameters());
-      const result = await qb.getMany();
-      return collapseIdOnlyFields(result);
+      // const qb = repo.createQueryBuilder('category');
+      // qb.select(extractResult.select);
+      // for (const join of extractResult.joinArr) {
+      //   qb.leftJoin(join.path, join.alias);
+      // }
+      // qb.where(extractResult.where).setParameters(extractResult.params);
+      // console.log(qb.getQuery(), qb.getParameters());
+      // const result = await qb.getMany();
+      // return collapseIdOnlyFields(result);
       const logs: any[] = [];
 
       const context = {
@@ -115,13 +115,13 @@ export class DynamicService {
         $body: req.body,
         $jwt: (payload: any, ext: string) =>
           this.jwtService.sign(payload, { expiresIn: ext }),
-        throw400: (message: string) => {
+        $throw400: (message: string) => {
           throw new BadRequestException(message);
         },
-        throw401: () => {
+        $throw401: () => {
           throw new UnauthorizedException();
         },
-        log: (...args) => {
+        $log: (...args) => {
           for (const arg of args) {
             if (
               typeof arg === 'object' &&
@@ -144,9 +144,14 @@ export class DynamicService {
       // Tạo sandbox và chạy script
       const script = new vm.Script(`(async () => { ${curRoute.handler} })()`);
       const vmContext = vm.createContext(context);
-      // const result = await script.runInContext(vmContext, { timeout: 3000 });
+      const result = await script.runInContext(vmContext, { timeout: 3000 });
 
-      return {};
+      return logs.length
+        ? {
+            result,
+            logs,
+          }
+        : result;
     } catch (error) {
       this.logger.error('❌ Script lỗi:', error.message);
       this.logger.debug(error.stack);

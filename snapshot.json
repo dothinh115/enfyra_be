@@ -86,7 +86,7 @@
             { "name": "method", "type": "varchar", "isNullable": false, "isStatic": true, "default": "GET" },
             { "name": "path", "type": "varchar", "isNullable": false, "isStatic": true, "default": null },
             { "name": "handler", "type": "text", "isNullable": false, "isStatic": true, "default": null },
-            { "name": "isPublished", "type": "boolean", "isNullable": false, "isStatic": true, "default": true },
+            { "name": "isPublished", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "isEnabled", "type": "boolean", "isNullable": true, "isStatic": true, "default": false }
         ],
         "relations": [

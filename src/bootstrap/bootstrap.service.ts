@@ -215,7 +215,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     try {
       const tableNameToId: Record<string, number> = {};
 
-      // Phase 1: Insert bảng trắng
+      // Phase 1: Insert bảng trắng với metadata
       for (const [name, defRaw] of Object.entries(snapshot)) {
         const def = defRaw as any;
 
@@ -230,7 +230,7 @@ export class BootstrapService implements OnApplicationBootstrap {
           tableNameToId[name] = exist.id;
           this.logger.log(`⏩ Bỏ qua ${name}, đã tồn tại`);
         } else {
-          const { columns, relations, ...rest } = def; // Bỏ columns và relations, giữ các thuộc tính khác
+          const { columns, relations, ...rest } = def;
           const created = await queryRunner.manager.save(
             this.tableDefRepo.target,
             {
@@ -243,20 +243,26 @@ export class BootstrapService implements OnApplicationBootstrap {
         }
       }
 
-      // Phase 2: Insert tất cả columns
+      // Phase 2: Insert columns nếu là bảng mới
       for (const [name, defRaw] of Object.entries(snapshot)) {
         const def = defRaw as any;
         const tableId = tableNameToId[name];
         if (!tableId) continue;
 
+        const exist = await queryRunner.manager.findOne(
+          this.tableDefRepo.target,
+          { where: { name: def.name } },
+        );
+
+        if (exist) {
+          this.logger.log(`⏩ Bỏ qua columns của ${name}, vì bảng đã tồn tại`);
+          continue;
+        }
+
         const columns = (def.columns || []).map((col: any) => ({
           ...col,
           table: { id: tableId },
         }));
-
-        await queryRunner.manager.delete(Column_definition, {
-          table: { id: tableId },
-        });
 
         if (columns.length) {
           await queryRunner.manager.save(Column_definition, columns);
@@ -265,11 +271,23 @@ export class BootstrapService implements OnApplicationBootstrap {
         this.logger.log(`📌 Ghi columns cho ${name}`);
       }
 
-      // Phase 3: Insert tất cả relations
+      // Phase 3: Insert relations nếu là bảng mới
       for (const [name, defRaw] of Object.entries(snapshot)) {
         const def = defRaw as any;
         const tableId = tableNameToId[name];
         if (!tableId) continue;
+
+        const exist = await queryRunner.manager.findOne(
+          this.tableDefRepo.target,
+          { where: { name: def.name } },
+        );
+
+        if (exist) {
+          this.logger.log(
+            `⏩ Bỏ qua relations của ${name}, vì bảng đã tồn tại`,
+          );
+          continue;
+        }
 
         const relations = (def.relations || [])
           .map((rel: any) => {
@@ -288,10 +306,6 @@ export class BootstrapService implements OnApplicationBootstrap {
             };
           })
           .filter(Boolean);
-
-        await queryRunner.manager.delete(Relation_definition, {
-          sourceTable: { id: tableId },
-        });
 
         if (relations.length) {
           await queryRunner.manager.save(Relation_definition, relations);
