@@ -28,27 +28,31 @@ export class DynamicService {
     const logs: any[] = [];
 
     try {
-      const repoMap = [
-        req.routeData.mainTable,
-        ...req.routeData.targetTables,
-      ]?.reduce((acc, table) => {
-        const repo = this.dataSourceService.getRepository(table.name);
-        acc[`$${table.alias ?? table.name}Repo`] = repo;
-        return acc;
-      }, {});
+      const repoEntries = await Promise.all(
+        [req.routeData.mainTable, ...req.routeData.targetTables].map(
+          async (table) => {
+            const repo = await this.dataSourceService.getRepository(table.name);
+            return [`$${table.alias ?? table.name}Repo`, repo];
+          },
+        ),
+      );
 
-      const dynamicFindMap = [
-        req.routeData.mainTable,
-        ...req.routeData.targetTables,
-      ]?.reduce((acc, table) => {
-        acc[`$${table.alias ?? table.name}Find`] =
-          this.dynamicFindService.dynamicFind({
-            fields: (req.query.fields as string) ?? '',
-            filter: req.query.filter,
-            tableName: table.name,
-          });
-        return acc;
-      }, {});
+      const repoMap = Object.fromEntries(repoEntries);
+
+      const dynamicFindEntries = await Promise.all(
+        [req.routeData.mainTable, ...req.routeData.targetTables]?.map(
+          async (table) => {
+            const dynamicFind = await this.dynamicFindService.dynamicFind({
+              fields: (req.query.fields as string) ?? '',
+              filter: req.query.filter,
+              tableName: table.name,
+            });
+            return [`${table.alias ?? table.name}Find`, dynamicFind];
+          },
+        ),
+      );
+
+      const dynamicFindMap = Object.fromEntries(dynamicFindEntries);
 
       const context = {
         $req: req,
