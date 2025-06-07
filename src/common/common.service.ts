@@ -8,6 +8,7 @@ import * as ts from 'typescript';
 import { EntityTarget } from 'typeorm';
 import { DataSourceService } from '../data-source/data-source.service';
 import pLimit from 'p-limit';
+import { match } from 'path-to-regexp';
 
 @Injectable()
 export class CommonService {
@@ -22,6 +23,10 @@ export class CommonService {
 
   lowerFirst(str: string): string {
     return str.charAt(0).toLowerCase() + str.slice(1);
+  }
+
+  delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   dbTypeToTSType(dbType: string): string {
@@ -127,6 +132,29 @@ export class CommonService {
       }
     }
     return exportMap;
+  }
+
+  isRouteMatched({
+    routePath,
+    reqPath,
+    prefix,
+  }: {
+    routePath: string;
+    reqPath: string;
+    prefix?: string;
+  }) {
+    const matcher = match(
+      `${prefix ? `/${prefix.replace(/^\//, '').replace(/\/$/, '')}/` : ''}${routePath.replace(/^\//, '')}`,
+      {
+        decode: decodeURIComponent,
+      },
+    );
+    const matched = matcher(reqPath);
+    return matched
+      ? {
+          params: matched.params,
+        }
+      : false;
   }
 
   async findMissingAndSuggestImports(

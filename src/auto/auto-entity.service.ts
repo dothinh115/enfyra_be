@@ -307,6 +307,7 @@ export class AutoService {
   }
 
   async pullMetadataFromDb() {
+    await this.commonService.delay(1000);
     const tableRepo = this.dataSourceService.getRepository(Table_definition);
 
     let tables: any[] = await tableRepo.find({

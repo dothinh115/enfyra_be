@@ -1,74 +1,65 @@
-import {
-  BadGatewayException,
-  BadRequestException,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-  InternalServerErrorException,
-  UnauthorizedException,
-  CanActivate,
-} from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Middleware_definition } from '../entities/middleware_definition.entity';
+import { Request, Response, NextFunction } from 'express';
+import { Route_definition } from '../entities/route_definition.entity';
 import { Repository } from 'typeorm';
+import { CommonService } from '../common/common.service';
 import * as vm from 'vm';
-import { Request } from 'express';
 
 @Injectable()
-export class DynamicMiddleware implements CanActivate {
+export class DynamicMiddleware implements NestMiddleware {
   constructor(
-    @InjectRepository(Middleware_definition)
-    private middlewareRepo: Repository<Middleware_definition>,
+    @InjectRepository(Route_definition)
+    private routeDefRepo: Repository<Route_definition>,
+    private commonService: CommonService,
   ) {}
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const req = context.switchToHttp().getRequest<Request & { user?: any }>();
 
+  async use(req: Request, res: Response, next: NextFunction) {
     const method = req.method;
-    const path = req.path;
-    const middlewares = await this.middlewareRepo.find({
+    const routes = await this.routeDefRepo.find({
       where: {
         isEnabled: true,
+        method,
       },
     });
-    for (const middleware of middlewares) {
-      const methodMatches = !middleware.method || middleware.method === method;
-      const pathMatches = !middleware.path || middleware.path === path;
 
-      if (methodMatches && pathMatches) {
-        const vmContext = vm.createContext({
-          $req: req,
-          $body: req.body,
-          $user: req.user,
-          throw400: (msg: string) => {
-            throw new BadRequestException(msg);
-          },
-          throw401: () => {
-            throw new UnauthorizedException();
-          },
-          throw403: () => {
-            throw new ForbiddenException();
-          },
-          throw500: () => {
-            throw new InternalServerErrorException();
-          },
-          throw502: () => {
-            throw new BadGatewayException();
-          },
-        });
+    for (const route of routes) {
+      const ifMatched = this.commonService.isRouteMatched({
+        routePath: route.path,
+        reqPath: req.path,
+        prefix: 'api',
+      });
 
-        try {
-          const script = new vm.Script(
-            `(async () => { ${middleware.handler} })()`,
-          );
-          await script.runInContext(vmContext, { timeout: 3000 });
-        } catch (err) {
-          // Cho phép propagate lỗi đã được ném ra trong middleware script
-          throw err instanceof Error
-            ? err
-            : new BadRequestException('Middleware execution failed');
-        }
+      if (!ifMatched) continue;
+
+      const ctx: Record<string, any> = {};
+
+      const $req = new Proxy(
+        {},
+        {
+          set(target, prop: string, value) {
+            ctx[prop] = value;
+            return true;
+          },
+        },
+      );
+
+      const context = {
+        $req,
+      };
+
+      const vmContext = vm.createContext(context);
+      const script = new vm.Script(`(async () => { ${route.handler} })()`);
+
+      try {
+        await script.runInContext(vmContext, { timeout: 1000 });
+        Object.assign(req, ctx);
+      } catch (err) {
+        console.error('Middleware VM Error:', err);
+        return res.status(500).send('Middleware handler failed.');
       }
     }
-    return true;
+
+    next();
   }
 }

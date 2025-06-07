@@ -65,10 +65,10 @@
             { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
             { "name": "email", "type": "varchar", "isNullable": false, "isStatic": true, "default": null },
             { "name": "password", "type": "varchar", "isNullable": false, "isStatic": true, "default": null },
-            { "name": "isRootUser", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
+            { "name": "isRootAdmin", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
         ],
         "relations": [
-            { "propertyName": "role", "type": "many-to-one", "targetTable": "role_definition", "isStatic": true, "inversePropertyName": "users" }
+            { "propertyName": "roles", "type": "many-to-many", "targetTable": "role_definition", "isStatic": true, "inversePropertyName": "users" }
         ]
     },
     "setting_definition": {
@@ -90,7 +90,8 @@
             { "name": "isEnabled", "type": "boolean", "isNullable": true, "isStatic": true, "default": false }
         ],
         "relations": [
-            { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isStatic": true, "isEager": true }
+            { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isStatic": true, "isEager": true },
+            { "propertyName": "roles", "type": "many-to-many", "targetTable": "role_definition", "isStatic": true, "inversePropertyName": "routes"}
         ]
     },
     "role_definition": {

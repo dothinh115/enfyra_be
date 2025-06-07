@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { User_definition } from "./user_definition.entity";
+import { Route_definition } from "./route_definition.entity";
 
 @Entity('role_definition')
 export class Role_definition {
@@ -9,8 +10,11 @@ export class Role_definition {
   @Column({ type: "varchar", nullable: false })
   name: string;
 
-  @OneToMany(() => User_definition, rel => rel.role, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  @ManyToMany(() => User_definition, rel => rel.roles, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   users: User_definition[];
+
+  @ManyToMany(() => Route_definition, rel => rel.roles, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  routes: Route_definition[];
 
   @CreateDateColumn()
   createdAt: Date;
