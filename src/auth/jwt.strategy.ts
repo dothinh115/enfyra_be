@@ -2,10 +2,17 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User_definition } from '../entities/user_definition.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    @InjectRepository(User_definition)
+    private userDefRepo: Repository<User_definition>,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -13,7 +20,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
-    return payload;
+  async validate({ id }: { id: string }) {
+    const user = await this.userDefRepo.findOne({
+      where: {
+        id,
+      },
+      relations: ['roles'],
+    });
+    return user;
   }
 }
