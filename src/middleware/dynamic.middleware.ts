@@ -11,8 +11,6 @@ import { ConfigService } from '@nestjs/config';
 export class DynamicMiddleware implements NestMiddleware {
   constructor(
     @InjectRepository(Middleware_definition)
-    private middlewareDefRepo: Repository<Middleware_definition>,
-    private commonService: CommonService,
     private configService: ConfigService,
   ) {}
 

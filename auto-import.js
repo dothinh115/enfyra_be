@@ -1,10 +1,28 @@
 const fs = require('fs');
 const path = require('path');
 const { Project, SyntaxKind } = require('ts-morph');
+const yargs = require('yargs/yargs');
+const { hideBin } = require('yargs/helpers');
+
+// Parse args
+const argv = yargs(hideBin(process.argv))
+  .option('target', {
+    alias: 't',
+    type: 'array',
+    describe: 'Danh sách thư mục chứa file cần auto import',
+    demandOption: true,
+  })
+  .option('scan', {
+    alias: 's',
+    type: 'array',
+    describe: 'Danh sách thư mục để quét export',
+    demandOption: true,
+  })
+  .help().argv;
 
 // ✅ CẤU HÌNH
-const TARGET_DIR = path.resolve('src/entities');
-const SCAN_DIRS = [TARGET_DIR];
+const TARGET_DIRS = argv.target.map((d) => path.resolve(d));
+const SCAN_DIRS = argv.scan.map((d) => path.resolve(d));
 
 const knownGlobalImports = {
   Entity: 'typeorm',
@@ -28,42 +46,51 @@ function getAllTsFiles(dirPath) {
 
   for (const entry of entries) {
     const fullPath = path.join(dirPath, entry.name);
-    if (entry.isDirectory()) results.push(...getAllTsFiles(fullPath));
-    else if (entry.isFile() && entry.name.endsWith('.ts'))
+    if (entry.isDirectory()) {
+      results.push(...getAllTsFiles(fullPath));
+    } else if (entry.isFile() && entry.name.endsWith('.ts')) {
       results.push(fullPath);
+    }
   }
 
   return results;
 }
 
+function getAllFilesFromDirs(dirs) {
+  return dirs.flatMap((dir) => getAllTsFiles(dir));
+}
+
 function buildExportMap(scanDirs, refFile) {
   const exportMap = new Map();
-  const allFiles = scanDirs.flatMap((dir) =>
-    fs
-      .readdirSync(dir)
-      .filter((f) => f.endsWith('.ts'))
-      .map((f) => path.resolve(dir, f)),
-  );
+  const allFiles = getAllFilesFromDirs(scanDirs);
+
+  const project = new Project({
+    tsConfigFilePath: 'tsconfig.json',
+    skipAddingFilesFromTsConfig: true,
+  });
+
+  const refDir = path.dirname(refFile);
 
   for (const file of allFiles) {
-    const code = fs.readFileSync(file, 'utf8');
-    if (!code.includes('export')) continue;
+    const sourceFile = project.addSourceFileAtPath(file);
+    const exports = sourceFile.getExportedDeclarations();
 
-    const regex =
-      /export\s+(?:class|const|function|interface|type|enum)\s+(\w+)/g;
-    let match;
-    while ((match = regex.exec(code))) {
-      const name = match[1];
-      const relativePath = path
-        .relative(path.dirname(refFile), file)
-        .replace(/\.ts$/, '')
-        .replace(/\\/g, '/');
+    for (const [name, decls] of exports) {
       if (!exportMap.has(name)) {
+        const relativePath = path
+          .relative(refDir, file)
+          .replace(/\.ts$/, '')
+          .replace(/\\/g, '/');
+
         exportMap.set(
           name,
           relativePath.startsWith('.') ? relativePath : './' + relativePath,
         );
       }
+    }
+    console.log('[ExportMap]');
+    for (const [name, mod] of exportMap.entries()) {
+      console.log('-', name, '=>', mod);
     }
   }
 
@@ -75,18 +102,36 @@ function getMissingIdentifiers(sourceFile) {
   const declared = new Set();
   const imported = new Set();
 
+  // ✅ Import đã có
   sourceFile.getImportDeclarations().forEach((decl) => {
     decl.getNamedImports().forEach((imp) => imported.add(imp.getName()));
   });
 
+  // ✅ Identifier bình thường
   sourceFile.forEachDescendant((node) => {
     if (node.getKind() === SyntaxKind.Identifier) {
       const name = node.getText();
       const symbol = node.getSymbol();
       if (!symbol && !imported.has(name)) used.add(name);
     }
+
+    // ✅ THÊM: check decorator (quan trọng)
+    if (node.getKind() === SyntaxKind.Decorator) {
+      const expr = node.getExpression();
+      if (expr.getKind() === SyntaxKind.CallExpression) {
+        const identifier = expr.getExpression();
+        if (identifier.getKind() === SyntaxKind.Identifier) {
+          const name = identifier.getText();
+          if (!imported.has(name)) used.add(name);
+        }
+      } else if (expr.getKind() === SyntaxKind.Identifier) {
+        const name = expr.getText();
+        if (!imported.has(name)) used.add(name);
+      }
+    }
   });
 
+  // ✅ Local class / variable
   sourceFile.getClasses().forEach((cls) => declared.add(cls.getName()));
   sourceFile
     .getVariableDeclarations()
@@ -130,26 +175,28 @@ function applyAutoImports(sourceFile, missingNames, exportMap) {
 }
 
 async function main() {
-  const files = getAllTsFiles(TARGET_DIR);
-  if (!files.length) {
-    console.warn('⚠️ Không tìm thấy file TS nào.');
+  const targetFiles = getAllFilesFromDirs(TARGET_DIRS);
+  if (!targetFiles.length) {
+    console.warn('⚠️ Không tìm thấy file nào trong TARGET_DIRS.');
     return;
   }
 
-  const exportMap = buildExportMap(SCAN_DIRS, files[0]);
+  const exportMap = buildExportMap(SCAN_DIRS, targetFiles[0]);
 
   const project = new Project({
     tsConfigFilePath: 'tsconfig.json',
     skipAddingFilesFromTsConfig: true,
   });
 
-  const sourceFiles = files.map((file) => project.addSourceFileAtPath(file));
+  const sourceFiles = targetFiles.map((file) =>
+    project.addSourceFileAtPath(file),
+  );
 
   for (const sourceFile of sourceFiles) {
     const missing = getMissingIdentifiers(sourceFile);
     const added = applyAutoImports(sourceFile, missing, exportMap);
     if (added) {
-      console.log(`✅ Auto imported: ${sourceFile.getBaseName()}`);
+      console.log(`✅ Auto imported: ${sourceFile.getFilePath()}`);
     }
   }
 

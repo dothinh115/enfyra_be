@@ -100,40 +100,6 @@ export class CommonService {
     return entities;
   }
 
-  private async buildExportMapAsync(
-    scanDirs: string[],
-    filePath: string,
-  ): Promise<Map<string, string>> {
-    const exportMap = new Map<string, string>();
-    const allFiles = scanDirs.flatMap((dir) =>
-      fs
-        .readdirSync(dir)
-        .filter((f) => f.endsWith('.ts'))
-        .map((f) => path.resolve(dir, f)),
-    );
-    for (const file of allFiles) {
-      const sourceCode = fs.readFileSync(file, 'utf8');
-      if (!sourceCode.includes('export')) continue;
-      const exportRegex =
-        /export\s+(?:class|const|function|interface|type|enum)\s+(\w+)/g;
-      let match: RegExpExecArray | null;
-      while ((match = exportRegex.exec(sourceCode))) {
-        const name = match[1];
-        const relativePath = path
-          .relative(path.dirname(filePath), file)
-          .replace(/\.ts$/, '')
-          .replace(/\\/g, '/');
-        if (!exportMap.has(name)) {
-          exportMap.set(
-            name,
-            relativePath.startsWith('.') ? relativePath : `./${relativePath}`,
-          );
-        }
-      }
-    }
-    return exportMap;
-  }
-
   isRouteMatched({
     routePath,
     reqPath,
@@ -155,146 +121,6 @@ export class CommonService {
           params: matched.params,
         }
       : false;
-  }
-
-  async findMissingAndSuggestImports(
-    filePath: string,
-    scanDirs: string[],
-  ): Promise<{ name: string; module: string }[]> {
-    const project = new Project({ compilerOptions: { target: 3, module: 1 } });
-    const sourceFile = project.addSourceFileAtPath(filePath);
-    const usedIdentifiers = new Set<string>();
-    const importedIdentifiers = new Set<string>();
-
-    sourceFile.getImportDeclarations().forEach((decl) => {
-      decl.getNamedImports().forEach((imp) => {
-        importedIdentifiers.add(imp.getName());
-      });
-    });
-
-    sourceFile.forEachDescendant((node) => {
-      if (node.getKind() === SyntaxKind.Identifier) {
-        const name = node.getText();
-        const symbol = node.getSymbol();
-        if (!symbol && !importedIdentifiers.has(name))
-          usedIdentifiers.add(name);
-      }
-    });
-
-    const localDeclarations = sourceFile
-      .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
-      .map((d) => d.getName());
-    sourceFile
-      .getClasses()
-      .forEach((cls) => usedIdentifiers.delete(cls.getName() || ''));
-    localDeclarations.forEach((n) => usedIdentifiers.delete(n));
-
-    const missing = Array.from(usedIdentifiers);
-    const suggestions: { name: string; module: string }[] = [];
-
-    for (const name of missing) {
-      if (knownGlobalImports[name])
-        suggestions.push({ name, module: knownGlobalImports[name] });
-    }
-
-    const toResolve = missing.filter(
-      (name) => !suggestions.find((s) => s.name === name),
-    );
-    const exportMap = await this.buildExportMapAsync(scanDirs, filePath);
-    for (const name of toResolve) {
-      const module = exportMap.get(name);
-      if (module) suggestions.push({ name, module });
-    }
-    return suggestions;
-  }
-
-  async autoAddImportsToFile(
-    filePath: string,
-    suggestions: { name: string; module: string }[],
-  ) {
-    const project = new Project();
-    const sourceFile = project.addSourceFileAtPath(filePath);
-    for (const suggestion of suggestions) {
-      const existingImport = sourceFile
-        .getImportDeclarations()
-        .find((imp) => imp.getModuleSpecifierValue() === suggestion.module);
-      if (existingImport) {
-        const namedImports = existingImport
-          .getNamedImports()
-          .map((ni) => ni.getName());
-        if (!namedImports.includes(suggestion.name))
-          existingImport.addNamedImport(suggestion.name);
-      } else {
-        sourceFile.addImportDeclaration({
-          namedImports: [suggestion.name],
-          moduleSpecifier: suggestion.module,
-        });
-      }
-    }
-    await sourceFile.save();
-  }
-
-  private async processFile(
-    project: Project,
-    filePath: string,
-    exportMap: Map<string, string>,
-  ) {
-    const start = Date.now();
-    const sourceFile = project.addSourceFileAtPath(filePath);
-    const usedIdentifiers = new Set<string>();
-    const importedIdentifiers = new Set<string>();
-
-    sourceFile.getImportDeclarations().forEach((decl) => {
-      decl
-        .getNamedImports()
-        .forEach((imp) => importedIdentifiers.add(imp.getName()));
-    });
-
-    sourceFile.forEachDescendant((node) => {
-      if (node.getKind() === SyntaxKind.Identifier) {
-        const name = node.getText();
-        const symbol = node.getSymbol();
-        if (!symbol && !importedIdentifiers.has(name))
-          usedIdentifiers.add(name);
-      }
-    });
-
-    const localDeclarations = sourceFile
-      .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
-      .map((d) => d.getName());
-    sourceFile
-      .getClasses()
-      .forEach((cls) => usedIdentifiers.delete(cls.getName() || ''));
-    localDeclarations.forEach((n) => usedIdentifiers.delete(n));
-
-    const missing = Array.from(usedIdentifiers);
-    const suggestions = missing
-      .filter((name) => !importedIdentifiers.has(name))
-      .map((name) => {
-        const module = exportMap.get(name) ?? knownGlobalImports[name];
-        return module ? { name, module } : null;
-      })
-      .filter(Boolean) as { name: string; module: string }[];
-
-    await this.autoAddImportsToFile(filePath, suggestions);
-    console.log(
-      `✅ [${new Date().toISOString()}] Đã xử lý ${filePath} trong ${Date.now() - start}ms`,
-    );
-  }
-
-  async autoFixMissingImports(
-    dirPath: string,
-    scanDir: string[],
-  ): Promise<void> {
-    const files = this.getAllTsFiles(dirPath);
-    const exportMap = await this.buildExportMapAsync(scanDir, files[0]);
-    const project = new Project({ compilerOptions: { target: 3, module: 1 } });
-    const limit = pLimit(5);
-
-    const tasks = files.map((filePath) =>
-      limit(() => this.processFile(project, filePath, exportMap)),
-    );
-    await Promise.allSettled(tasks);
   }
 
   getAllTsFiles(dirPath: string): string[] {
@@ -355,54 +181,6 @@ export class CommonService {
       throw new Error('Một hoặc nhiều file có lỗi TypeScript đã bị xoá.');
   }
 
-  async cleanInvalidImports(scanDir: string) {
-    const project = new Project({
-      tsConfigFilePath: path.resolve('tsconfig.json'),
-      skipAddingFilesFromTsConfig: true,
-    });
-    const files = fs
-      .readdirSync(scanDir)
-      .filter((f) => f.endsWith('.ts'))
-      .map((f) => path.resolve(scanDir, f));
-    for (const file of files) {
-      const sourceFile = project.addSourceFileAtPath(file);
-      let changed = false;
-      const importDecls = sourceFile.getImportDeclarations();
-      for (const imp of importDecls) {
-        const moduleSpecifier = imp.getModuleSpecifierValue();
-        const modulePath = path.resolve(
-          path.dirname(file),
-          moduleSpecifier + '.ts',
-        );
-        if (!fs.existsSync(modulePath)) {
-          imp.remove();
-          changed = true;
-          continue;
-        }
-        const tempSourceFile =
-          project.getSourceFile(modulePath) ??
-          project.addSourceFileAtPath(modulePath);
-        const exported = tempSourceFile.getExportedDeclarations();
-        const namedImports = imp.getNamedImports();
-        for (const named of namedImports) {
-          const name = named.getName();
-          if (!exported.has(name)) {
-            named.remove();
-            changed = true;
-          }
-        }
-        if (imp.getNamedImports().length === 0) {
-          imp.remove();
-          changed = true;
-        }
-      }
-      if (changed) {
-        await sourceFile.save();
-        console.log(`🧹 Đã dọn import trong: ${file}`);
-      }
-    }
-  }
-
   async removeOldFile(filePathOrPaths: string | string[], logger: Logger) {
     const paths = Array.isArray(filePathOrPaths)
       ? filePathOrPaths
@@ -430,12 +208,6 @@ export class CommonService {
         throw error;
       }
     }
-  }
-
-  getTableNameFromEntity(entity: EntityTarget<any>): string {
-    const dataSource = this.dataSourceService.getDataSource();
-    const metadata = dataSource.getMetadata(entity);
-    return metadata.tableName;
   }
 
   inverseRelationType(type: string): string {

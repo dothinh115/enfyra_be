@@ -16,6 +16,7 @@ import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { RoleGuard } from './guard/role.guard';
 import { DynamicFindModule } from './dynamic-find/dynamic-find.module';
+import { HideFieldInterceptor } from './interceptors/hidden-field.interceptor';
 
 @Global()
 @Module({
@@ -46,6 +47,7 @@ import { DynamicFindModule } from './dynamic-find/dynamic-find.module';
     BootstrapService,
     RabbitMQRegistry,
     JwtStrategy,
+    HideFieldInterceptor,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RoleGuard },
   ],

@@ -14,7 +14,8 @@
             { "name": "default", "type": "simple-json", "isNullable": true, "isStatic": true },
             { "name": "enumValues", "type": "simple-json", "isNullable": true, "isStatic": true },
             { "name": "isUnique", "type": "boolean", "isNullable": true, "isStatic": true, "default": false },
-            { "name": "isUpdatable", "type": "boolean", "isNullable": false, "isStatic": true, "default": true }
+            { "name": "isUpdatable", "type": "boolean", "isNullable": false, "isStatic": true, "default": true },
+            { "name": "isHidden", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
         ],
         "relations": [
             {
@@ -67,7 +68,7 @@
         "columns": [
             { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
             { "name": "email", "type": "varchar", "isNullable": false, "isStatic": true, "default": null },
-            { "name": "password", "type": "varchar", "isNullable": false, "isStatic": true, "default": null },
+            { "name": "password", "type": "varchar", "isNullable": false, "isStatic": true, "default": null, "isHidden": true },
             { "name": "isRootAdmin", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
         ],
         "relations": [

@@ -66,7 +66,7 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   private async insertDefaultSettingIfEmpty(): Promise<void> {
     const tableName =
-      this.commonService.getTableNameFromEntity(Setting_definition);
+      this.dataSourceService.getTableNameFromEntity(Setting_definition);
     const dataSource = this.dataSourceService.getDataSource();
 
     const [{ count }] = await dataSource.query(
@@ -90,7 +90,7 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   private async createDefaultRole(): Promise<void> {
     const tableName =
-      this.commonService.getTableNameFromEntity(Role_definition);
+      this.dataSourceService.getTableNameFromEntity(Role_definition);
     const dataSource = this.dataSourceService.getDataSource();
 
     const [result] = await dataSource.query(
@@ -115,7 +115,7 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   private async insertDefaultUserIfEmpty(): Promise<void> {
     const tableName =
-      this.commonService.getTableNameFromEntity(User_definition);
+      this.dataSourceService.getTableNameFromEntity(User_definition);
     const dataSource = this.dataSourceService.getDataSource();
     const userRepo = this.dataSourceService.getRepository(tableName);
 

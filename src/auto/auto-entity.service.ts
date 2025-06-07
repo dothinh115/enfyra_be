@@ -76,10 +76,15 @@ export class AutoService {
         if (col.index) code += `  @Index()\n`;
       }
 
+      if (col.isHidden) {
+        code += `  @HiddenField()\n`;
+      }
+
       const tsType =
         col.type === 'enum'
           ? col.enumValues.map((v) => `'${v}'`).join(' | ')
           : dbTypeToTSType(col.type);
+
       code += `  ${col.name}: ${tsType};\n\n`;
     }
 
@@ -341,9 +346,9 @@ export class AutoService {
     );
 
     this.logger.log(`Chuẩn bị fix import`);
-    await this.commonService.autoFixMissingImports(
-      path.resolve('src', 'entities'),
+    await this.autoFixMissingImports(
       [path.resolve('src', 'entities')],
+      [path.resolve('src', 'entities'), path.resolve('src', 'decorators')],
     );
     this.logger.debug(`Đã fix import xong`);
 
@@ -385,6 +390,16 @@ export class AutoService {
           this.logger.warn(`🗑️ Đã xoá JS không hợp lệ: ${file}`);
         }
       }
+    }
+  }
+
+  async autoFixMissingImports(targetDirs: string[], scanDirs: string[]) {
+    const autoImportFilePath = path.resolve('auto-import.js');
+    const script = `node ${autoImportFilePath} --target ${targetDirs.join(' ')} --scan ${scanDirs.join(' ')}`;
+    try {
+      execSync(script, { stdio: 'inherit' });
+    } catch (error) {
+      console.log(`Lỗi khi chạy script: `, error.message);
     }
   }
 }

@@ -2,7 +2,7 @@ import * as path from 'path';
 import { CommonService } from '../common/common.service';
 import { createDataSource } from '../data-source/data-source';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { DataSource, EntitySchema, Repository } from 'typeorm';
+import { DataSource, EntitySchema, EntityTarget, Repository } from 'typeorm';
 import { QueryTrackerService } from '../query-track/query-track.service';
 
 const entityDir = path.resolve('dist', 'entities');
@@ -109,5 +109,10 @@ export class DataSourceService implements OnModuleInit {
     );
 
     return entityMetadata?.target as Function | undefined;
+  }
+
+  getTableNameFromEntity(entity: EntityTarget<any>): string {
+    const metadata = this.dataSource.getMetadata(entity);
+    return metadata.tableName;
   }
 }

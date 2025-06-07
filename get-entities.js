@@ -95,10 +95,16 @@ function generateEntityCode(name, def, inverseMap) {
   code += `export class ${className} {\n`;
 
   for (const col of def.columns) {
+    const lines = [];
+
+    if (col.isHidden) {
+      lines.push(`  @HiddenField()`);
+    }
+
     if (col.isPrimary && col.isGenerated) {
       const strategy = col.type === 'uuid' ? `'uuid'` : `'increment'`;
       addDecorator('PrimaryGeneratedColumn');
-      code += `  @PrimaryGeneratedColumn(${strategy})\n`;
+      lines.push(`  @PrimaryGeneratedColumn(${strategy})`);
     } else {
       addDecorator('Column');
       const options = [`type: '${col.type}'`];
@@ -115,9 +121,11 @@ function generateEntityCode(name, def, inverseMap) {
           `enum: [${col.enumValues.map((v) => `'${v}'`).join(', ')}]`,
         );
       }
-      code += `  @Column({ ${options.join(', ')} })\n`;
+      lines.push(`  @Column({ ${options.join(', ')} })`);
     }
-    code += `  ${col.name}: ${dbTypeToTSType(col.type)};\n\n`;
+
+    lines.push(`  ${col.name}: ${dbTypeToTSType(col.type)};\n`);
+    code += lines.join('\n') + '\n';
   }
 
   for (const rel of def.relations || []) {

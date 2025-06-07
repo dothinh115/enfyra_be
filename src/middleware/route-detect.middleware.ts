@@ -15,13 +15,15 @@ export class RouteDetectMiddleware implements NestMiddleware {
     const routes = await this.routeDefRepo
       .createQueryBuilder('route')
       .leftJoinAndSelect('route.middlewares', 'middlewares')
+      .leftJoinAndSelect('route.mainTable', 'mainTable')
+      .leftJoinAndSelect('route.targetTables', 'targetTables')
       .where('route.isEnabled = :enabled', { enabled: true })
       .getMany();
 
     const matchedRoute = routes.find((route) => {
       const matched = this.commonService.isRouteMatched({
         routePath: route.path,
-        reqPath: req.path,
+        reqPath: req.originalUrl,
         prefix: 'api',
       });
       if (matched) {

@@ -19,7 +19,7 @@ const OPERATOR_MAP: Record<string, string> = {
 export class DynamicFindService {
   constructor(private dataSourceService: DataSourceService) {}
 
-  extractRelationsAndFieldsAndWhere({
+  private extractRelationsAndFieldsAndWhere({
     fields,
     tableName,
     filter,
@@ -273,7 +273,7 @@ export class DynamicFindService {
     }
 
     if (Array.isArray(obj)) {
-      const collapsed = obj.map(this.collapseIdOnlyFields);
+      const collapsed = obj.map((item) => this.collapseIdOnlyFields(item));
 
       // Nếu toàn bộ phần tử là object có đúng { id: ... }
       const isAllIdObjects = collapsed.every(

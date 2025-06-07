@@ -62,6 +62,10 @@ export class CreateColumnDto {
   @IsOptional()
   @IsBoolean()
   isUnique?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isHidden?: boolean;
 }
 
 export class CreateRelationDto {

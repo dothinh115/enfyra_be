@@ -10,7 +10,6 @@ import * as vm from 'vm';
 import { DataSourceService } from '../data-source/data-source.service';
 import { JwtService } from '@nestjs/jwt';
 import { Route_definition } from '../entities/route_definition.entity';
-import { InjectRepository } from '@nestjs/typeorm';
 import { DynamicFindService } from '../dynamic-find/dynamic-find.service';
 
 @Injectable()
@@ -20,7 +19,6 @@ export class DynamicService {
   constructor(
     private dataSourceService: DataSourceService,
     private jwtService: JwtService,
-    @InjectRepository(Route_definition)
     private dynamicFindService: DynamicFindService,
   ) {}
 
@@ -30,23 +28,35 @@ export class DynamicService {
     const logs: any[] = [];
 
     try {
-      const repoMap = req.routeData.targetTables.reduce((acc, table) => {
+      const repoMap = [
+        req.routeData.mainTable,
+        ...req.routeData.targetTables,
+      ]?.reduce((acc, table) => {
         const repo = this.dataSourceService.getRepository(table.name);
         acc[`$${table.alias ?? table.name}Repo`] = repo;
         return acc;
       }, {});
 
-      const dynamicFindMap = req.routeData.targetTables.reduce((acc, table) => {
+      const dynamicFindMap = [
+        req.routeData.mainTable,
+        ...req.routeData.targetTables,
+      ]?.reduce((acc, table) => {
         acc[`$${table.alias ?? table.name}Find`] =
           this.dynamicFindService.dynamicFind({
-            fields:
-              typeof req.query.fields === 'string' ? req.query.fields : '',
-            filter:
-              typeof req.query.filter === 'object' ? req.query.filter : {},
+            fields: (req.query.fields as string) ?? '',
+            filter: req.query.filter,
             tableName: table.name,
           });
         return acc;
       }, {});
+      // console.dir(
+      //   await this.dynamicFindService.dynamicFind({
+      //     fields: req.query.fields as string,
+      //     filter: req.query.filter,
+      //     tableName: req.routeData.mainTable.name,
+      //   }),
+      //   { depth: null },
+      // );
 
       const context = {
         $req: req,
@@ -76,7 +86,7 @@ export class DynamicService {
           }
         },
         ...repoMap,
-        ...dynamicFindMap,
+        // ...dynamicFindMap,
         ...(req.routeData.params && { params: req.routeData.params }),
       };
 
