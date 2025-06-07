@@ -14,10 +14,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { match } from 'path-to-regexp';
 import * as qs from 'qs';
-import {
-  collapseIdOnlyFields,
-  extractRelationsAndFieldsAndWhere,
-} from '../utils/common';
+import { DynamicFindService } from '../dynamic-find/dynamic-find.service';
 @Injectable()
 export class DynamicService {
   private logger = new Logger(DynamicService.name);
@@ -26,6 +23,7 @@ export class DynamicService {
     private jwtService: JwtService,
     @InjectRepository(Route_definition)
     private routeRepo: Repository<Route_definition>,
+    private dynamicFindService: DynamicFindService,
   ) {}
 
   async dynamicService(req: Request) {
@@ -90,24 +88,6 @@ export class DynamicService {
       if (reqQuery?.fields) {
         fields = reqQuery.fields;
       }
-
-      // const repo = this.dataSourceService.getRepository('category');
-      // const extractResult = extractRelationsAndFieldsAndWhere({
-      //   fields,
-      //   filter,
-      //   rootTableName: 'category',
-      //   dataSource: this.dataSourceService.getDataSource(),
-      // });
-
-      // const qb = repo.createQueryBuilder('category');
-      // qb.select(extractResult.select);
-      // for (const join of extractResult.joinArr) {
-      //   qb.leftJoin(join.path, join.alias);
-      // }
-      // qb.where(extractResult.where).setParameters(extractResult.params);
-      // console.log(qb.getQuery(), qb.getParameters());
-      // const result = await qb.getMany();
-      // return collapseIdOnlyFields(result);
       const logs: any[] = [];
 
       const context = {
@@ -129,7 +109,7 @@ export class DynamicService {
               !Array.isArray(arg) &&
               !(arg instanceof Date)
             ) {
-              logs.push(arg); // giữ nguyên object
+              logs.push(arg);
             } else {
               logs.push(
                 typeof arg === 'string' ? arg : JSON.stringify(arg, null, 2),

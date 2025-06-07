@@ -94,7 +94,8 @@
         ],
         "relations": [
             { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isStatic": true, "isEager": true },
-            { "propertyName": "roles", "type": "many-to-many", "targetTable": "role_definition", "isStatic": true, "inversePropertyName": "routes"}
+            { "propertyName": "roles", "type": "many-to-many", "targetTable": "role_definition", "isStatic": true, "inversePropertyName": "routes"},
+            { "propertyName": "mainTable", "type": "many-to-one", "targetTable": "table_definition", "isStatic": true, "isNullable": false}
         ]
     },
     "role_definition": {

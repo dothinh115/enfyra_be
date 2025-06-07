@@ -94,6 +94,11 @@ export class AutoService {
       const type = typeMap[rel.type] || 'ManyToOne';
       const target = capitalize(rel.targetTable?.name || rel.targetClass || '');
 
+      if (!target) {
+        console.warn(`⚠️ Missing target for relation:`, rel);
+        return '';
+      }
+
       const opts = [];
       if (rel.isEager) opts.push('eager: true');
       if (rel.isNullable !== undefined && rel.type !== 'one-to-many')
@@ -109,13 +114,8 @@ export class AutoService {
       }
       relationCode += `${optStr})\n`;
 
-      if (rel.type === 'many-to-many') {
-        if (
-          !isInverse &&
-          (!inverseRelationMap || !inverseRelationMap.has(payload.name))
-        ) {
-          relationCode += `  @JoinTable()\n`;
-        }
+      if (rel.type === 'many-to-many' && !isInverse) {
+        relationCode += `  @JoinTable()\n`;
       } else if (['many-to-one', 'one-to-one'].includes(rel.type)) {
         relationCode += `  @JoinColumn()\n`;
       }

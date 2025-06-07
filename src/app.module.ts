@@ -15,6 +15,7 @@ import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { RoleGuard } from './guard/role.guard';
+import { DynamicFindModule } from './dynamic-find/dynamic-find.module';
 
 @Global()
 @Module({
@@ -39,6 +40,7 @@ import { RoleGuard } from './guard/role.guard';
       },
       inject: [ConfigService],
     }),
+    DynamicFindModule,
   ],
   providers: [
     BootstrapService,

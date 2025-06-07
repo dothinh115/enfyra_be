@@ -6,13 +6,11 @@ import { AutoService } from '../auto/auto-entity.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { Repository } from 'typeorm';
 import { CommonService } from '../common/common.service';
-import { Route_definition } from '../entities/route_definition.entity';
 import { Role_definition } from '../entities/role_definition.entity';
 import { Setting_definition } from '../entities/setting_definition.entity';
 import { User_definition } from '../entities/user_definition.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as path from 'path';
-import * as fs from 'fs';
 import { Column_definition } from '../entities/column_definition.entity';
 import { Relation_definition } from '../entities/relation_definition.entity';
 const initJson = require('./init.json');
@@ -63,7 +61,6 @@ export class BootstrapService implements OnApplicationBootstrap {
       this.createDefaultRole(),
       this.insertDefaultSettingIfEmpty(),
       this.insertDefaultUserIfEmpty(),
-      this.insertDefaultRoutes(),
     ]);
   }
 
@@ -140,60 +137,6 @@ export class BootstrapService implements OnApplicationBootstrap {
     }
   }
 
-  private async insertDefaultRoutes(): Promise<void> {
-    const routeRepo = this.dataSourceService.getRepository(Route_definition);
-    const tableDefRepo = this.dataSourceService.getRepository(Table_definition);
-
-    const existingRoutes = await routeRepo.find();
-
-    const paths = [
-      this.commonService.getTableNameFromEntity(User_definition),
-      this.commonService.getTableNameFromEntity(Role_definition),
-      this.commonService.getTableNameFromEntity(Setting_definition),
-    ];
-
-    let insertedCount = 0;
-
-    for (const path of paths) {
-      // 🔍 Tìm id trong TableDefinition theo name
-      const targetTable: any = await tableDefRepo.findOne({
-        where: { name: path },
-      });
-
-      if (!targetTable) {
-        this.logger.warn(
-          `❗Không tìm thấy TableDefinition cho '${path}', bỏ qua.`,
-        );
-        continue;
-      }
-
-      for (const method of Object.keys(initJson.routeDefinition)) {
-        const def = initJson.routeDefinition[method];
-
-        const alreadyExists = existingRoutes.some(
-          (r: any) => r.method === def.method && r.path === `/${path}`,
-        );
-
-        if (!alreadyExists) {
-          const route = routeRepo.create({
-            method: def.method,
-            path: `/${path}`,
-            handler: def.handler,
-            targetTable: targetTable.id, // 👈 Gán ID vào đây
-          });
-
-          await routeRepo.save(route);
-          insertedCount++;
-        }
-      }
-    }
-
-    if (insertedCount) {
-      this.logger.log(`✅ Đã tạo ${insertedCount} route mặc định.`);
-    } else {
-      this.logger.debug(`Tất cả route mặc định đã tồn tại.`);
-    }
-  }
   async saveToDb(payload: CreateTableDto, repo: Repository<any>) {
     const newPayload = {
       ...payload,
