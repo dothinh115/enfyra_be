@@ -11,84 +11,42 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { JwtService } from '@nestjs/jwt';
 import { Route_definition } from '../entities/route_definition.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { match } from 'path-to-regexp';
-import * as qs from 'qs';
 import { DynamicFindService } from '../dynamic-find/dynamic-find.service';
+
 @Injectable()
 export class DynamicService {
   private logger = new Logger(DynamicService.name);
+
   constructor(
     private dataSourceService: DataSourceService,
     private jwtService: JwtService,
     @InjectRepository(Route_definition)
-    private routeRepo: Repository<Route_definition>,
     private dynamicFindService: DynamicFindService,
   ) {}
 
-  async dynamicService(req: Request) {
+  async dynamicService(
+    req: Request & { routeData: Route_definition & { params: any } },
+  ) {
+    const logs: any[] = [];
+
     try {
-      const path = req.path;
-      const method = req.method;
-      let curRoute;
-      let params;
-      const routes = await this.routeRepo.find({
-        where: { method, isEnabled: true },
-      });
-
-      for (const route of routes) {
-        const matcher = match(`/api/${route.path.replace(/^\//, '')}`, {
-          decode: decodeURIComponent,
-        });
-        const matched = matcher(path);
-        if (matched) {
-          curRoute = route;
-          params = matched.params;
-          break;
-        }
-      }
-
-      if (!curRoute) throw new NotFoundException();
-      const repoMap = curRoute.targetTables.reduce((acc, table) => {
+      const repoMap = req.routeData.targetTables.reduce((acc, table) => {
         const repo = this.dataSourceService.getRepository(table.name);
-
-        acc[`$${table.name}Repo`] = repo;
+        acc[`$${table.alias ?? table.name}Repo`] = repo;
         return acc;
       }, {});
 
-      // const queryMap = curRoute.targetTables.reduce((acc, table) => {
-      //   const repository = this.dataSourceService.getRepository(table.name);
-
-      //   acc[`$${table.name}Query`] = async (id?: any) =>
-      //     await this.queryService.query({
-      //       repository,
-      //       query: req.query,
-      //       ...(id && { id }),
-      //     });
-      //   return acc;
-      // }, {});
-      const url = req.originalUrl || req.url;
-      let reqQuery: any;
-
-      if (url.includes('?')) {
-        const [path, queryString] = url.split('?');
-        const parsed = qs.parse(queryString, { depth: 10 });
-
-        // Gán từng key vào req.query (tránh gán thẳng gây lỗi)
-        Object.assign(req.query, parsed);
-
-        // Debug log kết quả đã parse
-        reqQuery = parsed;
-      }
-      let filter = {};
-      let fields = '';
-      if (reqQuery?.filter) {
-        filter = reqQuery.filter;
-      }
-      if (reqQuery?.fields) {
-        fields = reqQuery.fields;
-      }
-      const logs: any[] = [];
+      const dynamicFindMap = req.routeData.targetTables.reduce((acc, table) => {
+        acc[`$${table.alias ?? table.name}Find`] =
+          this.dynamicFindService.dynamicFind({
+            fields:
+              typeof req.query.fields === 'string' ? req.query.fields : '',
+            filter:
+              typeof req.query.filter === 'object' ? req.query.filter : {},
+            tableName: table.name,
+          });
+        return acc;
+      }, {});
 
       const context = {
         $req: req,
@@ -101,7 +59,7 @@ export class DynamicService {
         $throw401: () => {
           throw new UnauthorizedException();
         },
-        $log: (...args) => {
+        $log: (...args: any[]) => {
           for (const arg of args) {
             if (
               typeof arg === 'object' &&
@@ -117,36 +75,38 @@ export class DynamicService {
             }
           }
         },
-        ...params,
         ...repoMap,
+        ...dynamicFindMap,
+        ...(req.routeData.params && { params: req.routeData.params }),
       };
 
-      // Tạo sandbox và chạy script
-      const script = new vm.Script(`(async () => { ${curRoute.handler} })()`);
+      if (!req.routeData.handler || typeof req.routeData.handler !== 'string') {
+        throw new BadRequestException(
+          'Handler script không hợp lệ hoặc bị thiếu',
+        );
+      }
+
+      const script = new vm.Script(
+        `(async () => { ${req.routeData.handler} })()`,
+      );
       const vmContext = vm.createContext(context);
       const result = await script.runInContext(vmContext, { timeout: 3000 });
 
-      return logs.length
-        ? {
-            result,
-            logs,
-          }
-        : result;
+      return logs.length ? { result, logs } : result;
     } catch (error) {
-      this.logger.error('❌ Script lỗi:', error.message);
+      this.logger.error('❌ Lỗi khi chạy handler:', error.message);
       this.logger.debug(error.stack);
-      console.dir(error, { depth: null });
 
       if (
         error instanceof UnauthorizedException ||
         error instanceof BadRequestException ||
         error instanceof NotFoundException
       ) {
-        throw error; // Trả nguyên trạng
+        throw error;
       }
 
       throw new BadRequestException(
-        `Lỗi script database hoặc handler:`,
+        'Lỗi trong quá trình thực thi script hoặc xử lý dữ liệu.',
         error.message,
       );
     }

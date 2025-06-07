@@ -16,26 +16,12 @@ export class DynamicMiddleware implements NestMiddleware {
     private configService: ConfigService,
   ) {}
 
-  async use(req: Request, res: Response, next: NextFunction) {
-    const method = req.method;
-    const middlewares = await this.middlewareDefRepo
-      .createQueryBuilder('middleware')
-      .leftJoinAndSelect('middleware.routes', 'route')
-      .leftJoinAndSelect('route.mainTable', 'mainTable')
-      .where('middleware.isEnabled = :enabled', { enabled: true })
-      .andWhere('route.method = :method', { method })
-      .getMany();
-
-    const matchedMiddlewares = middlewares.filter((middleware) =>
-      middleware.routes.find((route) =>
-        this.commonService.isRouteMatched({
-          routePath: route.path,
-          reqPath: req.path,
-          prefix: 'api',
-        }),
-      ),
-    );
-    for (const middleware of matchedMiddlewares) {
+  async use(
+    req: Request & { routeData: any },
+    res: Response,
+    next: NextFunction,
+  ) {
+    for (const middleware of req.routeData.middlewares) {
       const ctx: Record<string, any> = {};
       const $req = new Proxy(
         {},

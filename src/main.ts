@@ -4,7 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as cors from 'cors';
 import * as express from 'express';
-
+import * as qs from 'qs';
 async function ensureDatabaseExists() {
   const DB_TYPE = (process.env.DB_TYPE || 'mysql') as 'mysql' | 'postgres';
   const DB_HOST = process.env.DB_HOST || 'localhost';
@@ -68,6 +68,10 @@ async function bootstrap() {
     }),
   );
   app.use(express.json());
+
+  const httpAdapter = app.getHttpAdapter();
+  const expressApp = httpAdapter.getInstance();
+  expressApp.set('query parser', (str) => qs.parse(str, { depth: 10 }));
 
   app.useGlobalPipes(
     new ValidationPipe({
