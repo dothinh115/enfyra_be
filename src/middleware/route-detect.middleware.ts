@@ -12,7 +12,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private commonService: CommonService,
   ) {}
   async use(req: any, res: any, next: (error?: any) => void) {
-    console.log(req.query.fields);
     const routes = await this.routeDefRepo
       .createQueryBuilder('route')
       .leftJoinAndSelect('route.middlewares', 'middlewares')
