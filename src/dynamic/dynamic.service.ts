@@ -49,14 +49,6 @@ export class DynamicService {
           });
         return acc;
       }, {});
-      // console.dir(
-      //   await this.dynamicFindService.dynamicFind({
-      //     fields: req.query.fields as string,
-      //     filter: req.query.filter,
-      //     tableName: req.routeData.mainTable.name,
-      //   }),
-      //   { depth: null },
-      // );
 
       const context = {
         $req: req,
@@ -86,7 +78,7 @@ export class DynamicService {
           }
         },
         ...repoMap,
-        // ...dynamicFindMap,
+        ...dynamicFindMap,
         ...(req.routeData.params && { params: req.routeData.params }),
       };
 
