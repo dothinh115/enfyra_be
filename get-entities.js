@@ -82,7 +82,14 @@ function generateEntityCode(name, def, inverseMap) {
 
   const addDecorator = (dec) => usedDecorators.add(dec);
 
-  let code = `@Entity('${name}')\n`;
+  let code = '';
+  if (Array.isArray(def.unique) && def.unique.length) {
+    const uniqueFields = def.unique.map((u) => `'${u}'`).join(', ');
+    code += `@Unique([${uniqueFields}])\n`;
+    addDecorator('Unique');
+  }
+
+  code += `@Entity('${name}')\n`;
   addDecorator('Entity');
 
   code += `export class ${className} {\n`;

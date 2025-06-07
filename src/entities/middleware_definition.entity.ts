@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Route_definition } from "./route_definition.entity";
 
 @Entity('middleware_definition')
 export class Middleware_definition {
@@ -11,14 +12,15 @@ export class Middleware_definition {
   @Column({ type: "boolean", nullable: false, default: false })
   isEnabled: boolean;
 
-  @Column({ type: "varchar", nullable: true })
-  method: string;
-
-  @Column({ type: "varchar", nullable: false })
+  @Column({ type: "varchar", nullable: false, unique: true })
   name: string;
 
-  @Column({ type: "varchar", nullable: true })
-  path: string;
+  @Column({ type: "int", nullable: true, default: 0 })
+  priority: number;
+
+  @ManyToMany(() => Route_definition, rel => rel.middlewares, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  @JoinTable()
+  routes: Route_definition[];
 
   @CreateDateColumn()
   createdAt: Date;

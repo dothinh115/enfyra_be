@@ -28,21 +28,26 @@ export class AutoService {
     let code = `@Entity('${payload.name.toLowerCase()}')\n`;
 
     // Unique
-    if (payload.unique?.length) {
-      const uniques = payload.unique.map((u) => `"${u}"`).join(', ');
-      code += `@Unique([${uniques}])\n`;
+    if (payload.uniques?.length) {
+      for (const unique of payload.uniques) {
+        const fields = Array.isArray(unique) ? unique : [unique];
+        code += `@Unique([${fields.map((f) => `"${f}"`).join(', ')}])\n`;
+      }
     }
 
     // Index
-    if (payload.index?.length) {
-      const uniqueKeys = (payload.unique || []).map((u) =>
-        [...u.value].sort().join('|'),
-      );
-      for (const index of payload.index) {
-        const key = [...index.value].sort().join('|');
-        if (!uniqueKeys.includes(key)) {
-          const indexFields = index.value.map((v) => `"${v}"`).join(', ');
-          code += `@Index([${indexFields}])\n`;
+    const uniqueKeySet = new Set(
+      (payload.uniques || []).map((u) =>
+        (Array.isArray(u) ? u : [u]).sort().join('|'),
+      ),
+    );
+
+    if (payload.indexes?.length) {
+      for (const index of payload.indexes) {
+        const fields = Array.isArray(index) ? index : [index];
+        const key = fields.sort().join('|');
+        if (!uniqueKeySet.has(key)) {
+          code += `@Index([${fields.map((f) => `"${f}"`).join(', ')}])\n`;
         }
       }
     }

@@ -221,9 +221,7 @@ export class BootstrapService implements OnApplicationBootstrap {
 
         const exist = await queryRunner.manager.findOne(
           this.tableDefRepo.target,
-          {
-            where: { name: def.name },
-          },
+          { where: { name: def.name } },
         );
 
         if (exist) {
@@ -243,53 +241,64 @@ export class BootstrapService implements OnApplicationBootstrap {
         }
       }
 
-      // Phase 2: Insert columns nếu là bảng mới
+      // Phase 2: Chỉ thêm các column chưa có
       for (const [name, defRaw] of Object.entries(snapshot)) {
         const def = defRaw as any;
         const tableId = tableNameToId[name];
         if (!tableId) continue;
 
-        const exist = await queryRunner.manager.findOne(
-          this.tableDefRepo.target,
-          { where: { name: def.name } },
+        const existingColumns = await queryRunner.manager.find(
+          Column_definition,
+          {
+            where: { table: { id: tableId } },
+          },
         );
 
-        if (exist) {
-          this.logger.log(`⏩ Bỏ qua columns của ${name}, vì bảng đã tồn tại`);
-          continue;
+        const existingNames = new Set(existingColumns.map((col) => col.name));
+        const missingCols = (def.columns || []).filter(
+          (col: any) => !existingNames.has(col.name),
+        );
+
+        if (missingCols.length) {
+          const toInsert = missingCols.map((col: any) => ({
+            ...col,
+            table: { id: tableId },
+          }));
+          await queryRunner.manager.save(Column_definition, toInsert);
+          this.logger.log(
+            `📌 Thêm ${missingCols.length} column mới cho ${name}`,
+          );
+        } else {
+          this.logger.log(`⏩ Không cần thêm column nào cho ${name}`);
         }
-
-        const columns = (def.columns || []).map((col: any) => ({
-          ...col,
-          table: { id: tableId },
-        }));
-
-        if (columns.length) {
-          await queryRunner.manager.save(Column_definition, columns);
-        }
-
-        this.logger.log(`📌 Ghi columns cho ${name}`);
       }
 
-      // Phase 3: Insert relations nếu là bảng mới
+      // Phase 3: Chỉ thêm các relation chưa có
       for (const [name, defRaw] of Object.entries(snapshot)) {
         const def = defRaw as any;
         const tableId = tableNameToId[name];
         if (!tableId) continue;
 
-        const exist = await queryRunner.manager.findOne(
-          this.tableDefRepo.target,
-          { where: { name: def.name } },
+        const existingRelations = await queryRunner.manager.find(
+          Relation_definition,
+          {
+            where: { sourceTable: { id: tableId } },
+            relations: ['targetTable'],
+          },
         );
 
-        if (exist) {
-          this.logger.log(
-            `⏩ Bỏ qua relations của ${name}, vì bảng đã tồn tại`,
-          );
-          continue;
-        }
+        const existingKeys = new Set(
+          existingRelations.map((r) =>
+            JSON.stringify({
+              sourceTable: r.sourceTable?.id,
+              targetTable: r.targetTable?.id,
+              propertyName: r.propertyName,
+              relationType: r.type,
+            }),
+          ),
+        );
 
-        const relations = (def.relations || [])
+        const newRelations = (def.relations || [])
           .map((rel: any) => {
             const targetId = tableNameToId[rel.targetTable];
             if (!targetId) {
@@ -299,6 +308,15 @@ export class BootstrapService implements OnApplicationBootstrap {
               return null;
             }
 
+            const key = JSON.stringify({
+              sourceTable: tableId,
+              targetTable: targetId,
+              propertyName: rel.propertyName,
+              relationType: rel.relationType,
+            });
+
+            if (existingKeys.has(key)) return null;
+
             return {
               ...rel,
               sourceTable: { id: tableId },
@@ -307,11 +325,14 @@ export class BootstrapService implements OnApplicationBootstrap {
           })
           .filter(Boolean);
 
-        if (relations.length) {
-          await queryRunner.manager.save(Relation_definition, relations);
+        if (newRelations.length) {
+          await queryRunner.manager.save(Relation_definition, newRelations);
+          this.logger.log(
+            `📌 Thêm ${newRelations.length} relation mới cho ${name}`,
+          );
+        } else {
+          this.logger.log(`⏩ Không cần thêm relation nào cho ${name}`);
         }
-
-        this.logger.log(`📌 Ghi relations cho ${name}`);
       }
 
       await queryRunner.commitTransaction();

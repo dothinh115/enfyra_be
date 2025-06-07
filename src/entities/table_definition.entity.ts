@@ -10,6 +10,9 @@ export class Table_definition {
   @Column({ type: "varchar", nullable: true, unique: true })
   alias: string;
 
+  @Column({ type: "simple-json", nullable: true })
+  indexes: any;
+
   @Column({ type: "boolean", nullable: false, default: false })
   isStatic: boolean;
 
@@ -17,7 +20,7 @@ export class Table_definition {
   name: string;
 
   @Column({ type: "simple-json", nullable: true })
-  unique: any;
+  uniques: any;
 
   @OneToMany(() => Column_definition, rel => rel.table, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   columns: Column_definition[];

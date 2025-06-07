@@ -137,10 +137,10 @@ export class CreateTableDto {
   name: string;
 
   @IsOptional()
-  index?: CreateIndexDto[];
+  indexes?: CreateIndexDto[];
 
   @IsOptional()
-  unique: CreateUniqueDto[];
+  uniques: CreateUniqueDto[];
 
   @IsArray()
   @ValidateNested({ each: true })

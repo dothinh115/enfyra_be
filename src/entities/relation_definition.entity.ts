@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Table_definition } from "./table_definition.entity";
 
 @Entity('relation_definition')
+@Unique(["propertyName", "sourceTable"])
 export class Relation_definition {
   @PrimaryGeneratedColumn('increment')
   id: number;

@@ -2,6 +2,7 @@
     "column_definition": {
         "name": "column_definition",
         "isStatic": true,
+        "uniques": [["name", "table"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
             { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true },
@@ -30,10 +31,11 @@
         {
         "name": "relation_definition",
         "isStatic": true,
+        "uniques": [["propertyName", "sourceTable"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
             { "name": "type", "type": "enum", "isNullable": false, "isStatic": true, "enumValues": ["one-to-one", "many-to-one", "one-to-many", "many-to-many"] },
-            { "name": "propertyName", "type": "varchar", "isNullable": false, "isStatic": true },
+            { "name": "propertyName", "type": "varchar", "isNullable": false, "isStatic": true},
             { "name": "inversePropertyName", "type": "varchar", "isNullable": true, "isStatic": true },
             { "name": "isEager", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "isNullable", "type": "boolean", "isNullable": false, "isStatic": true, "default": true },
@@ -53,7 +55,8 @@
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
             { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true, "isUnique": true },
             { "name": "isStatic", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "unique", "type": "simple-json", "isNullable": true, "isStatic": true },
+            { "name": "uniques", "type": "simple-json", "isNullable": true, "isStatic": true },
+            { "name": "indexes", "type": "simple-json", "isNullable": true, "isStatic": true },
             { "name": "alias", "type": "varchar", "isNullable": true, "isStatic": true, "isUnique": true }
         ]
     },
@@ -80,7 +83,7 @@
     "route_definition": {
         "name": "route_definition",
         "isStatic": true,
-        "unique": ["path", "method"],
+        "uniques": [["path", "method"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
             { "name": "method", "type": "varchar", "isNullable": false, "isStatic": true, "default": "GET" },
@@ -107,13 +110,15 @@
         "isStatic": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true },
-            { "name": "method", "type": "varchar", "isNullable": true, "isStatic": true },
-            { "name": "path", "type": "varchar", "isNullable": true, "isStatic": true },
+            { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true, "isUnique":true },
             { "name": "handler", "type": "text", "isNullable": false, "isStatic": true },
-            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
+            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
+            { "name": "priority", "type": "int", "isNullable": true, "isStatic": true, "default": 0 }
+
         ],
-        "relations": []
+        "relations": [
+            { "propertyName": "routes", "type": "many-to-many", "targetTable": "route_definition", "isStatic": true, "inversePropertyName": "middlewares" }
+        ]
     },
     "hook_definition": {
         "name": "hook_definition",

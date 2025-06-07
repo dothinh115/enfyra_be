@@ -1,34 +1,42 @@
 const fs = require('fs');
 const path = require('path');
 const { Project, SyntaxKind } = require('ts-morph');
-const pLimit = require('p-limit').default;
 
-// ✅ CẤU HÌNH CỐ ĐỊNH
-const TARGET_DIR = path.resolve('src/entities'); // nơi cần auto import
-const SCAN_DIRS = [
-  // nơi scan export
-  path.resolve('src/entities'),
-];
+// ✅ CẤU HÌNH
+const TARGET_DIR = path.resolve('src/entities');
+const SCAN_DIRS = [TARGET_DIR];
 
 const knownGlobalImports = {
   Entity: 'typeorm',
   Column: 'typeorm',
   PrimaryGeneratedColumn: 'typeorm',
+  OneToMany: 'typeorm',
+  ManyToOne: 'typeorm',
+  ManyToMany: 'typeorm',
+  OneToOne: 'typeorm',
+  JoinColumn: 'typeorm',
+  JoinTable: 'typeorm',
+  CreateDateColumn: 'typeorm',
+  UpdateDateColumn: 'typeorm',
+  Unique: 'typeorm',
+  Index: 'typeorm',
 };
 
 function getAllTsFiles(dirPath) {
-  const result = [];
+  const results = [];
   const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
   for (const entry of entries) {
     const fullPath = path.join(dirPath, entry.name);
-    if (entry.isDirectory()) result.push(...getAllTsFiles(fullPath));
+    if (entry.isDirectory()) results.push(...getAllTsFiles(fullPath));
     else if (entry.isFile() && entry.name.endsWith('.ts'))
-      result.push(fullPath);
+      results.push(fullPath);
   }
-  return result;
+
+  return results;
 }
 
-async function buildExportMapAsync(scanDirs, refFile) {
+function buildExportMap(scanDirs, refFile) {
   const exportMap = new Map();
   const allFiles = scanDirs.flatMap((dir) =>
     fs
@@ -36,9 +44,11 @@ async function buildExportMapAsync(scanDirs, refFile) {
       .filter((f) => f.endsWith('.ts'))
       .map((f) => path.resolve(dir, f)),
   );
+
   for (const file of allFiles) {
     const code = fs.readFileSync(file, 'utf8');
     if (!code.includes('export')) continue;
+
     const regex =
       /export\s+(?:class|const|function|interface|type|enum)\s+(\w+)/g;
     let match;
@@ -56,33 +66,13 @@ async function buildExportMapAsync(scanDirs, refFile) {
       }
     }
   }
+
   return exportMap;
 }
 
-async function autoAddImportsToFile(filePath, suggestions) {
-  const project = new Project();
-  const sourceFile = project.addSourceFileAtPath(filePath);
-  for (const { name, module } of suggestions) {
-    const existing = sourceFile
-      .getImportDeclarations()
-      .find((imp) => imp.getModuleSpecifierValue() === module);
-    if (existing) {
-      const names = existing.getNamedImports().map((n) => n.getName());
-      if (!names.includes(name)) existing.addNamedImport(name);
-    } else {
-      sourceFile.addImportDeclaration({
-        namedImports: [name],
-        moduleSpecifier: module,
-      });
-    }
-  }
-  await sourceFile.save();
-}
-
-async function processFile(filePath, exportMap) {
-  const project = new Project();
-  const sourceFile = project.addSourceFileAtPath(filePath);
-  const usedIdentifiers = new Set();
+function getMissingIdentifiers(sourceFile) {
+  const used = new Set();
+  const declared = new Set();
   const imported = new Set();
 
   sourceFile.getImportDeclarations().forEach((decl) => {
@@ -93,20 +83,24 @@ async function processFile(filePath, exportMap) {
     if (node.getKind() === SyntaxKind.Identifier) {
       const name = node.getText();
       const symbol = node.getSymbol();
-      if (!symbol && !imported.has(name)) usedIdentifiers.add(name);
+      if (!symbol && !imported.has(name)) used.add(name);
     }
   });
 
-  const classes = sourceFile.getClasses().map((c) => c.getName());
-  const vars = sourceFile
-    .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
-    .map((v) => v.getName());
-  for (const name of [...classes, ...vars]) usedIdentifiers.delete(name);
+  sourceFile.getClasses().forEach((cls) => declared.add(cls.getName()));
+  sourceFile
+    .getVariableDeclarations()
+    .forEach((v) => declared.add(v.getName()));
 
-  const missing = [...usedIdentifiers];
+  declared.forEach((name) => used.delete(name));
+
+  return [...used];
+}
+
+function applyAutoImports(sourceFile, missingNames, exportMap) {
   const suggestions = [];
 
-  for (const name of missing) {
+  for (const name of missingNames) {
     if (knownGlobalImports[name]) {
       suggestions.push({ name, module: knownGlobalImports[name] });
     } else if (exportMap.has(name)) {
@@ -114,21 +108,55 @@ async function processFile(filePath, exportMap) {
     }
   }
 
-  if (suggestions.length) {
-    await autoAddImportsToFile(filePath, suggestions);
-    console.log(`✅ Imported into ${filePath}`);
+  if (!suggestions.length) return false;
+
+  for (const { name, module } of suggestions) {
+    const existing = sourceFile
+      .getImportDeclarations()
+      .find((imp) => imp.getModuleSpecifierValue() === module);
+
+    if (existing) {
+      const names = existing.getNamedImports().map((n) => n.getName());
+      if (!names.includes(name)) existing.addNamedImport(name);
+    } else {
+      sourceFile.addImportDeclaration({
+        namedImports: [name],
+        moduleSpecifier: module,
+      });
+    }
   }
+
+  return true;
 }
 
 async function main() {
   const files = getAllTsFiles(TARGET_DIR);
-  const exportMap = await buildExportMapAsync(SCAN_DIRS, files[0]);
-  const limit = pLimit(5);
-  const tasks = files.map((f) => limit(() => processFile(f, exportMap)));
-  await Promise.allSettled(tasks);
+  if (!files.length) {
+    console.warn('⚠️ Không tìm thấy file TS nào.');
+    return;
+  }
+
+  const exportMap = buildExportMap(SCAN_DIRS, files[0]);
+
+  const project = new Project({
+    tsConfigFilePath: 'tsconfig.json',
+    skipAddingFilesFromTsConfig: true,
+  });
+
+  const sourceFiles = files.map((file) => project.addSourceFileAtPath(file));
+
+  for (const sourceFile of sourceFiles) {
+    const missing = getMissingIdentifiers(sourceFile);
+    const added = applyAutoImports(sourceFile, missing, exportMap);
+    if (added) {
+      console.log(`✅ Auto imported: ${sourceFile.getBaseName()}`);
+    }
+  }
+
+  await project.save();
 }
 
 main().catch((err) => {
-  console.error('❌ Lỗi:', err.message);
+  console.error('❌ Lỗi:', err);
   process.exit(1);
 });

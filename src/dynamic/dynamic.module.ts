@@ -1,7 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { DynamicService } from './dynamic.service';
 import { DynamicController } from './dynamic.controller';
-import { DynamicMiddleware } from '../middleware/dynamic.service';
+import { DynamicMiddleware } from '../middleware/dynamic.middleware';
 
 @Module({
   imports: [],
