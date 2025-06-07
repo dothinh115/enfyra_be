@@ -21,10 +21,9 @@ export class TableHanlderService {
   ) {}
 
   async createTable(body: CreateTableDto) {
-    const queryRunner = this.dataSouceService
-      .getDataSource()
-      .createQueryRunner();
-    await queryRunner.connect(); // Kết nối
+    const dataSource = await this.dataSouceService.getDataSource();
+    const queryRunner = dataSource.createQueryRunner();
+    await queryRunner.connect();
     await queryRunner.startTransaction();
     const manager = queryRunner.manager;
     try {
@@ -64,9 +63,8 @@ export class TableHanlderService {
   }
 
   async updateTable(id: number, body: CreateTableDto) {
-    const queryRunner = this.dataSouceService
-      .getDataSource()
-      .createQueryRunner();
+    const dataSource = await this.dataSouceService.getDataSource();
+    const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     const manager = queryRunner.manager;

@@ -1,9 +1,11 @@
 import * as path from 'path';
 import { CommonService } from '../common/common.service';
 import { createDataSource } from '../data-source/data-source';
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntitySchema, EntityTarget, Repository } from 'typeorm';
 import { QueryTrackerService } from '../query-track/query-track.service';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
+import { RELOADING_DATASOURCE_KEY } from '../utils/constant';
 
 const entityDir = path.resolve('dist', 'entities');
 
@@ -15,6 +17,7 @@ export class DataSourceService implements OnModuleInit {
   constructor(
     private commonService: CommonService,
     private queryTrackerService: QueryTrackerService,
+    @Inject(CACHE_MANAGER) private cache: Cache,
   ) {}
 
   async onModuleInit() {
@@ -69,10 +72,11 @@ export class DataSourceService implements OnModuleInit {
     }
   }
 
-  getRepository<Entity>(
+  async getRepository<Entity>(
     identifier: string | Function | EntitySchema<any>,
-  ): Repository<Entity> | null {
-    if (!this.dataSource?.isInitialized) {
+  ): Promise<Repository<Entity>> | null {
+    const dataSource = await this.getDataSource();
+    if (!dataSource?.isInitialized) {
       throw new Error('DataSource chưa được khởi tạo!');
     }
 
@@ -80,12 +84,12 @@ export class DataSourceService implements OnModuleInit {
 
     if (typeof identifier === 'string') {
       // Tìm theo tên bảng
-      metadata = this.dataSource.entityMetadatas.find(
+      metadata = dataSource.entityMetadatas.find(
         (meta) => meta.tableName === identifier,
       );
     } else {
       try {
-        metadata = this.dataSource.getMetadata(identifier);
+        metadata = dataSource.getMetadata(identifier);
       } catch {
         return null; // Không tìm thấy metadata
       }
@@ -95,10 +99,14 @@ export class DataSourceService implements OnModuleInit {
       return null;
     }
 
-    return this.dataSource.getRepository<Entity>(metadata.target as any);
+    return dataSource.getRepository<Entity>(metadata.target as any);
   }
 
-  getDataSource() {
+  async getDataSource() {
+    const cached = await this.cache.get(RELOADING_DATASOURCE_KEY);
+    while (cached) {
+      await this.commonService.delay(500);
+    }
     return this.dataSource;
   }
 

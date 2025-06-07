@@ -19,7 +19,7 @@ const OPERATOR_MAP: Record<string, string> = {
 export class DynamicFindService {
   constructor(private dataSourceService: DataSourceService) {}
 
-  private extractRelationsAndFieldsAndWhere({
+  private async extractRelationsAndFieldsAndWhere({
     fields,
     tableName,
     filter,
@@ -27,14 +27,14 @@ export class DynamicFindService {
     fields: string[] | string;
     tableName: string;
     filter?: any;
-  }): {
+  }): Promise<{
     select: string[];
     joinArr: { path: string; alias: string }[];
     where: Brackets;
     params: Record<string, any>;
-  } {
+  }> {
     let paramCounter = 0;
-    const dataSource = this.dataSourceService.getDataSource();
+    const dataSource = await this.dataSourceService.getDataSource();
     fields =
       typeof fields === 'string'
         ? fields
@@ -325,8 +325,8 @@ export class DynamicFindService {
     tableName: string;
     filter?: any;
   }) {
-    const repo = this.dataSourceService.getRepository(tableName);
-    const extract = this.extractRelationsAndFieldsAndWhere({
+    const repo = await this.dataSourceService.getRepository(tableName);
+    const extract = await this.extractRelationsAndFieldsAndWhere({
       fields,
       filter,
       tableName,

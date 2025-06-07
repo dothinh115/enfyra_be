@@ -16,6 +16,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { RoleGuard } from './guard/role.guard';
 import { DynamicFindModule } from './dynamic-find/dynamic-find.module';
 import { HideFieldInterceptor } from './interceptors/hidden-field.interceptor';
+import { CacheModule } from '@nestjs/cache-manager';
+import * as redisStore from 'cache-manager-ioredis';
 
 @Global()
 @Module({
@@ -37,6 +39,16 @@ import { HideFieldInterceptor } from './interceptors/hidden-field.interceptor';
           secret: configService.get('SECRET_KEY'),
         };
       },
+      inject: [ConfigService],
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async (configService: ConfigService) => ({
+        store: redisStore,
+        host: configService.get('REDIS_HOST'),
+        port: configService.get('REDIS_PORT'),
+        ttl: configService.get('DEFAULT_TTL'),
+      }),
       inject: [ConfigService],
     }),
     DynamicFindModule,

@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { DataSource, EntitySchema, Repository } from 'typeorm';
 
 export const knownGlobalImports: Record<string, string> = {
   Column: 'typeorm',

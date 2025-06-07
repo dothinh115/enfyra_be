@@ -226,7 +226,7 @@ export class AutoService {
   }
 
   async clearMigrationsTable() {
-    const dataSource = this.dataSourceService.getDataSource();
+    const dataSource = await this.dataSourceService.getDataSource();
     const queryRunner = dataSource.createQueryRunner();
 
     await queryRunner.connect();
@@ -318,7 +318,8 @@ export class AutoService {
 
   async pullMetadataFromDb() {
     await this.commonService.delay(1000);
-    const tableRepo = this.dataSourceService.getRepository(Table_definition);
+    const tableRepo =
+      await this.dataSourceService.getRepository(Table_definition);
 
     let tables: any[] = await tableRepo.find({
       relations: ['relations', 'relations.targetTable', 'columns'],
