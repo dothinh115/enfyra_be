@@ -70,6 +70,10 @@ export class CreateColumnDto {
   @IsOptional()
   @IsBoolean()
   isUpdatable?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isIndex?: boolean;
 }
 
 export class CreateRelationDto {
@@ -123,6 +127,14 @@ export class CreateRelationDto {
   @IsBoolean()
   @IsOptional()
   isNullable?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isIndex?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isInverseIndex?: boolean;
 }
 
 export class CreateIndexDto {

@@ -6,7 +6,10 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { CommonService } from '../common/common.service';
 import { Table_definition } from '../entities/table_definition.entity';
-import { TInverseRelation, TInverseRelationMap } from '../utils/type';
+import {
+  TInverseRelation,
+  TInverseRelationMap,
+} from '../utils/types/common.type';
 
 @Injectable()
 export class AutoService {
@@ -60,23 +63,33 @@ export class AutoService {
         const strategy = col.type === 'uuid' ? `'uuid'` : `'increment'`;
         code += `  @PrimaryGeneratedColumn(${strategy})\n`;
       } else {
-        const opts = [`type: "${col.type}"`, `nullable: ${col.isNullable}`];
+        const type = col.type === 'date' ? 'timestamp' : col.type;
+        const opts = [`type: "${type}"`, `nullable: ${col.isNullable}`];
+
+        if (col.default !== undefined && col.default !== null) {
+          if (col.default === 'now') {
+            opts.push(`default: () => "now()"`);
+          } else {
+            opts.push(
+              typeof col.default === 'string'
+                ? `default: "${col.default}"`
+                : `default: ${col.default}`,
+            );
+          }
+        }
+
         if (col.isUnique) opts.push(`unique: true`);
         if (col.type === 'enum' && col.enumValues)
           opts.push(
             `enum: [${col.enumValues.map((v) => `'${v}'`).join(', ')}]`,
           );
-        if (col.default !== undefined && col.default !== null)
-          opts.push(
-            typeof col.default === 'string'
-              ? `default: "${col.default}"`
-              : `default: ${col.default}`,
-          );
+
         if (col.isUpdatable === false) {
           opts.push('update: false');
         }
+
         code += `  @Column({ ${opts.join(', ')} })\n`;
-        if (col.index) code += `  @Index()\n`;
+        if (col.isIndex) code += `  @Index()\n`;
       }
 
       if (col.isHidden) {
@@ -86,7 +99,9 @@ export class AutoService {
       const tsType =
         col.type === 'enum'
           ? col.enumValues.map((v) => `'${v}'`).join(' | ')
-          : dbTypeToTSType(col.type);
+          : col.type === 'date'
+            ? 'Date'
+            : dbTypeToTSType(col.type);
 
       code += `  ${col.name}: ${tsType};\n\n`;
     }
@@ -116,7 +131,16 @@ export class AutoService {
       opts.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
       const optStr = opts.length ? `, { ${opts.join(', ')} }` : '';
 
-      let relationCode = `  @${type}(() => ${target}`;
+      let relationCode = '';
+      if (
+        rel.isIndex &&
+        (rel.type === 'many-to-one' ||
+          (rel.type === 'one-to-one' && !isInverse))
+      ) {
+        relationCode += `  @Index()\n`;
+      }
+
+      relationCode += `  @${type}(() => ${target}`;
       if (rel.inversePropertyName) {
         relationCode += `, rel => rel.${rel.inversePropertyName}`;
       }
@@ -309,6 +333,7 @@ export class AutoService {
           propertyName: rel.inversePropertyName,
           inversePropertyName: rel.propertyName,
           type: inverseRelationType(rel.type),
+          isIndex: rel.isInverseIndex,
         };
 
         if (!map.has(targetName)) map.set(targetName, []);

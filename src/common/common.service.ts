@@ -1,4 +1,4 @@
-import { DBToTSTypeMap, TSToDBTypeMap } from '../utils/type';
+import { DBToTSTypeMap, TSToDBTypeMap } from '../utils/types/common.type';
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';

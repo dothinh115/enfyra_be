@@ -15,7 +15,8 @@
             { "name": "enumValues", "type": "simple-json", "isNullable": true, "isStatic": true },
             { "name": "isUnique", "type": "boolean", "isNullable": true, "isStatic": true, "default": false },
             { "name": "isUpdatable", "type": "boolean", "isNullable": false, "isStatic": true, "default": true },
-            { "name": "isHidden", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
+            { "name": "isHidden", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
+            { "name": "isIndex", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
         ],
         "relations": [
             {
@@ -41,7 +42,10 @@
             { "name": "isEager", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "isNullable", "type": "boolean", "isNullable": false, "isStatic": true, "default": true },
             { "name": "isStatic", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "isInverseEager", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
+            { "name": "isInverseEager", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
+            { "name": "isIndex", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
+            { "name": "isInverseIndex", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
+
         ],
         "relations": [
             { "propertyName": "sourceTable", "type": "many-to-one", "targetTable": "table_definition", "isStatic": true, "inversePropertyName": "relations", "isInverseEager": true },
@@ -131,6 +135,18 @@
             { "name": "path", "type": "varchar", "isNullable": false, "isStatic": true },
             { "name": "handler", "type": "text", "isNullable": false, "isStatic": true },
             { "name": "type", "type": "varchar", "isNullable": false, "isStatic": true, "default": "beforeHandler" }
+        ]
+    },
+    "session_definition": {
+        "name": "session_definition",
+        "isStatic": true,
+        "columns": [
+            { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
+            { "name": "expiredAt", "type": "date", "isNullable": false, "isStatic": true, "default": "now" },
+            { "name": "remember", "type": "boolean", "isStatic": true, "default": false }
+        ],
+        "relations": [
+            { "propertyName": "user", "type": "many-to-one", "targetTable": "user_definition", "isStatic": true, "isNullable": false, "isIndex": true }
         ]
     }
 }

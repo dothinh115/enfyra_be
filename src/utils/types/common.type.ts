@@ -1,6 +1,3 @@
-import { Column_definition } from '../entities/column_definition.entity';
-import { RelationDefinition } from '../relation.entity';
-
 export type TEntitySchemaIn = {
   id: number | string;
   name: string;
@@ -21,17 +18,6 @@ export type TEntitySchemaIn = {
     type: 'one-to-one' | 'many-to-one' | 'one-to-many' | 'many-to-many';
     propertyName: string;
   }[];
-};
-
-export type TableDiff = {
-  nameChanged: boolean;
-  addedColumns: Column_definition[];
-  removedColumns: Column_definition[];
-  updatedColumns: { old: Column_definition; new: Column_definition }[];
-
-  addedRelations: RelationDefinition[];
-  removedRelations: RelationDefinition[];
-  updatedRelations: { old: RelationDefinition; new: RelationDefinition }[];
 };
 
 export type DBToTSTypeMap = {
@@ -74,19 +60,10 @@ export type TInverseRelation = {
   type: string;
   isEager?: boolean;
   isNullable?: boolean;
-  index?: boolean;
+  isIndex?: boolean;
   inversePropertyName: string;
   targetClass: string;
   targetGraphQLType?: string;
 };
 
 export type TInverseRelationMap = Map<string, TInverseRelation[]>;
-
-export type TQuery = {
-  fields?: string;
-  filter?: string;
-  limit?: number;
-  page?: number;
-  meta?: string;
-  sort?: string;
-};

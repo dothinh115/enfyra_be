@@ -88,10 +88,6 @@ function buildExportMap(scanDirs, refFile) {
         );
       }
     }
-    console.log('[ExportMap]');
-    for (const [name, mod] of exportMap.entries()) {
-      console.log('-', name, '=>', mod);
-    }
   }
 
   return exportMap;

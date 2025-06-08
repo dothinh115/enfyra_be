@@ -1,18 +1,11 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Request, Response, NextFunction } from 'express';
-import { Repository } from 'typeorm';
-import { CommonService } from '../common/common.service';
 import * as vm from 'vm';
-import { Middleware_definition } from '../entities/middleware_definition.entity';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class DynamicMiddleware implements NestMiddleware {
-  constructor(
-    @InjectRepository(Middleware_definition)
-    private configService: ConfigService,
-  ) {}
+  constructor(private configService: ConfigService) {}
 
   async use(
     req: Request & { routeData: any },

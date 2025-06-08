@@ -14,7 +14,13 @@ export class Relation_definition {
   isEager: boolean;
 
   @Column({ type: "boolean", nullable: false, default: false })
+  isIndex: boolean;
+
+  @Column({ type: "boolean", nullable: false, default: false })
   isInverseEager: boolean;
+
+  @Column({ type: "boolean", nullable: false, default: false })
+  isInverseIndex: boolean;
 
   @Column({ type: "boolean", nullable: false, default: true })
   isNullable: boolean;

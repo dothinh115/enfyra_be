@@ -176,7 +176,6 @@ export class BootstrapService implements OnApplicationBootstrap {
             this.tableDefRepo.target,
             {
               ...rest,
-              isStatic: true,
             },
           );
           tableNameToId[name] = created.id;
@@ -190,7 +189,6 @@ export class BootstrapService implements OnApplicationBootstrap {
         const tableId = tableNameToId[name];
         if (!tableId) continue;
 
-        // Lấy danh sách column hiện có bằng queryBuilder để chắc chắn có table.id
         const existingColumns = await queryRunner.manager
           .getRepository(Column_definition)
           .createQueryBuilder('c')
@@ -209,7 +207,6 @@ export class BootstrapService implements OnApplicationBootstrap {
           const toInsert = newColumns.map((col: any) => ({
             ...col,
             table: { id: tableId },
-            isStatic: true,
           }));
           await queryRunner.manager.save(Column_definition, toInsert);
           this.logger.log(
@@ -226,7 +223,6 @@ export class BootstrapService implements OnApplicationBootstrap {
         const tableId = tableNameToId[name];
         if (!tableId) continue;
 
-        // 1. Lấy các relation hiện có (dùng query builder để chắc chắn có id)
         const existingRelations = await queryRunner.manager
           .getRepository(Relation_definition)
           .createQueryBuilder('r')
@@ -288,7 +284,6 @@ export class BootstrapService implements OnApplicationBootstrap {
             ...rel,
             sourceTable: { id: tableId },
             targetTable: { id: targetId },
-            isStatic: true,
           });
         }
 

@@ -18,6 +18,7 @@ import { DynamicFindModule } from './dynamic-find/dynamic-find.module';
 import { HideFieldInterceptor } from './interceptors/hidden-field.interceptor';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-ioredis';
+import { AuthModule } from './auth/auth.module';
 
 @Global()
 @Module({
@@ -52,6 +53,7 @@ import * as redisStore from 'cache-manager-ioredis';
       inject: [ConfigService],
     }),
     DynamicFindModule,
+    AuthModule,
   ],
   providers: [
     BootstrapService,

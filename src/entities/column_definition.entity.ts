@@ -19,6 +19,9 @@ export class Column_definition {
   @Column({ type: "boolean", nullable: false, default: false })
   isHidden: boolean;
 
+  @Column({ type: "boolean", nullable: false, default: false })
+  isIndex: boolean;
+
   @Column({ type: "boolean", nullable: true, default: true })
   isNullable: boolean;
 

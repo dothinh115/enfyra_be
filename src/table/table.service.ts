@@ -9,7 +9,6 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { TQuery } from '../utils/type';
 
 @Injectable()
 export class TableHanlderService {
@@ -205,9 +204,9 @@ export class TableHanlderService {
     return [idColumn, ...filtered];
   }
 
-  async find(query: TQuery) {}
+  // async find(query: TQuery) {}
 
-  async findOne(id: number, query: TQuery) {}
+  // async findOne(id: number, query: TQuery) {}
 
   async delete(id: number) {
     try {
