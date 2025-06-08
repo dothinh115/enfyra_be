@@ -5,7 +5,6 @@
 
 /src/migrations/*.ts
 
-/src/entities/*
 # !/src/entities/table_definition.entity.ts
 # !/src/entities/column_definition.entity.ts
 # !/src/entities/relation_definition.entity.ts
