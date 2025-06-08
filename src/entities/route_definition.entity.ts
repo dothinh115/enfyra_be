@@ -2,6 +2,7 @@ import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, 
 import { Table_definition } from "./table_definition.entity";
 import { Role_definition } from "./role_definition.entity";
 import { Middleware_definition } from "./middleware_definition.entity";
+import { Hook_definition } from "./hook_definition.entity";
 
 @Entity('route_definition')
 @Unique(['path', 'method'])
@@ -29,6 +30,8 @@ export class Route_definition {
     targetTables: Table_definition[];
     @ManyToMany(() => Middleware_definition, (rel) => rel.routes, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     middlewares: Middleware_definition[];
+    @ManyToMany(() => Hook_definition, (rel) => rel.routes, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    hooks: Hook_definition[];
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

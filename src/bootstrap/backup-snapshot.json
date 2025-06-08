@@ -131,10 +131,12 @@
         "isStatic": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "method", "type": "varchar", "isNullable": false, "isStatic": true, "default": "GET" },
-            { "name": "path", "type": "varchar", "isNullable": false, "isStatic": true },
-            { "name": "handler", "type": "text", "isNullable": false, "isStatic": true },
-            { "name": "type", "type": "varchar", "isNullable": false, "isStatic": true, "default": "beforeHandler" }
+            { "name": "preHook", "type": "text", "isNullable": true, "isStatic": true },
+            { "name": "afterHook", "type": "text", "isNullable": true, "isStatic": true },
+            { "name": "priority", "type": "int", "isNullable": true, "isStatic": true, "default": 0 }
+        ],
+        "relations": [
+            { "propertyName": "routes", "type": "many-to-many", "targetTable": "route_definition", "isStatic": true, "inversePropertyName": "hooks" }
         ]
     },
     "session_definition": {
