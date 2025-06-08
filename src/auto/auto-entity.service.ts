@@ -10,6 +10,7 @@ import {
   TInverseRelation,
   TInverseRelationMap,
 } from '../utils/types/common.type';
+import { Project, QuoteKind } from 'ts-morph';
 
 @Injectable()
 export class AutoService {
@@ -25,43 +26,77 @@ export class AutoService {
     payload: CreateTableDto,
     inverseRelationMap?: TInverseRelationMap,
   ) {
-    const capitalize = this.commonService.capitalize;
-    const dbTypeToTSType = this.commonService.dbTypeToTSType;
-    const className = capitalize(payload.name);
-    let code = `@Entity('${payload.name.toLowerCase()}')\n`;
+    const capitalize = this.commonService.capitalize.bind(this.commonService);
+    const dbTypeToTSType = this.commonService.dbTypeToTSType.bind(
+      this.commonService,
+    );
 
-    // Unique
-    if (payload.uniques?.length) {
-      for (const unique of payload.uniques) {
-        const fields = Array.isArray(unique) ? unique : [unique];
-        code += `@Unique([${fields.map((f) => `"${f}"`).join(', ')}])\n`;
-      }
+    const className = capitalize(payload.name);
+    const entityDir = path.resolve('src', 'entities');
+    const entityPath = path.resolve(
+      entityDir,
+      `${payload.name.toLowerCase()}.entity.ts`,
+    );
+    if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
+
+    const project = new Project({
+      manipulationSettings: {
+        quoteKind: QuoteKind.Single,
+      },
+    });
+    const sourceFile = project.createSourceFile(entityPath, '', {
+      overwrite: true,
+    });
+
+    // Entity-level decorators
+    const classDecorators = [
+      {
+        name: 'Entity',
+        arguments: [`'${payload.name.toLowerCase()}'`],
+      },
+    ];
+
+    for (const unique of payload.uniques || []) {
+      const fields = Array.isArray(unique) ? unique : [unique];
+      classDecorators.push({
+        name: 'Unique',
+        arguments: [`[${fields.map((f) => `'${f}'`).join(', ')}]`],
+      });
     }
 
-    // Index
     const uniqueKeySet = new Set(
       (payload.uniques || []).map((u) =>
         (Array.isArray(u) ? u : [u]).sort().join('|'),
       ),
     );
 
-    if (payload.indexes?.length) {
-      for (const index of payload.indexes) {
-        const fields = Array.isArray(index) ? index : [index];
-        const key = fields.sort().join('|');
-        if (!uniqueKeySet.has(key)) {
-          code += `@Index([${fields.map((f) => `"${f}"`).join(', ')}])\n`;
-        }
+    for (const index of payload.indexes || []) {
+      const fields = Array.isArray(index) ? index : [index];
+      const key = fields.sort().join('|');
+      if (!uniqueKeySet.has(key)) {
+        classDecorators.push({
+          name: 'Index',
+          arguments: [`[${fields.map((f) => `'${f}'`).join(', ')}]`],
+        });
       }
     }
 
-    code += `export class ${className} {\n`;
+    const classDeclaration = sourceFile.addClass({
+      name: className,
+      isExported: true,
+      decorators: classDecorators,
+    });
 
     // Columns
     for (const col of payload.columns) {
+      const decorators = [];
+
       if (col.isPrimary) {
         const strategy = col.type === 'uuid' ? `'uuid'` : `'increment'`;
-        code += `  @PrimaryGeneratedColumn(${strategy})\n`;
+        decorators.push({
+          name: 'PrimaryGeneratedColumn',
+          arguments: [strategy],
+        });
       } else {
         const type = col.type === 'date' ? 'timestamp' : col.type;
         const opts = [`type: "${type}"`, `nullable: ${col.isNullable}`];
@@ -79,21 +114,27 @@ export class AutoService {
         }
 
         if (col.isUnique) opts.push(`unique: true`);
-        if (col.type === 'enum' && col.enumValues)
+        if (col.type === 'enum' && col.enumValues) {
           opts.push(
             `enum: [${col.enumValues.map((v) => `'${v}'`).join(', ')}]`,
           );
-
+        }
         if (col.isUpdatable === false) {
-          opts.push('update: false');
+          opts.push(`update: false`);
         }
 
-        code += `  @Column({ ${opts.join(', ')} })\n`;
-        if (col.isIndex) code += `  @Index()\n`;
+        decorators.push({
+          name: 'Column',
+          arguments: [`{ ${opts.join(', ')} }`],
+        });
+
+        if (col.isIndex) {
+          decorators.push({ name: 'Index', arguments: [] });
+        }
       }
 
       if (col.isHidden) {
-        code += `  @HiddenField()\n`;
+        decorators.push({ name: 'HiddenField', arguments: [] });
       }
 
       const tsType =
@@ -103,10 +144,15 @@ export class AutoService {
             ? 'Date'
             : dbTypeToTSType(col.type);
 
-      code += `  ${col.name}: ${tsType};\n\n`;
+      classDeclaration.addProperty({
+        name: col.name,
+        type: tsType,
+        hasExclamationToken: false,
+        decorators,
+      });
     }
 
-    // Relation generator
+    // Relations
     const generateRelation = (rel: any, isInverse = false) => {
       const typeMap = {
         'many-to-many': 'ManyToMany',
@@ -114,82 +160,79 @@ export class AutoService {
         'many-to-one': 'ManyToOne',
         'one-to-many': 'OneToMany',
       };
-      const type = typeMap[rel.type] || 'ManyToOne';
+      const relationType = typeMap[rel.type] || 'ManyToOne';
       const target = capitalize(rel.targetTable?.name || rel.targetClass || '');
+      const propertyType = ['many-to-many', 'one-to-many'].includes(rel.type)
+        ? `${target}[]`
+        : target;
 
-      if (!target) {
-        console.warn(`⚠️ Missing target for relation:`, rel);
-        return '';
-      }
+      const decorators = [];
 
-      const opts = [];
-      if (rel.isEager) opts.push('eager: true');
-      if (rel.isNullable !== undefined && rel.type !== 'one-to-many')
-        opts.push(`nullable: ${rel.isNullable}`);
-      if (['many-to-many', 'many-to-one'].includes(rel.type) && !isInverse)
-        opts.push(`cascade: true`);
-      opts.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
-      const optStr = opts.length ? `, { ${opts.join(', ')} }` : '';
-
-      let relationCode = '';
       if (
         rel.isIndex &&
         (rel.type === 'many-to-one' ||
           (rel.type === 'one-to-one' && !isInverse))
       ) {
-        relationCode += `  @Index()\n`;
+        decorators.push({ name: 'Index', arguments: [] });
       }
 
-      relationCode += `  @${type}(() => ${target}`;
+      const options = [];
+      if (rel.isEager) options.push('eager: true');
+      if (rel.isNullable !== undefined && rel.type !== 'one-to-many')
+        options.push(`nullable: ${rel.isNullable}`);
+      if (['many-to-many', 'many-to-one'].includes(rel.type) && !isInverse)
+        options.push('cascade: true');
+      options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
+
+      let args = [`() => ${target}`];
       if (rel.inversePropertyName) {
-        relationCode += `, rel => rel.${rel.inversePropertyName}`;
+        args.push(`(rel) => rel.${rel.inversePropertyName}`);
       }
-      relationCode += `${optStr})\n`;
+      if (options.length) {
+        args.push(`{ ${options.join(', ')} }`);
+      }
+
+      decorators.push({ name: relationType, arguments: args });
 
       if (rel.type === 'many-to-many' && !isInverse) {
-        relationCode += `  @JoinTable()\n`;
+        decorators.push({ name: 'JoinTable', arguments: [] });
       } else if (['many-to-one', 'one-to-one'].includes(rel.type)) {
-        relationCode += `  @JoinColumn()\n`;
+        decorators.push({ name: 'JoinColumn', arguments: [] });
       }
 
-      const suffix = ['many-to-many', 'one-to-many'].includes(rel.type)
-        ? '[]'
-        : '';
-      relationCode += `  ${rel.propertyName}: ${target}${suffix};\n\n`;
-
-      return relationCode;
+      classDeclaration.addProperty({
+        name: rel.propertyName,
+        type: propertyType,
+        decorators,
+      });
     };
 
-    // Normal relations
     for (const rel of payload.relations || []) {
-      code += generateRelation(rel);
+      generateRelation(rel, false);
     }
 
-    // Inverse relations
     if (inverseRelationMap?.has(payload.name)) {
-      const inverseRelations = inverseRelationMap.get(payload.name);
-      for (const rel of inverseRelations) {
-        code += generateRelation(rel, true);
+      for (const rel of inverseRelationMap.get(payload.name)!) {
+        generateRelation(rel, true);
       }
       inverseRelationMap.delete(payload.name);
     }
 
-    // Timestamps
-    code += `  @CreateDateColumn()\n  createdAt: Date;\n\n`;
-    code += `  @UpdateDateColumn()\n  updatedAt: Date;\n`;
-    code += `}\n`;
+    // createdAt / updatedAt
+    classDeclaration.addProperty({
+      name: 'createdAt',
+      type: 'Date',
+      decorators: [{ name: 'CreateDateColumn', arguments: [] }],
+    });
 
-    // Write to file
-    const entityDir = path.resolve('src', 'entities');
-    const entityPath = path.resolve(
-      entityDir,
-      `${payload.name.toLowerCase()}.entity.ts`,
-    );
-    if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
-    fs.writeFileSync(entityPath, code);
+    classDeclaration.addProperty({
+      name: 'updatedAt',
+      type: 'Date',
+      decorators: [{ name: 'UpdateDateColumn', arguments: [] }],
+    });
 
-    console.log(`✅ Ghi entity file thành công: ${entityPath}`);
-    return code;
+    await sourceFile.save();
+    console.log(`✅ Entity written: ${entityPath}`);
   }
 
   async buildToJs(filePath: string) {

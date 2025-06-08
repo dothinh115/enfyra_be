@@ -4,6 +4,7 @@ import { Middleware_definition } from '../entities/middleware_definition.entity'
 import { Relation_definition } from '../entities/relation_definition.entity';
 import { Role_definition } from '../entities/role_definition.entity';
 import { Route_definition } from '../entities/route_definition.entity';
+import { Session_definition } from '../entities/session_definition.entity';
 import { Setting_definition } from '../entities/setting_definition.entity';
 import { Table_definition } from '../entities/table_definition.entity';
 import { User_definition } from '../entities/user_definition.entity';
@@ -26,6 +27,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       Role_definition,
       Route_definition,
       Setting_definition,
+      Session_definition,
     ]),
   ],
   controllers: [TableController],

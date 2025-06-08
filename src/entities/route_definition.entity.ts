@@ -4,44 +4,33 @@ import { Role_definition } from "./role_definition.entity";
 import { Middleware_definition } from "./middleware_definition.entity";
 
 @Entity('route_definition')
-@Unique(["path", "method"])
+@Unique(['path', 'method'])
 export class Route_definition {
-  @PrimaryGeneratedColumn('increment')
-  id: number;
-
-  @Column({ type: "text", nullable: false })
-  handler: string;
-
-  @Column({ type: "boolean", nullable: true, default: false })
-  isEnabled: boolean;
-
-  @Column({ type: "boolean", nullable: false, default: false })
-  isPublished: boolean;
-
-  @Column({ type: "varchar", nullable: false, default: "GET" })
-  method: string;
-
-  @Column({ type: "varchar", nullable: false })
-  path: string;
-
-  @ManyToOne(() => Table_definition, { nullable: false, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-  @JoinColumn()
-  mainTable: Table_definition;
-
-  @ManyToMany(() => Role_definition, rel => rel.routes, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-  @JoinTable()
-  roles: Role_definition[];
-
-  @ManyToMany(() => Table_definition, { eager: true, nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-  @JoinTable()
-  targetTables: Table_definition[];
-
-  @ManyToMany(() => Middleware_definition, rel => rel.routes, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-  middlewares: Middleware_definition[];
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
+    @PrimaryGeneratedColumn('increment')
+    id: number;
+    @Column({ type: "text", nullable: false })
+    handler: string;
+    @Column({ type: "boolean", nullable: true, default: false })
+    isEnabled: boolean;
+    @Column({ type: "boolean", nullable: false, default: false })
+    isPublished: boolean;
+    @Column({ type: "varchar", nullable: false, default: "GET" })
+    method: string;
+    @Column({ type: "varchar", nullable: false })
+    path: string;
+    @ManyToOne(() => Table_definition, { nullable: false, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @JoinColumn()
+    mainTable: Table_definition;
+    @ManyToMany(() => Role_definition, (rel) => rel.routes, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @JoinTable()
+    roles: Role_definition[];
+    @ManyToMany(() => Table_definition, { eager: true, nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @JoinTable()
+    targetTables: Table_definition[];
+    @ManyToMany(() => Middleware_definition, (rel) => rel.routes, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    middlewares: Middleware_definition[];
+    @CreateDateColumn()
+    createdAt: Date;
+    @UpdateDateColumn()
+    updatedAt: Date;
 }
