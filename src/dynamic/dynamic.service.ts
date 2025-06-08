@@ -36,7 +36,6 @@ export class DynamicService {
           },
         ),
       );
-
       const repoMap = Object.fromEntries(repoEntries);
 
       const dynamicFindEntries = await Promise.all(
@@ -66,20 +65,7 @@ export class DynamicService {
           throw new UnauthorizedException();
         },
         $log: (...args: any[]) => {
-          for (const arg of args) {
-            if (
-              typeof arg === 'object' &&
-              arg !== null &&
-              !Array.isArray(arg) &&
-              !(arg instanceof Date)
-            ) {
-              logs.push(arg);
-            } else {
-              logs.push(
-                typeof arg === 'string' ? arg : JSON.stringify(arg, null, 2),
-              );
-            }
-          }
+          logs.push(...args);
         },
         ...repoMap,
         ...dynamicFindMap,

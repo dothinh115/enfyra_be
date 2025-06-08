@@ -11,7 +11,7 @@ import { RouteDetectMiddleware } from '../middleware/route-detect.middleware';
 })
 export class DynamicModule implements NestModule {
   async configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RouteDetectMiddleware).forRoutes('*');
-    consumer.apply(DynamicMiddleware).forRoutes('*');
+    consumer.apply(RouteDetectMiddleware).forRoutes(DynamicController);
+    consumer.apply(DynamicMiddleware).forRoutes(DynamicController);
   }
 }

@@ -10,7 +10,7 @@ import { Repository } from 'typeorm';
 import { CommonService } from '../common/common.service';
 
 @Injectable()
-export class RoleGuard implements CanActivate {
+export class DynamicRoleGuard implements CanActivate {
   constructor(
     @InjectRepository(Route_definition)
     private routeDefRepo: Repository<Route_definition>,

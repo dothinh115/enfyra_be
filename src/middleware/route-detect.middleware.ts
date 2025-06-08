@@ -27,7 +27,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
         .leftJoinAndSelect('route.middlewares', 'middlewares')
         .leftJoinAndSelect('route.mainTable', 'mainTable')
         .leftJoinAndSelect('route.targetTables', 'targetTables')
-        .where('route.isEnabled = :enabled AND route.isPublished = :enabled', {
+        .where('route.isEnabled = :enabled', {
           enabled: true,
         })
         .getMany();

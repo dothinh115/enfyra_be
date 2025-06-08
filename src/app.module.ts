@@ -13,7 +13,6 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
-import { RoleGuard } from './guard/role.guard';
 import { DynamicFindModule } from './dynamic-find/dynamic-find.module';
 import { HideFieldInterceptor } from './interceptors/hidden-field.interceptor';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -61,7 +60,6 @@ import { AuthModule } from './auth/auth.module';
     JwtStrategy,
     HideFieldInterceptor,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: RoleGuard },
   ],
   exports: [RabbitMQRegistry, DataSourceModule, JwtModule],
 })

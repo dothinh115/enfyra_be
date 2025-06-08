@@ -13,6 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as path from 'path';
 import { Column_definition } from '../entities/column_definition.entity';
 import { Relation_definition } from '../entities/relation_definition.entity';
+import { BcryptService } from '../auth/bcrypt.service';
 const initJson = require('./init.json');
 
 @Injectable()
@@ -26,6 +27,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     private commonService: CommonService,
     @InjectRepository(Table_definition)
     private tableDefRepo: Repository<Table_definition>,
+    private bcryptService: BcryptService,
   ) {}
 
   private async waitForDatabaseConnection(
@@ -126,7 +128,10 @@ export class BootstrapService implements OnApplicationBootstrap {
     if (Number(count) === 0) {
       this.logger.log(`Tạo user mặc định: ${initJson.defaultUser.email}`);
 
-      const user = userRepo.create(initJson.defaultUser);
+      const user = userRepo.create({
+        ...initJson.defaultUser,
+        password: await this.bcryptService.hash(initJson.defaultUser.password),
+      });
 
       await userRepo.save(user);
       this.logger.log(`User mặc định đã được tạo.`);
