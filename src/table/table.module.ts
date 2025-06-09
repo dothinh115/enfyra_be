@@ -9,9 +9,9 @@ import { Setting_definition } from '../entities/setting_definition.entity';
 import { Table_definition } from '../entities/table_definition.entity';
 import { User_definition } from '../entities/user_definition.entity';
 import { TableController } from '../table/table.controller';
-import { TableHanlderService } from '../table/table.service';
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { TableHandlerService } from './table.service';
 
 @Global()
 @Module({
@@ -31,7 +31,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     ]),
   ],
   controllers: [TableController],
-  providers: [TableHanlderService],
-  exports: [TypeOrmModule, TableHanlderService],
+  providers: [TableHandlerService],
+  exports: [TypeOrmModule, TableHandlerService],
 })
 export class TableModule {}

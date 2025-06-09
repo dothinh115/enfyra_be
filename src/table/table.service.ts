@@ -5,13 +5,13 @@ import {
   CreateRelationDto,
   CreateTableDto,
 } from '../table/dto/create-table.dto';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 @Injectable()
-export class TableHanlderService {
+export class TableHandlerService {
   constructor(
     private dataSouceService: DataSourceService,
     private autoService: AutoService,

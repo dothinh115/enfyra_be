@@ -1,22 +1,12 @@
 import { DBToTSTypeMap, TSToDBTypeMap } from '../utils/types/common.type';
-import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Project, SyntaxKind } from 'ts-morph';
-import { knownGlobalImports } from '../utils/common';
 import * as ts from 'typescript';
-import { EntityTarget } from 'typeorm';
-import { DataSourceService } from '../data-source/data-source.service';
-import pLimit from 'p-limit';
 import { match } from 'path-to-regexp';
 
 @Injectable()
 export class CommonService {
-  constructor(
-    @Inject(forwardRef(() => DataSourceService))
-    private dataSourceService: DataSourceService,
-  ) {}
-
   capitalize(str: string): string {
     return str.charAt(0).toUpperCase() + str.slice(1);
   }

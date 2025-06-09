@@ -18,6 +18,8 @@ import { HideFieldInterceptor } from './interceptors/hidden-field.interceptor';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-ioredis';
 import { AuthModule } from './auth/auth.module';
+import { RoleGuard } from './guard/role.guard';
+import { MeModule } from './me/me.module';
 
 @Global()
 @Module({
@@ -53,6 +55,7 @@ import { AuthModule } from './auth/auth.module';
     }),
     DynamicFindModule,
     AuthModule,
+    MeModule,
   ],
   providers: [
     BootstrapService,
@@ -60,6 +63,7 @@ import { AuthModule } from './auth/auth.module';
     JwtStrategy,
     HideFieldInterceptor,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RoleGuard },
   ],
   exports: [RabbitMQRegistry, DataSourceModule, JwtModule],
 })

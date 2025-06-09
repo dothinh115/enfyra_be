@@ -1,6 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
-import { TableHanlderService } from '../table/table.service';
 import { Table_definition } from '../entities/table_definition.entity';
 import { AutoService } from '../auto/auto-entity.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
@@ -14,6 +13,7 @@ import * as path from 'path';
 import { Column_definition } from '../entities/column_definition.entity';
 import { Relation_definition } from '../entities/relation_definition.entity';
 import { BcryptService } from '../auth/bcrypt.service';
+import { TableHandlerService } from '../table/table.service';
 const initJson = require('./init.json');
 
 @Injectable()
@@ -22,7 +22,7 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   constructor(
     private dataSourceService: DataSourceService,
-    private tableHandlerService: TableHanlderService,
+    private tableHandlerService: TableHandlerService,
     private autoService: AutoService,
     private commonService: CommonService,
     @InjectRepository(Table_definition)

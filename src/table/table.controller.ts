@@ -1,5 +1,4 @@
 import { CreateTableDto } from '../table/dto/create-table.dto';
-import { TableHanlderService } from '../table/table.service';
 import {
   Body,
   Controller,
@@ -10,10 +9,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { TableHandlerService } from './table.service';
 
 @Controller('table-handler')
 export class TableController {
-  constructor(private readonly tableService: TableHanlderService) {}
+  constructor(private readonly tableService: TableHandlerService) {}
 
   @Post()
   createTable(@Body() body: CreateTableDto) {

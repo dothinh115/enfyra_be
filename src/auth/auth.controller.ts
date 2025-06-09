@@ -5,11 +5,13 @@ import { LogoutAuthDto } from './dto/logout-auth.dto';
 import { Request } from 'express';
 import { User_definition } from '../entities/user_definition.entity';
 import { RefreshTokenAuthDto } from './dto/refresh-token-auth.dto';
+import { Public } from '../decorators/public-route.decorator';
 
 @Controller()
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Public()
   @Post('auth/login')
   login(@Body() body: LoginAuthDto) {
     return this.authService.login(body);
@@ -23,6 +25,7 @@ export class AuthController {
     return this.authService.logout(body, req);
   }
 
+  @Public()
   @Post('auth/refresh-token')
   refreshToken(@Body() body: RefreshTokenAuthDto) {
     return this.authService.refreshToken(body);

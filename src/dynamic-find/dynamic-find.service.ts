@@ -22,7 +22,7 @@ export class DynamicFindService {
   private async extractRelationsAndFieldsAndWhere({
     fields,
     tableName,
-    filter,
+    filter = {},
   }: {
     fields: string[] | string;
     tableName: string;
@@ -320,10 +320,14 @@ export class DynamicFindService {
     fields,
     tableName,
     filter,
+    page = 1,
+    limit = 10,
   }: {
     fields: string[] | string;
     tableName: string;
     filter?: any;
+    page: number;
+    limit: number;
   }) {
     const repo = await this.dataSourceService.getRepository(tableName);
     const extract = await this.extractRelationsAndFieldsAndWhere({
@@ -339,6 +343,8 @@ export class DynamicFindService {
     }
 
     qb.where(extract.where).setParameters(extract.params);
+    qb.skip(limit * (page - 1));
+    qb.take(limit);
 
     const result = await qb.getMany();
     return this.collapseIdOnlyFields(result);

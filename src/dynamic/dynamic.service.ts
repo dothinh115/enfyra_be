@@ -11,6 +11,10 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { JwtService } from '@nestjs/jwt';
 import { Route_definition } from '../entities/route_definition.entity';
 import { DynamicFindService } from '../dynamic-find/dynamic-find.service';
+import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
+import { TableHandlerService } from '../table/table.service';
+import { TDynamicContext } from '../utils/types/dynamic-context.type';
+import { User_definition } from '../entities/user_definition.entity';
 
 @Injectable()
 export class DynamicService {
@@ -20,56 +24,64 @@ export class DynamicService {
     private dataSourceService: DataSourceService,
     private jwtService: JwtService,
     private dynamicFindService: DynamicFindService,
+    private tableHandlerService: TableHandlerService,
   ) {}
 
   async dynamicService(
-    req: Request & { routeData: Route_definition & { params: any } },
+    req: Request & {
+      routeData: Route_definition & { params: any };
+      user: User_definition;
+    },
   ) {
     const logs: any[] = [];
 
     try {
-      const repoEntries = await Promise.all(
-        [req.routeData.mainTable, ...req.routeData.targetTables].map(
-          async (table) => {
-            const repo = await this.dataSourceService.getRepository(table.name);
-            return [`$${table.alias ?? table.name}Repo`, repo];
-          },
-        ),
-      );
-      const repoMap = Object.fromEntries(repoEntries);
-
       const dynamicFindEntries = await Promise.all(
         [req.routeData.mainTable, ...req.routeData.targetTables]?.map(
           async (table) => {
-            const dynamicFind = await this.dynamicFindService.dynamicFind({
-              fields: (req.query.fields as string) ?? '',
+            const dynamicRepo = new DynamicRepoService({
+              fields: req.query.fields as string,
               filter: req.query.filter,
+              page: Number(req.query.page ?? 1),
               tableName: table.name,
+              limit: Number(req.query.limit ?? 10),
+              tableHandlerService: this.tableHandlerService,
+              dataSourceService: this.dataSourceService,
+              dynamicFindService: this.dynamicFindService,
             });
-            return [`${table.alias ?? table.name}Find`, dynamicFind];
+            const name =
+              table.name === req.routeData.mainTable.name
+                ? 'main'
+                : (table.alias ?? table.name);
+            return [`$${name}`, dynamicRepo];
           },
         ),
       );
 
       const dynamicFindMap = Object.fromEntries(dynamicFindEntries);
+      console.log(dynamicFindMap);
 
-      const context = {
-        $req: req,
+      const context: TDynamicContext = {
         $body: req.body,
-        $jwt: (payload: any, ext: string) =>
-          this.jwtService.sign(payload, { expiresIn: ext }),
-        $throw400: (message: string) => {
-          throw new BadRequestException(message);
+        $errors: {
+          throw400: (msg: string) => {
+            throw new BadRequestException(msg);
+          },
+          throw401: () => {
+            throw new UnauthorizedException();
+          },
         },
-        $throw401: () => {
-          throw new UnauthorizedException();
-        },
-        $log: (...args: any[]) => {
+        $logs(...args) {
           logs.push(...args);
         },
-        ...repoMap,
-        ...dynamicFindMap,
-        ...(req.routeData.params && { params: req.routeData.params }),
+        $helpers: {
+          $jwt: (payload: any, ext: string) =>
+            this.jwtService.sign(payload, { expiresIn: ext }),
+        },
+        $params: req.routeData.params ?? {},
+        $query: req.query ?? {},
+        $user: req.user ?? undefined,
+        $repos: dynamicFindMap,
       };
 
       if (!req.routeData.handler || typeof req.routeData.handler !== 'string') {
