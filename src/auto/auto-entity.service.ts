@@ -180,8 +180,13 @@ export class AutoService {
       if (rel.isEager) options.push('eager: true');
       if (rel.isNullable !== undefined && rel.type !== 'one-to-many')
         options.push(`nullable: ${rel.isNullable}`);
-      if (['many-to-many', 'many-to-one'].includes(rel.type) && !isInverse)
+      if (
+        (rel.type === 'many-to-many' && isInverse === false) ||
+        rel.type === 'one-to-many'
+      ) {
         options.push('cascade: true');
+      }
+
       options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
 
       let args = [`() => ${target}`];
@@ -235,14 +240,20 @@ export class AutoService {
     console.log(`✅ Entity written: ${entityPath}`);
   }
 
-  async buildToJs(filePath: string) {
-    const script = `npx ts-node ${filePath}`;
+  async buildToJs({
+    targetDir,
+    outDir,
+  }: {
+    targetDir: string;
+    outDir: string;
+  }) {
+    const script = `npx node ${path.resolve('build-entities.js')} -t ${targetDir} -o ${outDir}`;
     this.logger.log('Chuẩn bị build file js');
     this.logger.log('script', script);
 
     try {
       execSync(script, { stdio: 'inherit' });
-      this.logger.debug('Build file js thành công: ', filePath);
+      this.logger.debug('Build file js thành công');
     } catch (err) {
       this.logger.error('Lỗi khi chạy shell script:', err);
     }
@@ -427,7 +438,10 @@ export class AutoService {
     // this.logger.log(`Test logic file vừa generate`);
     // this.commonService.checkTsErrors(path.resolve('src', 'entities'));
     // this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
-    await this.buildToJs(path.resolve('build-entities.ts'));
+    await this.buildToJs({
+      targetDir: path.resolve('src/entities'),
+      outDir: path.resolve('dist/entities'),
+    });
     await this.dataSourceService.reloadDataSource();
     await this.generateMigrationFile();
     await this.runMigration();

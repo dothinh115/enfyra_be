@@ -24,10 +24,10 @@ export class Relation_definition {
     propertyName: string;
     @Column({ type: "enum", nullable: false, enum: ['one-to-one', 'many-to-one', 'one-to-many', 'many-to-many'] })
     type: 'one-to-one' | 'many-to-one' | 'one-to-many' | 'many-to-many';
-    @ManyToOne(() => Table_definition, (rel) => rel.relations, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne(() => Table_definition, (rel) => rel.relations, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     sourceTable: Table_definition;
-    @ManyToOne(() => Table_definition, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne(() => Table_definition, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     targetTable: Table_definition;
     @CreateDateColumn()

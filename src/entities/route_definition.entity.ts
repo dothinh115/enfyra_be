@@ -19,7 +19,7 @@ export class Route_definition {
     method: string;
     @Column({ type: "varchar", nullable: false })
     path: string;
-    @ManyToOne(() => Table_definition, { nullable: false, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne(() => Table_definition, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     mainTable: Table_definition;
     @ManyToMany(() => Role_definition, (rel) => rel.routes, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })

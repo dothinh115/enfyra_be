@@ -30,7 +30,7 @@ export class Column_definition {
     name: string;
     @Column({ type: "varchar", nullable: false })
     type: string;
-    @ManyToOne(() => Table_definition, (rel) => rel.columns, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne(() => Table_definition, (rel) => rel.columns, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     table: Table_definition;
     @CreateDateColumn()

@@ -4,7 +4,7 @@
 /build
 
 /src/migrations/*.ts
-
+schema-from-db.json
 # !/src/entities/table_definition.entity.ts
 # !/src/entities/column_definition.entity.ts
 # !/src/entities/relation_definition.entity.ts
