@@ -53,13 +53,12 @@ export class DynamicService {
               table.name === req.routeData.mainTable.name
                 ? 'main'
                 : (table.alias ?? table.name);
-            return [`$${name}`, dynamicRepo];
+            return [`${name}`, dynamicRepo];
           },
         ),
       );
 
       const dynamicFindMap = Object.fromEntries(dynamicFindEntries);
-      console.log(dynamicFindMap);
 
       const context: TDynamicContext = {
         $body: req.body,
@@ -75,7 +74,7 @@ export class DynamicService {
           logs.push(...args);
         },
         $helpers: {
-          $jwt: (payload: any, ext: string) =>
+          jwt: (payload: any, ext: string) =>
             this.jwtService.sign(payload, { expiresIn: ext }),
         },
         $params: req.routeData.params ?? {},
