@@ -67,7 +67,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
     reqPath: string,
     method: string,
   ) {
-    const matchers = ['DELETE', 'PATCH', 'GET'].includes(method)
+    const matchers = ['DELETE', 'PATCH'].includes(method)
       ? [(r) => r.path + '/:id', (r) => r.path]
       : [(r) => r.path];
 
