@@ -1,7 +1,7 @@
 import { User_definition } from '../../entities/user_definition.entity';
 
 export type TDynamicContext = {
-  $repos: any[];
+  $repos: any;
   $body: any;
   $query: any;
   $params: any;

@@ -68,8 +68,9 @@ export class DynamicRepoService {
       const table = await this.tableHandlerService.createTable(body);
       return this.find(table.id);
     }
-    const result: any = await this.repo.create(body);
-    return this.find(result.id);
+    console.log(body);
+    const result: any = await this.repo.save(body);
+    return await this.find(result.id);
   }
 
   async update(id: string | number, body: any) {
@@ -80,7 +81,7 @@ export class DynamicRepoService {
     });
     if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
     await this.repo.update(id, body);
-    return this.find(id);
+    return await this.find(id);
   }
 
   async delete(id: string | number) {

@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DynamicModule } from './dynamic/dynamic.module';
@@ -20,6 +20,9 @@ import * as redisStore from 'cache-manager-ioredis';
 import { AuthModule } from './auth/auth.module';
 import { RoleGuard } from './guard/role.guard';
 import { MeModule } from './me/me.module';
+import { RouteDetectMiddleware } from './middleware/route-detect.middleware';
+import { DynamicMiddleware } from './middleware/dynamic.middleware';
+import { NotFoundDetectGuard } from './guard/not-found-detect.guard';
 
 @Global()
 @Module({
@@ -63,8 +66,14 @@ import { MeModule } from './me/me.module';
     JwtStrategy,
     HideFieldInterceptor,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: RoleGuard },
   ],
   exports: [RabbitMQRegistry, DataSourceModule, JwtModule],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  async configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RouteDetectMiddleware).forRoutes('*');
+    consumer.apply(DynamicMiddleware).forRoutes('*');
+  }
+}

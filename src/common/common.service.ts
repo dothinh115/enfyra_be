@@ -99,18 +99,16 @@ export class CommonService {
     reqPath: string;
     prefix?: string;
   }) {
-    const matcher = match(
-      `${prefix ? `/${prefix.replace(/^\//, '').replace(/\/$/, '')}/` : ''}${routePath.replace(/^\//, '')}`,
-      {
-        decode: decodeURIComponent,
-      },
-    );
+    const cleanPrefix = prefix?.replace(/^\//, '').replace(/\/$/, '');
+    const cleanRoute = routePath.replace(/^\//, '');
+
+    const fullPattern = cleanPrefix
+      ? `/${cleanPrefix}/${cleanRoute}`
+      : `/${cleanRoute}`;
+    const matcher = match(fullPattern, { decode: decodeURIComponent });
+
     const matched = matcher(reqPath);
-    return matched
-      ? {
-          params: matched.params,
-        }
-      : false;
+    return matched ? { params: matched.params } : false;
   }
 
   getAllTsFiles(dirPath: string): string[] {

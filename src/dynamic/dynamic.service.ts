@@ -29,7 +29,7 @@ export class DynamicService {
 
   async dynamicService(
     req: Request & {
-      routeData: Route_definition & { params: any };
+      routeData: Route_definition & { params: any; handler: string };
       user: User_definition;
     },
   ) {
@@ -49,6 +49,7 @@ export class DynamicService {
               dataSourceService: this.dataSourceService,
               dynamicFindService: this.dynamicFindService,
             });
+            await dynamicRepo.init();
             const name =
               table.name === req.routeData.mainTable.name
                 ? 'main'
@@ -58,7 +59,8 @@ export class DynamicService {
         ),
       );
 
-      const dynamicFindMap = Object.fromEntries(dynamicFindEntries);
+      const dynamicFindMap: { any: any } =
+        Object.fromEntries(dynamicFindEntries);
 
       const context: TDynamicContext = {
         $body: req.body,
@@ -83,15 +85,23 @@ export class DynamicService {
         $repos: dynamicFindMap,
       };
 
-      if (!req.routeData.handler || typeof req.routeData.handler !== 'string') {
-        throw new BadRequestException(
-          'Handler script không hợp lệ hoặc bị thiếu',
-        );
+      let handler: string;
+      switch (req.method) {
+        case 'DELETE':
+          handler = `return await $repos.main.delete($params.id);`;
+          break;
+        case 'POST':
+          handler = `return await $repos.main.create($body);`;
+          break;
+        case 'PATCH':
+          handler = `return await $repos.main.update($params.id, $body);`;
+          break;
+        default:
+          handler = `return await $repos.main.find()`;
       }
+      if (req.routeData.handler) handler = req.routeData.handler;
 
-      const script = new vm.Script(
-        `(async () => { ${req.routeData.handler} })()`,
-      );
+      const script = new vm.Script(`(async () => { ${handler} })()`);
       const vmContext = vm.createContext(context);
       const result = await script.runInContext(vmContext, { timeout: 3000 });
 

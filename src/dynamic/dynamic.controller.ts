@@ -12,7 +12,7 @@ export class DynamicController {
   dynamicGetController(
     @Req()
     req: Request & {
-      routeData: Route_definition & { params: any };
+      routeData: Route_definition & { params: any; handler: string };
       user: User_definition;
     },
   ) {

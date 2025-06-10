@@ -27,6 +27,20 @@ export class RouteDetectMiddleware implements NestMiddleware {
         .leftJoinAndSelect('route.middlewares', 'middlewares')
         .leftJoinAndSelect('route.mainTable', 'mainTable')
         .leftJoinAndSelect('route.targetTables', 'targetTables')
+        .leftJoinAndSelect('route.hooks', 'hooks')
+        .leftJoinAndSelect(
+          'route.handlers',
+          'handlers',
+          'handlers.method = :method',
+          { method: req.method },
+        )
+        .leftJoinAndSelect(
+          'route.permissions',
+          'permissions',
+          'permissions.isEnabled = :enabled',
+          { enabled: true },
+        )
+        .leftJoinAndSelect('permissions.role', 'role')
         .where('route.isEnabled = :enabled', {
           enabled: true,
         })
@@ -34,23 +48,42 @@ export class RouteDetectMiddleware implements NestMiddleware {
       await this.cache.set(GLOBAL_ROUTES_KEY, routes, 5);
     }
 
-    const matchedRoute = routes.find((route) => {
-      const matched = this.commonService.isRouteMatched({
-        routePath: route.path,
-        reqPath: req.originalUrl,
-        prefix: 'api',
-      });
-      if (matched) {
-        req.routeData = {
-          ...matched,
-          ...route,
-        };
-        return true;
-      }
-      return false;
-    });
-    if (!matchedRoute) throw new NotFoundException();
+    let matchedRoute = this.tryMatchRoute(routes, req.originalUrl, req.method);
 
+    const routeData = matchedRoute
+      ? {
+          ...matchedRoute.route,
+          handler: matchedRoute.route.handlers.length
+            ? matchedRoute.route.handlers[0].logic
+            : undefined,
+          params: matchedRoute.params,
+        }
+      : null;
+    if (routeData) delete routeData.handlers;
+    req.routeData = routeData;
     next();
+  }
+
+  private tryMatchRoute(
+    routes: Route_definition[],
+    reqPath: string,
+    method: string,
+  ) {
+    const checkPaths = ['DELETE', 'PATCH', 'GET'].includes(method)
+      ? [(r) => r.path + '/:id', (r) => r.path]
+      : [(r) => r.path];
+
+    for (const route of routes) {
+      for (const buildPath of checkPaths) {
+        const matched = this.commonService.isRouteMatched({
+          routePath: buildPath(route),
+          reqPath,
+          prefix: 'api',
+        });
+        if (matched) return { route, params: matched.params };
+      }
+    }
+
+    return null;
   }
 }

@@ -5,7 +5,7 @@
     "defaultUser": {
         "email": "dynamiq@admin.com",
         "password": "1234",
-        "isRootUser": true
+        "isRootAdmin": true
     },
     "defaultSetting": {
         "isInit": false

@@ -3,6 +3,7 @@ const path = require('path');
 const { Project, SyntaxKind } = require('ts-morph');
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
+const pMap = require('p-map');
 
 // Parse args
 const argv = yargs(hideBin(process.argv))
@@ -188,15 +189,19 @@ async function main() {
     project.addSourceFileAtPath(file),
   );
 
-  for (const sourceFile of sourceFiles) {
-    const missing = getMissingIdentifiers(sourceFile);
-    const added = applyAutoImports(sourceFile, missing, exportMap);
-    if (added) {
-      console.log(`✅ Auto imported: ${sourceFile.getFilePath()}`);
-    }
-  }
+  await pMap(
+    sourceFiles,
+    async (sourceFile) => {
+      const missing = getMissingIdentifiers(sourceFile);
+      const added = applyAutoImports(sourceFile, missing, exportMap);
+      if (added) {
+        console.log(`✅ Auto imported: ${sourceFile.getFilePath()}`);
+      }
+    },
+    { concurrency: 4 },
+  ); // giới hạn 4 file cùng lúc
 
-  await project.save();
+  await project.save(); // 💾 Chỉ gọi save 1 lần
 }
 
 main().catch((err) => {

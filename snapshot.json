@@ -19,14 +19,7 @@
             { "name": "isIndex", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
         ],
         "relations": [
-            {
-                "propertyName": "table",
-                "type": "many-to-one",
-                "targetTable": "table_definition",
-                "isStatic": true,
-                "inversePropertyName": "columns",
-                "isInverseEager": true
-            }
+            { "propertyName": "table", "type": "many-to-one", "targetTable": "table_definition", "isStatic": true, "inversePropertyName": "columns", "isInverseEager": true }
         ]
     },
     "relation_definition": 
@@ -45,7 +38,6 @@
             { "name": "isInverseEager", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "isIndex", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "isInverseIndex", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
-
         ],
         "relations": [
             { "propertyName": "sourceTable", "type": "many-to-one", "targetTable": "table_definition", "isStatic": true, "inversePropertyName": "relations", "isInverseEager": true },
@@ -74,9 +66,6 @@
             { "name": "email", "type": "varchar", "isNullable": false, "isStatic": true, "default": null },
             { "name": "password", "type": "varchar", "isNullable": false, "isStatic": true, "default": null, "isHidden": true },
             { "name": "isRootAdmin", "type": "boolean", "isNullable": false, "isStatic": true, "default": false, "isUpdatable": false }
-        ],
-        "relations": [
-            { "propertyName": "roles", "type": "many-to-many", "targetTable": "role_definition", "isStatic": true, "inversePropertyName": "users" }
         ]
     },
     "setting_definition": {
@@ -88,18 +77,15 @@
     "route_definition": {
         "name": "route_definition",
         "isStatic": true,
-        "uniques": [["path", "method"]],
+        "uniques": [["path", "mainTable"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "method", "type": "varchar", "isNullable": false, "isStatic": true, "default": "GET" },
             { "name": "path", "type": "varchar", "isNullable": false, "isStatic": true, "default": null },
-            { "name": "handler", "type": "text", "isNullable": false, "isStatic": true, "default": null },
             { "name": "isPublished", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
             { "name": "isEnabled", "type": "boolean", "isNullable": true, "isStatic": true, "default": false }
         ],
         "relations": [
             { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isStatic": true, "isEager": true },
-            { "propertyName": "roles", "type": "many-to-many", "targetTable": "role_definition", "isStatic": true, "inversePropertyName": "routes"},
             { "propertyName": "mainTable", "type": "many-to-one", "targetTable": "table_definition", "isStatic": true, "isNullable": false}
         ]
     },
@@ -108,7 +94,35 @@
         "isStatic": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true, "default": null }
+            { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true, "default": null, "isUnique": true }
+        ],
+        "relations": [
+            { "propertyName": "users", "type": "one-to-many", "isStatic": true, "targetTable": "user_definition", "inversePropertyName": "role" }
+        ]
+    },
+    "permission_definition" : {
+        "name": "permission_definition",
+        "isStatic": true,
+        "columns": [
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
+            { "name": "actions", "type": "simple-json", "isStatic": true },
+            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isStatic": true, "default": true }
+        ],
+        "relations": [
+            { "propertyName": "role", "type": "many-to-one", "isStatic": true, "targetTable": "role_definition", "inversePropertyName": "permissions" },
+            { "propertyName": "route", "type": "many-to-one", "isStatic": true, "targetTable": "route_definition", "inversePropertyName": "permissions"} 
+        ]
+    },
+    "route_handler_definition": {
+        "name": "route_handler_definition",
+        "isStatic": true,
+        "columns": [
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
+            { "name": "method", "type": "varchar", "isStatic": true },
+            { "name": "logic", "type": "text", "isStatic":true }
+        ],
+        "relations": [
+            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isStatic": true, "inversePropertyName": "handlers"}
         ]
     },
     "middleware_definition": {
@@ -123,7 +137,7 @@
 
         ],
         "relations": [
-            { "propertyName": "routes", "type": "many-to-many", "targetTable": "route_definition", "isStatic": true, "inversePropertyName": "middlewares" }
+            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isStatic": true, "inversePropertyName": "middlewares" }
         ]
     },
     "hook_definition": {
@@ -136,7 +150,7 @@
             { "name": "priority", "type": "int", "isNullable": true, "isStatic": true, "default": 0 }
         ],
         "relations": [
-            { "propertyName": "routes", "type": "many-to-many", "targetTable": "route_definition", "isStatic": true, "inversePropertyName": "hooks" }
+            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isStatic": true, "inversePropertyName": "hooks" }
         ]
     },
     "session_definition": {

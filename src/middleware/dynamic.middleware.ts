@@ -1,4 +1,8 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NestMiddleware,
+} from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import * as vm from 'vm';
 import { ConfigService } from '@nestjs/config';
@@ -12,6 +16,7 @@ export class DynamicMiddleware implements NestMiddleware {
     res: Response,
     next: NextFunction,
   ) {
+    if (!req.routeData) return next();
     for (const middleware of req.routeData.middlewares) {
       const ctx: Record<string, any> = {};
       const $req = new Proxy(
@@ -29,7 +34,11 @@ export class DynamicMiddleware implements NestMiddleware {
       const script = new vm.Script(`(async () => { ${middleware.handler} })()`);
 
       try {
-        const exec = () => script.runInContext(vmContext);
+        const exec = () =>
+          script.runInContext(vmContext).then?.(undefined, (err) => {
+            throw err;
+          });
+
         const timeout = new Promise((_, reject) =>
           setTimeout(
             () => reject(new Error('Timeout')),
@@ -44,11 +53,9 @@ export class DynamicMiddleware implements NestMiddleware {
           `Middleware "${middleware.name || '[unknown]'}" VM Error:`,
           err.message,
         );
-        return res
-          .status(500)
-          .send(
-            `Middleware "${middleware.name || '[unknown]'}" VM Error: ${err.message}`,
-          );
+        throw new InternalServerErrorException(
+          `middleware error: ${err.message}`,
+        );
       }
     }
 

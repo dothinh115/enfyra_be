@@ -11,6 +11,13 @@ import { CommonService } from '../common/common.service';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../utils/constant';
 
+const permissionMap = {
+  GET: 'read',
+  POST: 'create',
+  PATCH: 'update',
+  DELETE: 'delete',
+};
+
 @Injectable()
 export class RoleGuard implements CanActivate {
   constructor(
@@ -27,35 +34,15 @@ export class RoleGuard implements CanActivate {
       context.getClass(),
     ]);
     if (isPublic) return true;
-    const method = req.method;
-
-    const routes = await this.routeDefRepo.find({
-      where: {
-        isEnabled: true,
-        method,
-      },
-      relations: ['roles'],
-    });
-
-    const matchedRoute = routes.find((route) =>
-      this.commonService.isRouteMatched({
-        routePath: route.path,
-        reqPath: req.path,
-        prefix: 'api',
-      }),
-    );
-
-    if (!matchedRoute) return false;
-
-    if (matchedRoute.isPublished) return true;
-
     if (!req.user) throw new UnauthorizedException();
     if (req.user.isRootAdmin) return true;
-
-    const canPassed = matchedRoute.roles.some((routeRole) =>
-      req.user.roles.some((userRole) => routeRole.id === userRole.id),
-    );
-
-    return canPassed;
+    const canAccess = req.routeData.permissions.find((permission) => {
+      return (
+        permission.role.id === req.user.role.id &&
+        permission.actions.includes(permissionMap[req.method])
+      );
+    });
+    if (canAccess) return true;
+    return false;
   }
 }

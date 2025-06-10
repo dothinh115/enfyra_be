@@ -1,17 +1,15 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Route_definition } from "./route_definition.entity";
 
-@Entity('hook_definition')
-export class Hook_definition {
+@Entity('route_handler_definition')
+export class Route_handler_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
     @Column({ type: "text", nullable: true })
-    afterHook: string;
-    @Column({ type: "text", nullable: true })
-    preHook: string;
-    @Column({ type: "int", nullable: true, default: 0 })
-    priority: number;
-    @ManyToOne(() => Route_definition, (rel) => rel.hooks, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    logic: string;
+    @Column({ type: "varchar", nullable: true })
+    method: string;
+    @ManyToOne(() => Route_definition, (rel) => rel.handlers, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     route: Route_definition;
     @CreateDateColumn()
