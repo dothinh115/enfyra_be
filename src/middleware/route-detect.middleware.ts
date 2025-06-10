@@ -14,92 +14,68 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private commonService: CommonService,
     @Inject(CACHE_MANAGER) private cache: Cache,
   ) {}
-  async use(req: any, res: any, next: (error?: any) => void) {
-    let routes: Route_definition[] = await this.cache.get(GLOBAL_ROUTES_KEY);
-    if (!routes) {
-      routes = await this.routeDefRepo
-        .createQueryBuilder('route')
-        .leftJoinAndSelect('route.middlewares', 'middlewares')
-        .leftJoinAndSelect('route.mainTable', 'mainTable')
-        .leftJoinAndSelect('route.targetTables', 'targetTables')
-        .leftJoinAndSelect('route.hooks', 'hooks')
-        .leftJoinAndSelect(
-          'route.handlers',
-          'handlers',
-          'handlers.method = :method',
-          { method: req.method },
-        )
-        .leftJoinAndSelect(
-          'route.permissions',
-          'permissions',
-          'permissions.isEnabled = :enabled',
-          { enabled: true },
-        )
-        .leftJoinAndSelect('permissions.role', 'role')
-        .where('route.isEnabled = :enabled', {
-          enabled: true,
-        })
-        .getMany();
-      await this.cache.set(GLOBAL_ROUTES_KEY, routes, 5);
-    }
 
-    //match trực tiếp, vì có thể sẽ match custom path ví dụ /abc/:id/xyz/:postId
-    let params: any;
-    let routeData: any;
-    const directMatched = routes.find((route) => {
-      const matched = this.commonService.isRouteMatched({
-        routePath: route.path,
-        reqPath: req.originalUrl,
-        prefix: 'api',
-      });
-      if (matched) {
-        params = matched.params;
-        return true;
-      }
-      return false;
-    });
-    if (directMatched) {
-      routeData = {
-        ...directMatched,
-        handler: directMatched.handlers.length
-          ? directMatched.handlers[0].logic
-          : undefined,
+  async use(req: any, res: any, next: (error?: any) => void) {
+    const method = req.method;
+    let routes: Route_definition[] =
+      (await this.cache.get(GLOBAL_ROUTES_KEY)) ||
+      (await this.loadAndCacheRoutes(method));
+
+    const matchedRoute = this.findMatchedRoute(routes, req.originalUrl, method);
+
+    if (matchedRoute) {
+      const { route, params } = matchedRoute;
+      req.routeData = {
+        ...route,
+        handler: route.handlers?.[0]?.logic,
         params,
       };
-      delete routeData.handlers;
-      req.routeData = routeData;
-      return next();
     }
 
-    //nếu ko match trực tiếp thì sẽ so sánh crud
-    let matchedRoute = this.tryMatchRoute(routes, req.originalUrl, req.method);
-    routeData = matchedRoute
-      ? {
-          ...matchedRoute.route,
-          handler: matchedRoute.route.handlers.length
-            ? matchedRoute.route.handlers[0].logic
-            : undefined,
-          params: matchedRoute.params,
-        }
-      : null;
-    if (routeData) delete routeData.handlers;
-    req.routeData = routeData;
     next();
   }
 
-  private tryMatchRoute(
+  private async loadAndCacheRoutes(method: string) {
+    const routes = await this.routeDefRepo
+      .createQueryBuilder('route')
+      .leftJoinAndSelect('route.middlewares', 'middlewares')
+      .leftJoinAndSelect('route.mainTable', 'mainTable')
+      .leftJoinAndSelect('route.targetTables', 'targetTables')
+      .leftJoinAndSelect('route.hooks', 'hooks')
+      .leftJoinAndSelect(
+        'route.handlers',
+        'handlers',
+        'handlers.method = :method',
+        { method },
+      )
+      .leftJoinAndSelect(
+        'route.permissions',
+        'permissions',
+        'permissions.isEnabled = :enabled',
+        { enabled: true },
+      )
+      .leftJoinAndSelect('permissions.role', 'role')
+      .where('route.isEnabled = :enabled', { enabled: true })
+      .getMany();
+
+    await this.cache.set(GLOBAL_ROUTES_KEY, routes, 5);
+    return routes;
+  }
+
+  private findMatchedRoute(
     routes: Route_definition[],
     reqPath: string,
     method: string,
   ) {
-    const checkPaths = ['DELETE', 'PATCH', 'GET'].includes(method)
+    const matchers = ['DELETE', 'PATCH', 'GET'].includes(method)
       ? [(r) => r.path + '/:id', (r) => r.path]
       : [(r) => r.path];
 
     for (const route of routes) {
-      for (const buildPath of checkPaths) {
+      const paths = [route.path, ...matchers.map((fn) => fn(route))];
+      for (const routePath of paths) {
         const matched = this.commonService.isRouteMatched({
-          routePath: buildPath(route),
+          routePath,
           reqPath,
           prefix: 'api',
         });
