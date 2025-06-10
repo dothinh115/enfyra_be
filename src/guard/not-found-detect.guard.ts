@@ -7,6 +7,8 @@ import {
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../utils/constant';
 
+const supportedMethod = ['POST', 'PATCH', 'GET', 'DELETE'];
+
 @Injectable()
 export class NotFoundDetectGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -18,7 +20,8 @@ export class NotFoundDetectGuard implements CanActivate {
       context.getClass(),
     ]);
     if (isPublic) return true;
-    if (!req.routeData) throw new NotFoundException();
+    if (!supportedMethod.includes(req.method) || !req.routeData)
+      throw new NotFoundException();
     return true;
   }
 }

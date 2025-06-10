@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  NestMiddleware,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NestMiddleware } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Route_definition } from '../entities/route_definition.entity';
 import { Repository } from 'typeorm';
@@ -48,9 +43,37 @@ export class RouteDetectMiddleware implements NestMiddleware {
       await this.cache.set(GLOBAL_ROUTES_KEY, routes, 5);
     }
 
-    let matchedRoute = this.tryMatchRoute(routes, req.originalUrl, req.method);
+    //match trực tiếp, vì có thể sẽ match custom path ví dụ /abc/:id/xyz/:postId
+    let params: any;
+    let routeData: any;
+    const directMatched = routes.find((route) => {
+      const matched = this.commonService.isRouteMatched({
+        routePath: route.path,
+        reqPath: req.originalUrl,
+        prefix: 'api',
+      });
+      if (matched) {
+        params = matched.params;
+        return true;
+      }
+      return false;
+    });
+    if (directMatched) {
+      routeData = {
+        ...directMatched,
+        handler: directMatched.handlers.length
+          ? directMatched.handlers[0].logic
+          : undefined,
+        params,
+      };
+      delete routeData.handlers;
+      req.routeData = routeData;
+      return next();
+    }
 
-    const routeData = matchedRoute
+    //nếu ko match trực tiếp thì sẽ so sánh crud
+    let matchedRoute = this.tryMatchRoute(routes, req.originalUrl, req.method);
+    routeData = matchedRoute
       ? {
           ...matchedRoute.route,
           handler: matchedRoute.route.handlers.length
