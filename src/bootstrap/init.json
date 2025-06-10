@@ -9,14 +9,6 @@
     },
     "defaultSetting": {
         "isInit": false
-    },
-   
-    "adminGuardMiddleware": {
-        "name": "Route for root Admin",
-        "method": null,
-        "path": null,
-        "isEnabled": true,
-        "handler": "const user = $req.user; if(!user.isRootUser) return throw401();"
     }
 }
 
