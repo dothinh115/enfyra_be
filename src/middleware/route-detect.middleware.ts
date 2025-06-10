@@ -38,7 +38,12 @@ export class RouteDetectMiddleware implements NestMiddleware {
   private async loadAndCacheRoutes(method: string) {
     const routes = await this.routeDefRepo
       .createQueryBuilder('route')
-      .leftJoinAndSelect('route.middlewares', 'middlewares')
+      .leftJoinAndSelect(
+        'route.middlewares',
+        'middlewares',
+        'middlewares.isEnabled = :enabled',
+        { enabled: true },
+      )
       .leftJoinAndSelect('route.mainTable', 'mainTable')
       .leftJoinAndSelect('route.targetTables', 'targetTables')
       .leftJoinAndSelect('route.hooks', 'hooks')
