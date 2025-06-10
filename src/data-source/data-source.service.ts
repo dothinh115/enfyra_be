@@ -3,7 +3,6 @@ import { CommonService } from '../common/common.service';
 import { createDataSource } from '../data-source/data-source';
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntitySchema, EntityTarget, Repository } from 'typeorm';
-import { QueryTrackerService } from '../query-track/query-track.service';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { RELOADING_DATASOURCE_KEY } from '../utils/constant';
 
@@ -16,7 +15,6 @@ export class DataSourceService implements OnModuleInit {
 
   constructor(
     private commonService: CommonService,
-    private queryTrackerService: QueryTrackerService,
     @Inject(CACHE_MANAGER) private cache: Cache,
   ) {}
 
@@ -35,27 +33,8 @@ export class DataSourceService implements OnModuleInit {
       return;
     }
 
-    const interval = 500;
-    const maxCount = 20;
-    let count = 0;
-
-    while (!this.queryTrackerService.isIdle()) {
-      if (count >= maxCount) {
-        this.logger.error(
-          `❌ DataSource vẫn đang bận sau ${(maxCount * interval) / 1000}s, huỷ reload.`,
-        );
-        return; // hoặc throw error nếu muốn retry lại từ client
-      }
-
-      this.logger.debug(
-        `DataSource đang bận, còn ${this.queryTrackerService.getCount()} kết nối...${count > 0 ? `, thử lại ${count}/${maxCount} lần...` : ''}`,
-      );
-
-      count++;
-      await new Promise((resolve) => setTimeout(resolve, interval));
-    }
-
     this.logger.log('🔁 Chuẩn bị reload DataSource');
+    await this.cache.set(RELOADING_DATASOURCE_KEY, true, 10);
     await this.dataSource.destroy();
     this.logger.debug('✅ Destroy DataSource cũ thành công!');
 
@@ -69,6 +48,8 @@ export class DataSourceService implements OnModuleInit {
     } catch (err: any) {
       this.logger.error('❌ Lỗi khi reInit DataSource:', err.message);
       this.logger.error(err.stack || err);
+    } finally {
+      await this.cache.del(RELOADING_DATASOURCE_KEY);
     }
   }
 
