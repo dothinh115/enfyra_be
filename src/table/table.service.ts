@@ -20,7 +20,7 @@ export class TableHandlerService {
   ) {}
 
   async createTable(body: CreateTableDto) {
-    const dataSource = await this.dataSouceService.getDataSource();
+    const dataSource = this.dataSouceService.getDataSource();
     const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -62,7 +62,7 @@ export class TableHandlerService {
   }
 
   async updateTable(id: number, body: CreateTableDto) {
-    const dataSource = await this.dataSouceService.getDataSource();
+    const dataSource = this.dataSouceService.getDataSource();
     const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();

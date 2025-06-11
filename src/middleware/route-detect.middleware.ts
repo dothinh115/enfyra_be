@@ -29,6 +29,8 @@ export class RouteDetectMiddleware implements NestMiddleware {
         ...route,
         handler: route.handlers?.[0]?.logic,
         params,
+        isPublished:
+          matchedRoute.route.publishedMethods?.includes(req.method) || false,
       };
     }
 

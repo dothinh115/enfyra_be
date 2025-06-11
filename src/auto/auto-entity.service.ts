@@ -307,7 +307,7 @@ export class AutoService {
   }
 
   async clearMigrationsTable() {
-    const dataSource = await this.dataSourceService.getDataSource();
+    const dataSource = this.dataSourceService.getDataSource();
     const queryRunner = dataSource.createQueryRunner();
 
     await queryRunner.connect();

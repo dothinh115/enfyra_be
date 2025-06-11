@@ -5,7 +5,6 @@ import { DataSource } from 'typeorm';
 import * as cors from 'cors';
 import * as express from 'express';
 import * as qs from 'qs';
-import { HideFieldInterceptor } from './interceptors/hidden-field.interceptor';
 async function ensureDatabaseExists() {
   const DB_TYPE = (process.env.DB_TYPE || 'mysql') as 'mysql' | 'postgres';
   const DB_HOST = process.env.DB_HOST || 'localhost';
@@ -80,7 +79,6 @@ async function bootstrap() {
       whitelist: true,
     }),
   );
-  app.useGlobalInterceptors(app.get(HideFieldInterceptor));
 
   await app.listen(1105);
 }

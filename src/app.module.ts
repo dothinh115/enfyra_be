@@ -9,7 +9,7 @@ import { DataSourceModule } from './data-source/data-source.module';
 import { CommonModule } from './common/common.module';
 import { BootstrapService } from './bootstrap/bootstrap.service';
 import { AutoGenerateModule } from './auto/auto.module';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
@@ -68,6 +68,7 @@ import { NotFoundDetectGuard } from './guard/not-found-detect.guard';
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RoleGuard },
+    { provide: APP_INTERCEPTOR, useClass: HideFieldInterceptor },
   ],
   exports: [RabbitMQRegistry, DataSourceModule, JwtModule],
 })

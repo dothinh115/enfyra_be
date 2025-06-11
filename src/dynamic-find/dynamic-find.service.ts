@@ -34,7 +34,7 @@ export class DynamicFindService {
     params: Record<string, any>;
   }> {
     let paramCounter = 0;
-    const dataSource = await this.dataSourceService.getDataSource();
+    const dataSource = this.dataSourceService.getDataSource();
     fields =
       typeof fields === 'string'
         ? fields

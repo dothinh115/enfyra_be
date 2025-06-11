@@ -12,10 +12,10 @@ export class Route_definition {
     id: number;
     @Column({ type: "boolean", nullable: true, default: false })
     isEnabled: boolean;
-    @Column({ type: "boolean", nullable: false, default: false })
-    isPublished: boolean;
     @Column({ type: "varchar", nullable: false })
     path: string;
+    @Column({ type: "simple-json", nullable: true })
+    publishedMethods: any;
     @ManyToOne(() => Table_definition, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     mainTable: Table_definition;

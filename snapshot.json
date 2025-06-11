@@ -81,7 +81,7 @@
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
             { "name": "path", "type": "varchar", "isNullable": false, "isStatic": true, "default": null },
-            { "name": "isPublished", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
+            { "name": "publishedMethods", "type": "simple-json", "isStatic": true },
             { "name": "isEnabled", "type": "boolean", "isNullable": true, "isStatic": true, "default": false }
         ],
         "relations": [

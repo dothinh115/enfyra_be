@@ -1,9 +1,8 @@
 import * as path from 'path';
 import { CommonService } from '../common/common.service';
 import { createDataSource } from '../data-source/data-source';
-import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntitySchema, EntityTarget, Repository } from 'typeorm';
-import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { RELOADING_DATASOURCE_KEY } from '../utils/constant';
 
 const entityDir = path.resolve('dist', 'entities');
@@ -13,10 +12,7 @@ export class DataSourceService implements OnModuleInit {
   private dataSource: DataSource;
   private logger = new Logger(DataSourceService.name);
 
-  constructor(
-    private commonService: CommonService,
-    @Inject(CACHE_MANAGER) private cache: Cache,
-  ) {}
+  constructor(private commonService: CommonService) {}
 
   async onModuleInit() {
     this.logger.log('Chuẩn bị gán và init DataSource.');
@@ -34,7 +30,6 @@ export class DataSourceService implements OnModuleInit {
     }
 
     this.logger.log('🔁 Chuẩn bị reload DataSource');
-    await this.cache.set(RELOADING_DATASOURCE_KEY, true, 10);
     await this.dataSource.destroy();
     this.logger.debug('✅ Destroy DataSource cũ thành công!');
 
@@ -48,15 +43,13 @@ export class DataSourceService implements OnModuleInit {
     } catch (err: any) {
       this.logger.error('❌ Lỗi khi reInit DataSource:', err.message);
       this.logger.error(err.stack || err);
-    } finally {
-      await this.cache.del(RELOADING_DATASOURCE_KEY);
     }
   }
 
-  async getRepository<Entity>(
+  getRepository<Entity>(
     identifier: string | Function | EntitySchema<any>,
-  ): Promise<Repository<Entity>> | null {
-    const dataSource = await this.getDataSource();
+  ): Repository<Entity> | null {
+    const dataSource = this.getDataSource();
     if (!dataSource?.isInitialized) {
       throw new Error('DataSource chưa được khởi tạo!');
     }
@@ -83,11 +76,7 @@ export class DataSourceService implements OnModuleInit {
     return dataSource.getRepository<Entity>(metadata.target as any);
   }
 
-  async getDataSource() {
-    const cached = await this.cache.get(RELOADING_DATASOURCE_KEY);
-    while (cached) {
-      await this.commonService.delay(500);
-    }
+  getDataSource() {
     return this.dataSource;
   }
 

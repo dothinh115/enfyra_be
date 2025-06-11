@@ -34,7 +34,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     maxRetries = 10,
     delayMs = 1000,
   ): Promise<void> {
-    const dataSource = await this.dataSourceService.getDataSource();
+    const dataSource = this.dataSourceService.getDataSource();
 
     for (let i = 0; i < maxRetries; i++) {
       try {
@@ -69,7 +69,7 @@ export class BootstrapService implements OnApplicationBootstrap {
   private async insertDefaultSettingIfEmpty(): Promise<void> {
     const tableName =
       this.dataSourceService.getTableNameFromEntity(Setting_definition);
-    const dataSource = await this.dataSourceService.getDataSource();
+    const dataSource = this.dataSourceService.getDataSource();
 
     const [{ count }] = await dataSource.query(
       `SELECT COUNT(*) as count FROM \`${tableName}\``,
@@ -93,7 +93,7 @@ export class BootstrapService implements OnApplicationBootstrap {
   private async createDefaultRole(): Promise<void> {
     const tableName =
       this.dataSourceService.getTableNameFromEntity(Role_definition);
-    const dataSource = await this.dataSourceService.getDataSource();
+    const dataSource = this.dataSourceService.getDataSource();
 
     const [result] = await dataSource.query(
       `SELECT COUNT(*) as count FROM \`${tableName}\` WHERE name = ?`,
@@ -118,8 +118,8 @@ export class BootstrapService implements OnApplicationBootstrap {
   private async insertDefaultUserIfEmpty(): Promise<void> {
     const tableName =
       this.dataSourceService.getTableNameFromEntity(User_definition);
-    const dataSource = await this.dataSourceService.getDataSource();
-    const userRepo = await this.dataSourceService.getRepository(tableName);
+    const dataSource = this.dataSourceService.getDataSource();
+    const userRepo = this.dataSourceService.getRepository(tableName);
 
     const [{ count }] = await dataSource.query(
       `SELECT COUNT(*) as count FROM \`${tableName}\``,
@@ -154,7 +154,7 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   async createInitMetadata() {
     const snapshot = await import(path.resolve('snapshot.json'));
-    const dataSource = await this.dataSourceService.getDataSource();
+    const dataSource = this.dataSourceService.getDataSource();
     const queryRunner = dataSource.createQueryRunner();
 
     await queryRunner.connect();
