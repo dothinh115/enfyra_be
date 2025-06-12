@@ -146,7 +146,9 @@
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
             { "name": "preHook", "type": "text", "isNullable": true, "isStatic": true },
             { "name": "afterHook", "type": "text", "isNullable": true, "isStatic": true },
-            { "name": "priority", "type": "int", "isNullable": true, "isStatic": true, "default": 0 }
+            { "name": "priority", "type": "int", "isNullable": true, "isStatic": true, "default": 0 },
+            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
+
         ],
         "relations": [
             { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isStatic": true, "inversePropertyName": "hooks", "isIndex": true }

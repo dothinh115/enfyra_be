@@ -18,4 +18,5 @@ export type TDynamicContext = {
     throw400: (msg: string) => never;
     throw401: () => never;
   };
+  $result?: any;
 };

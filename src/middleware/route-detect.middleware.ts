@@ -111,7 +111,9 @@ export class RouteDetectMiddleware implements NestMiddleware {
       )
       .leftJoinAndSelect('route.mainTable', 'mainTable')
       .leftJoinAndSelect('route.targetTables', 'targetTables')
-      .leftJoinAndSelect('route.hooks', 'hooks')
+      .leftJoinAndSelect('route.hooks', 'hooks', 'hooks.isEnabled = :enabled', {
+        enabled: true,
+      })
       .leftJoinAndSelect(
         'route.handlers',
         'handlers',
@@ -127,6 +129,11 @@ export class RouteDetectMiddleware implements NestMiddleware {
       .leftJoinAndSelect('permissions.role', 'role')
       .where('route.isEnabled = :enabled', { enabled: true })
       .getMany();
+
+    routes.forEach((route) => {
+      route.hooks?.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+      route.middlewares?.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+    });
 
     await this.cache.set(GLOBAL_ROUTES_KEY, routes, 5);
     return routes;
