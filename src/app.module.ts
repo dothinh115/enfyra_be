@@ -33,7 +33,6 @@ import { NotFoundDetectGuard } from './guard/not-found-detect.guard';
     }),
     TableModule,
     DatabaseModule,
-    DynamicModule,
     CommonModule,
     DataSourceModule,
     AutoGenerateModule,
@@ -59,6 +58,7 @@ import { NotFoundDetectGuard } from './guard/not-found-detect.guard';
     DynamicFindModule,
     AuthModule,
     MeModule,
+    DynamicModule,
   ],
   providers: [
     BootstrapService,

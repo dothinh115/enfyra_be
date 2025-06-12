@@ -8,7 +8,7 @@ import { User_definition } from '../entities/user_definition.entity';
 export class DynamicController {
   constructor(private readonly dynamicService: DynamicService) {}
 
-  @All('api/*splat')
+  @All('*splat')
   dynamicGetController(
     @Req()
     req: Request & {

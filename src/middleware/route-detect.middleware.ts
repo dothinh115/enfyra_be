@@ -85,7 +85,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
         const matched = this.commonService.isRouteMatched({
           routePath,
           reqPath,
-          prefix: 'api',
         });
         if (matched) return { route, params: matched.params };
       }
