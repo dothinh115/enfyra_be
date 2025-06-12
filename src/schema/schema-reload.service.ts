@@ -12,6 +12,7 @@ import {
   SCHEMA_UPDATED_EVENT_KEY,
 } from '../utils/constant';
 import { RedisPubSubService } from '../redis-pubsub/redis-pubsub.service';
+import { CommonService } from '../common/common.service';
 
 @Injectable()
 export class SchemaReloadService {
@@ -23,6 +24,7 @@ export class SchemaReloadService {
     private configService: ConfigService,
     @Inject(forwardRef(() => RedisPubSubService))
     private redisPubSubService: RedisPubSubService,
+    private commonService: CommonService,
   ) {
     this.sourceInstanceId = uuidv4();
   }
@@ -45,31 +47,33 @@ export class SchemaReloadService {
     // nếu version trong message bé hơn newest, bỏ qua, để lắng nghe version cao hơn
     //nếu version hiện tại lớn hơn hoặc bằng version mới nhất, bỏ qua
 
-    if (
-      new Date(data.version) < new Date(newestSchema['createdAt']) ||
-      new Date(localVersion) >= new Date(newestSchema['createdAt'])
-    )
+    if (data.version < newestSchema['id'] || localVersion >= newestSchema['id'])
       return;
 
     //nếu cùng 1 node , chỉ tiến hành reload datasource
     if (node_name === data.node_name) {
       await this.dataSourceService.reloadDataSource();
+      //update version sau khi reload
+      this.schemaStateService.setVersion(newestSchema['id']);
       return;
     }
     //nếu ko cùng 1 node thì set lock và tiến hành pull metadata
     const sourceIdInMem = await this.cache.get('dynamiq:pulling');
-    if (!sourceIdInMem && sourceIdInMem !== this.sourceInstanceId) {
+    if (!sourceIdInMem) {
       await this.cache.set('dynamiq:pulling', this.sourceInstanceId, 10);
       await this.autoService.pullMetadataFromDb();
       //sau khi pull xong phải clear lock để các instance khác ko đợi
       await this.cache.del('dynamiq:pulling');
+      return;
     }
     //nếu đang có lock thì liên tục check lock để reload datasource (không pull)
     while (await this.cache.get('dynamiq:pulling')) {
-      await new Promise((resolve) => setTimeout(() => resolve(true), 500));
+      await this.commonService.delay(Math.random() * 300 + 300);
     }
     //hết lock thì reload DS
     await this.dataSourceService.reloadDataSource();
+    //set version
+    this.schemaStateService.setVersion(newestSchema['id']);
   }
 
   async lockChangeSchema() {
@@ -79,7 +83,7 @@ export class SchemaReloadService {
     }
   }
 
-  async publishSchemaUpdated(version: string) {
+  async publishSchemaUpdated(version: number) {
     const reloadSchemaMsg: TReloadSchema = {
       event: 'schema-updated',
       node_name: this.configService.get('NODE_NAME'),

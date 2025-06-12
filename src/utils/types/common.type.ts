@@ -72,5 +72,5 @@ export type TReloadSchema = {
   node_name: string;
   sourceInstanceId: string;
   event: 'schema-updated';
-  version: string;
+  version: number;
 };

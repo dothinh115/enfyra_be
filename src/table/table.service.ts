@@ -46,7 +46,7 @@ export class TableHandlerService {
       await this.schemaReloadService.lockChangeSchema();
       const backup = await this.autoService.backup();
       await this.autoService.pullMetadataFromDb();
-      await this.schemaReloadService.publishSchemaUpdated(backup['createdAt']);
+      await this.schemaReloadService.publishSchemaUpdated(backup['id']);
 
       return result;
     } catch (error) {
@@ -151,7 +151,7 @@ export class TableHandlerService {
       await this.schemaReloadService.lockChangeSchema();
       const backup = await this.autoService.backup();
       await this.autoService.pullMetadataFromDb();
-      await this.schemaReloadService.publishSchemaUpdated(backup['createdAt']);
+      await this.schemaReloadService.publishSchemaUpdated(backup['id']);
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -225,7 +225,7 @@ export class TableHandlerService {
       await this.schemaReloadService.lockChangeSchema();
       const backup = await this.autoService.backup();
       await this.autoService.pullMetadataFromDb();
-      await this.schemaReloadService.publishSchemaUpdated(backup['createdAt']);
+      await this.schemaReloadService.publishSchemaUpdated(backup['id']);
 
       return result;
     } catch (error) {

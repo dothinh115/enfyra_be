@@ -2,13 +2,13 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class SchemaStateService {
-  private currentVersion: string;
+  private currentVersion: number;
 
   getVersion() {
     return this.currentVersion;
   }
 
-  setVersion(newVer: string) {
+  setVersion(newVer: number) {
     this.currentVersion = newVer;
   }
 }
