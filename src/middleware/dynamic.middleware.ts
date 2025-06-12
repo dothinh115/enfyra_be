@@ -17,7 +17,9 @@ export class DynamicMiddleware implements NestMiddleware {
     next: NextFunction,
   ) {
     if (!req.routeData) return next();
-    for (const middleware of req.routeData.middlewares) {
+    for (const middleware of req.routeData.middlewares.sort(
+      (a, b) => a.priority - b.priority,
+    )) {
       const ctx: Record<string, any> = {};
       const $req = new Proxy(
         {},

@@ -8,13 +8,15 @@ import { User_definition } from '../entities/user_definition.entity';
 export class MeController {
   constructor(private readonly meService: MeService) {}
 
-  @Get()
   @Public()
+  @Get()
   find(@Req() req: Request & { user: User_definition }) {
     return this.meService.find(req);
   }
 
-  @Post()
   @Public()
-  update(@Body() body: any, @Req() req: Request & { user: User_definition }) {}
+  @Post()
+  update(@Body() body: any, @Req() req: Request & { user: User_definition }) {
+    return this.meService.update(body, req);
+  }
 }

@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { CommonService } from '../common/common.service';
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { GLOBAL_ROUTES_KEY } from '../utils/constant';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
