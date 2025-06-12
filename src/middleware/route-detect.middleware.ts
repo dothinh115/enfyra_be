@@ -1,19 +1,17 @@
 import { Inject, Injectable, NestMiddleware } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Route_definition } from '../entities/route_definition.entity';
 import { Repository } from 'typeorm';
 import { CommonService } from '../common/common.service';
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { GLOBAL_ROUTES_KEY } from '../utils/constant';
-import { ConfigService } from '@nestjs/config';
+import { DataSourceService } from '../data-source/data-source.service';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
   constructor(
-    @InjectRepository(Route_definition)
-    private routeDefRepo: Repository<Route_definition>,
     private commonService: CommonService,
     @Inject(CACHE_MANAGER) private cache: Cache,
+    private dataSourceService: DataSourceService,
   ) {}
 
   async use(req: any, res: any, next: (error?: any) => void) {
@@ -39,7 +37,9 @@ export class RouteDetectMiddleware implements NestMiddleware {
   }
 
   private async loadAndCacheRoutes(method: string) {
-    const routes = await this.routeDefRepo
+    const routeDefRepo: Repository<Route_definition> =
+      this.dataSourceService.getRepository('route_definition');
+    const routes = await routeDefRepo
       .createQueryBuilder('route')
       .leftJoinAndSelect(
         'route.middlewares',

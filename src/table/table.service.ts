@@ -7,7 +7,6 @@ import {
 } from '../table/dto/create-table.dto';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -15,8 +14,6 @@ export class TableHandlerService {
   constructor(
     private dataSouceService: DataSourceService,
     private autoService: AutoService,
-    @InjectRepository(Table_definition)
-    private tableDefRepo: Repository<Table_definition>,
   ) {}
 
   async createTable(body: CreateTableDto) {
@@ -45,10 +42,6 @@ export class TableHandlerService {
 
       if (!result) result = await manager.save(Table_definition, tableEntity);
       await queryRunner.commitTransaction();
-      const tables = await this.tableDefRepo.find({
-        relations: ['relations', 'columns'],
-      });
-      await this.autoService.backup({ data: tables });
       await this.autoService.pullMetadataFromDb();
 
       return result;
@@ -209,8 +202,10 @@ export class TableHandlerService {
   // async findOne(id: number, query: TQuery) {}
 
   async delete(id: number) {
+    const tableDefRepo: Repository<Table_definition> =
+      this.dataSouceService.getRepository('table_definition');
     try {
-      const exists = await this.tableDefRepo.findOne({
+      const exists = await tableDefRepo.findOne({
         where: { id },
       });
 
@@ -224,8 +219,8 @@ export class TableHandlerService {
         );
       }
 
-      const result = await this.tableDefRepo.remove(exists);
-      const tables = await this.tableDefRepo.find({
+      const result = await tableDefRepo.remove(exists);
+      const tables = await tableDefRepo.find({
         relations: ['relations', 'columns'],
       });
       await this.autoService.backup({ data: tables });

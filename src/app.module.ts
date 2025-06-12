@@ -49,8 +49,7 @@ import { NotFoundDetectGuard } from './guard/not-found-detect.guard';
       isGlobal: true,
       useFactory: async (configService: ConfigService) => ({
         store: redisStore,
-        host: configService.get('REDIS_HOST'),
-        port: configService.get('REDIS_PORT'),
+        url: configService.get('REDIS_URI'),
         ttl: configService.get('DEFAULT_TTL'),
       }),
       inject: [ConfigService],

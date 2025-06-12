@@ -12,8 +12,8 @@
           "table"
         ]
       ],
-      "createdAt": "2025-06-08T03:08:04.118Z",
-      "updatedAt": "2025-06-08T03:08:04.118Z",
+      "createdAt": "2025-06-12T01:39:48.507Z",
+      "updatedAt": "2025-06-12T01:39:48.507Z",
       "relations": [
         {
           "id": 1,
@@ -26,8 +26,8 @@
           "isStatic": true,
           "propertyName": "table",
           "type": "many-to-one",
-          "createdAt": "2025-06-08T03:08:04.184Z",
-          "updatedAt": "2025-06-08T03:08:04.184Z"
+          "createdAt": "2025-06-12T01:39:48.583Z",
+          "updatedAt": "2025-06-12T01:39:48.583Z"
         }
       ],
       "columns": [
@@ -45,8 +45,8 @@
           "isUpdatable": true,
           "name": "id",
           "type": "int",
-          "createdAt": "2025-06-08T03:08:04.136Z",
-          "updatedAt": "2025-06-08T03:08:04.136Z"
+          "createdAt": "2025-06-12T01:39:48.529Z",
+          "updatedAt": "2025-06-12T01:39:48.529Z"
         },
         {
           "id": 2,
@@ -62,8 +62,8 @@
           "isUpdatable": true,
           "name": "name",
           "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.137Z",
-          "updatedAt": "2025-06-08T03:08:04.137Z"
+          "createdAt": "2025-06-12T01:39:48.530Z",
+          "updatedAt": "2025-06-12T01:39:48.530Z"
         },
         {
           "id": 3,
@@ -79,8 +79,8 @@
           "isUpdatable": true,
           "name": "type",
           "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.138Z",
-          "updatedAt": "2025-06-08T03:08:04.138Z"
+          "createdAt": "2025-06-12T01:39:48.531Z",
+          "updatedAt": "2025-06-12T01:39:48.531Z"
         },
         {
           "id": 4,
@@ -96,8 +96,8 @@
           "isUpdatable": true,
           "name": "isGenerated",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.139Z",
-          "updatedAt": "2025-06-08T03:08:04.139Z"
+          "createdAt": "2025-06-12T01:39:48.532Z",
+          "updatedAt": "2025-06-12T01:39:48.532Z"
         },
         {
           "id": 5,
@@ -113,8 +113,8 @@
           "isUpdatable": true,
           "name": "isPrimary",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.140Z",
-          "updatedAt": "2025-06-08T03:08:04.140Z"
+          "createdAt": "2025-06-12T01:39:48.533Z",
+          "updatedAt": "2025-06-12T01:39:48.533Z"
         },
         {
           "id": 6,
@@ -130,8 +130,8 @@
           "isUpdatable": true,
           "name": "isNullable",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.141Z",
-          "updatedAt": "2025-06-08T03:08:04.141Z"
+          "createdAt": "2025-06-12T01:39:48.534Z",
+          "updatedAt": "2025-06-12T01:39:48.534Z"
         },
         {
           "id": 7,
@@ -147,8 +147,8 @@
           "isUpdatable": true,
           "name": "isStatic",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.142Z",
-          "updatedAt": "2025-06-08T03:08:04.142Z"
+          "createdAt": "2025-06-12T01:39:48.535Z",
+          "updatedAt": "2025-06-12T01:39:48.535Z"
         },
         {
           "id": 8,
@@ -164,8 +164,8 @@
           "isUpdatable": true,
           "name": "default",
           "type": "simple-json",
-          "createdAt": "2025-06-08T03:08:04.142Z",
-          "updatedAt": "2025-06-08T03:08:04.142Z"
+          "createdAt": "2025-06-12T01:39:48.536Z",
+          "updatedAt": "2025-06-12T01:39:48.536Z"
         },
         {
           "id": 9,
@@ -181,8 +181,8 @@
           "isUpdatable": true,
           "name": "enumValues",
           "type": "simple-json",
-          "createdAt": "2025-06-08T03:08:04.143Z",
-          "updatedAt": "2025-06-08T03:08:04.143Z"
+          "createdAt": "2025-06-12T01:39:48.537Z",
+          "updatedAt": "2025-06-12T01:39:48.537Z"
         },
         {
           "id": 10,
@@ -198,8 +198,8 @@
           "isUpdatable": true,
           "name": "isUnique",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.144Z",
-          "updatedAt": "2025-06-08T03:08:04.144Z"
+          "createdAt": "2025-06-12T01:39:48.537Z",
+          "updatedAt": "2025-06-12T01:39:48.537Z"
         },
         {
           "id": 11,
@@ -215,8 +215,8 @@
           "isUpdatable": true,
           "name": "isUpdatable",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.144Z",
-          "updatedAt": "2025-06-08T03:08:04.144Z"
+          "createdAt": "2025-06-12T01:39:48.538Z",
+          "updatedAt": "2025-06-12T01:39:48.538Z"
         },
         {
           "id": 12,
@@ -232,8 +232,8 @@
           "isUpdatable": true,
           "name": "isHidden",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.145Z",
-          "updatedAt": "2025-06-08T03:08:04.145Z"
+          "createdAt": "2025-06-12T01:39:48.539Z",
+          "updatedAt": "2025-06-12T01:39:48.539Z"
         },
         {
           "id": 13,
@@ -249,8 +249,8 @@
           "isUpdatable": true,
           "name": "isIndex",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.145Z",
-          "updatedAt": "2025-06-08T03:08:04.145Z"
+          "createdAt": "2025-06-12T01:39:48.540Z",
+          "updatedAt": "2025-06-12T01:39:48.540Z"
         }
       ]
     },
@@ -266,8 +266,8 @@
           "sourceTable"
         ]
       ],
-      "createdAt": "2025-06-08T03:08:04.121Z",
-      "updatedAt": "2025-06-08T03:08:04.121Z",
+      "createdAt": "2025-06-12T01:39:48.510Z",
+      "updatedAt": "2025-06-12T01:39:48.510Z",
       "relations": [
         {
           "id": 2,
@@ -280,8 +280,8 @@
           "isStatic": true,
           "propertyName": "sourceTable",
           "type": "many-to-one",
-          "createdAt": "2025-06-08T03:08:04.185Z",
-          "updatedAt": "2025-06-08T03:08:04.185Z"
+          "createdAt": "2025-06-12T01:39:48.584Z",
+          "updatedAt": "2025-06-12T01:39:48.584Z"
         },
         {
           "id": 3,
@@ -294,8 +294,8 @@
           "isStatic": true,
           "propertyName": "targetTable",
           "type": "many-to-one",
-          "createdAt": "2025-06-08T03:08:04.186Z",
-          "updatedAt": "2025-06-08T03:08:04.186Z"
+          "createdAt": "2025-06-12T01:39:48.585Z",
+          "updatedAt": "2025-06-12T01:39:48.585Z"
         }
       ],
       "columns": [
@@ -313,8 +313,8 @@
           "isUpdatable": true,
           "name": "id",
           "type": "int",
-          "createdAt": "2025-06-08T03:08:04.147Z",
-          "updatedAt": "2025-06-08T03:08:04.147Z"
+          "createdAt": "2025-06-12T01:39:48.541Z",
+          "updatedAt": "2025-06-12T01:39:48.541Z"
         },
         {
           "id": 15,
@@ -335,8 +335,8 @@
           "isUpdatable": true,
           "name": "type",
           "type": "enum",
-          "createdAt": "2025-06-08T03:08:04.148Z",
-          "updatedAt": "2025-06-08T03:08:04.148Z"
+          "createdAt": "2025-06-12T01:39:48.542Z",
+          "updatedAt": "2025-06-12T01:39:48.542Z"
         },
         {
           "id": 16,
@@ -352,8 +352,8 @@
           "isUpdatable": true,
           "name": "propertyName",
           "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.149Z",
-          "updatedAt": "2025-06-08T03:08:04.149Z"
+          "createdAt": "2025-06-12T01:39:48.542Z",
+          "updatedAt": "2025-06-12T01:39:48.542Z"
         },
         {
           "id": 17,
@@ -369,8 +369,8 @@
           "isUpdatable": true,
           "name": "inversePropertyName",
           "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.149Z",
-          "updatedAt": "2025-06-08T03:08:04.149Z"
+          "createdAt": "2025-06-12T01:39:48.544Z",
+          "updatedAt": "2025-06-12T01:39:48.544Z"
         },
         {
           "id": 18,
@@ -386,8 +386,8 @@
           "isUpdatable": true,
           "name": "isEager",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.150Z",
-          "updatedAt": "2025-06-08T03:08:04.150Z"
+          "createdAt": "2025-06-12T01:39:48.544Z",
+          "updatedAt": "2025-06-12T01:39:48.544Z"
         },
         {
           "id": 19,
@@ -403,8 +403,8 @@
           "isUpdatable": true,
           "name": "isNullable",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.151Z",
-          "updatedAt": "2025-06-08T03:08:04.151Z"
+          "createdAt": "2025-06-12T01:39:48.545Z",
+          "updatedAt": "2025-06-12T01:39:48.545Z"
         },
         {
           "id": 20,
@@ -420,8 +420,8 @@
           "isUpdatable": true,
           "name": "isStatic",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.151Z",
-          "updatedAt": "2025-06-08T03:08:04.151Z"
+          "createdAt": "2025-06-12T01:39:48.546Z",
+          "updatedAt": "2025-06-12T01:39:48.546Z"
         },
         {
           "id": 21,
@@ -437,8 +437,8 @@
           "isUpdatable": true,
           "name": "isInverseEager",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.152Z",
-          "updatedAt": "2025-06-08T03:08:04.152Z"
+          "createdAt": "2025-06-12T01:39:48.547Z",
+          "updatedAt": "2025-06-12T01:39:48.547Z"
         },
         {
           "id": 22,
@@ -454,8 +454,8 @@
           "isUpdatable": true,
           "name": "isIndex",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.153Z",
-          "updatedAt": "2025-06-08T03:08:04.153Z"
+          "createdAt": "2025-06-12T01:39:48.552Z",
+          "updatedAt": "2025-06-12T01:39:48.552Z"
         },
         {
           "id": 23,
@@ -471,8 +471,8 @@
           "isUpdatable": true,
           "name": "isInverseIndex",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.153Z",
-          "updatedAt": "2025-06-08T03:08:04.153Z"
+          "createdAt": "2025-06-12T01:39:48.553Z",
+          "updatedAt": "2025-06-12T01:39:48.553Z"
         }
       ]
     },
@@ -483,8 +483,8 @@
       "isStatic": true,
       "name": "table_definition",
       "uniques": null,
-      "createdAt": "2025-06-08T03:08:04.123Z",
-      "updatedAt": "2025-06-08T03:08:04.123Z",
+      "createdAt": "2025-06-12T01:39:48.513Z",
+      "updatedAt": "2025-06-12T01:39:48.513Z",
       "relations": [],
       "columns": [
         {
@@ -501,8 +501,8 @@
           "isUpdatable": true,
           "name": "id",
           "type": "int",
-          "createdAt": "2025-06-08T03:08:04.155Z",
-          "updatedAt": "2025-06-08T03:08:04.155Z"
+          "createdAt": "2025-06-12T01:39:48.555Z",
+          "updatedAt": "2025-06-12T01:39:48.555Z"
         },
         {
           "id": 25,
@@ -518,8 +518,8 @@
           "isUpdatable": true,
           "name": "name",
           "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.156Z",
-          "updatedAt": "2025-06-08T03:08:04.156Z"
+          "createdAt": "2025-06-12T01:39:48.556Z",
+          "updatedAt": "2025-06-12T01:39:48.556Z"
         },
         {
           "id": 26,
@@ -535,8 +535,8 @@
           "isUpdatable": true,
           "name": "isStatic",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.156Z",
-          "updatedAt": "2025-06-08T03:08:04.156Z"
+          "createdAt": "2025-06-12T01:39:48.557Z",
+          "updatedAt": "2025-06-12T01:39:48.557Z"
         },
         {
           "id": 27,
@@ -552,8 +552,8 @@
           "isUpdatable": true,
           "name": "uniques",
           "type": "simple-json",
-          "createdAt": "2025-06-08T03:08:04.157Z",
-          "updatedAt": "2025-06-08T03:08:04.157Z"
+          "createdAt": "2025-06-12T01:39:48.558Z",
+          "updatedAt": "2025-06-12T01:39:48.558Z"
         },
         {
           "id": 28,
@@ -569,8 +569,8 @@
           "isUpdatable": true,
           "name": "indexes",
           "type": "simple-json",
-          "createdAt": "2025-06-08T03:08:04.159Z",
-          "updatedAt": "2025-06-08T03:08:04.159Z"
+          "createdAt": "2025-06-12T01:39:48.559Z",
+          "updatedAt": "2025-06-12T01:39:48.559Z"
         },
         {
           "id": 29,
@@ -586,8 +586,8 @@
           "isUpdatable": true,
           "name": "alias",
           "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.160Z",
-          "updatedAt": "2025-06-08T03:08:04.160Z"
+          "createdAt": "2025-06-12T01:39:48.559Z",
+          "updatedAt": "2025-06-12T01:39:48.559Z"
         }
       ]
     },
@@ -598,24 +598,9 @@
       "isStatic": true,
       "name": "user_definition",
       "uniques": null,
-      "createdAt": "2025-06-08T03:08:04.125Z",
-      "updatedAt": "2025-06-08T03:08:04.125Z",
-      "relations": [
-        {
-          "id": 4,
-          "inversePropertyName": "users",
-          "isEager": false,
-          "isIndex": false,
-          "isInverseEager": false,
-          "isInverseIndex": false,
-          "isNullable": true,
-          "isStatic": true,
-          "propertyName": "roles",
-          "type": "many-to-many",
-          "createdAt": "2025-06-08T03:08:04.188Z",
-          "updatedAt": "2025-06-08T03:08:04.188Z"
-        }
-      ],
+      "createdAt": "2025-06-12T01:39:48.514Z",
+      "updatedAt": "2025-06-12T01:39:48.514Z",
+      "relations": [],
       "columns": [
         {
           "id": 30,
@@ -631,8 +616,8 @@
           "isUpdatable": true,
           "name": "id",
           "type": "uuid",
-          "createdAt": "2025-06-08T03:08:04.161Z",
-          "updatedAt": "2025-06-08T03:08:04.161Z"
+          "createdAt": "2025-06-12T01:39:48.560Z",
+          "updatedAt": "2025-06-12T01:39:48.560Z"
         },
         {
           "id": 31,
@@ -648,8 +633,8 @@
           "isUpdatable": true,
           "name": "email",
           "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.162Z",
-          "updatedAt": "2025-06-08T03:08:04.162Z"
+          "createdAt": "2025-06-12T01:39:48.561Z",
+          "updatedAt": "2025-06-12T01:39:48.561Z"
         },
         {
           "id": 32,
@@ -665,8 +650,8 @@
           "isUpdatable": true,
           "name": "password",
           "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.163Z",
-          "updatedAt": "2025-06-08T03:08:04.163Z"
+          "createdAt": "2025-06-12T01:39:48.562Z",
+          "updatedAt": "2025-06-12T01:39:48.562Z"
         },
         {
           "id": 33,
@@ -682,8 +667,8 @@
           "isUpdatable": false,
           "name": "isRootAdmin",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.163Z",
-          "updatedAt": "2025-06-08T03:08:04.163Z"
+          "createdAt": "2025-06-12T01:39:48.563Z",
+          "updatedAt": "2025-06-12T01:39:48.563Z"
         }
       ]
     },
@@ -694,8 +679,8 @@
       "isStatic": true,
       "name": "setting_definition",
       "uniques": null,
-      "createdAt": "2025-06-08T03:08:04.126Z",
-      "updatedAt": "2025-06-08T03:08:04.126Z",
+      "createdAt": "2025-06-12T01:39:48.516Z",
+      "updatedAt": "2025-06-12T01:39:48.516Z",
       "relations": [],
       "columns": [
         {
@@ -712,8 +697,8 @@
           "isUpdatable": true,
           "name": "id",
           "type": "int",
-          "createdAt": "2025-06-08T03:08:04.165Z",
-          "updatedAt": "2025-06-08T03:08:04.165Z"
+          "createdAt": "2025-06-12T01:39:48.564Z",
+          "updatedAt": "2025-06-12T01:39:48.564Z"
         },
         {
           "id": 35,
@@ -729,8 +714,8 @@
           "isUpdatable": true,
           "name": "isInit",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.165Z",
-          "updatedAt": "2025-06-08T03:08:04.165Z"
+          "createdAt": "2025-06-12T01:39:48.564Z",
+          "updatedAt": "2025-06-12T01:39:48.564Z"
         }
       ]
     },
@@ -743,14 +728,14 @@
       "uniques": [
         [
           "path",
-          "method"
+          "mainTable"
         ]
       ],
-      "createdAt": "2025-06-08T03:08:04.128Z",
-      "updatedAt": "2025-06-08T03:08:04.128Z",
+      "createdAt": "2025-06-12T01:39:48.517Z",
+      "updatedAt": "2025-06-12T01:39:48.517Z",
       "relations": [
         {
-          "id": 5,
+          "id": 4,
           "inversePropertyName": null,
           "isEager": true,
           "isIndex": false,
@@ -760,25 +745,11 @@
           "isStatic": true,
           "propertyName": "targetTables",
           "type": "many-to-many",
-          "createdAt": "2025-06-08T03:08:04.190Z",
-          "updatedAt": "2025-06-08T03:08:04.190Z"
+          "createdAt": "2025-06-12T01:39:48.587Z",
+          "updatedAt": "2025-06-12T01:39:48.587Z"
         },
         {
-          "id": 6,
-          "inversePropertyName": "routes",
-          "isEager": false,
-          "isIndex": false,
-          "isInverseEager": false,
-          "isInverseIndex": false,
-          "isNullable": true,
-          "isStatic": true,
-          "propertyName": "roles",
-          "type": "many-to-many",
-          "createdAt": "2025-06-08T03:08:04.190Z",
-          "updatedAt": "2025-06-08T03:08:04.190Z"
-        },
-        {
-          "id": 7,
+          "id": 5,
           "inversePropertyName": null,
           "isEager": false,
           "isIndex": false,
@@ -788,8 +759,8 @@
           "isStatic": true,
           "propertyName": "mainTable",
           "type": "many-to-one",
-          "createdAt": "2025-06-08T03:08:04.191Z",
-          "updatedAt": "2025-06-08T03:08:04.191Z"
+          "createdAt": "2025-06-12T01:39:48.587Z",
+          "updatedAt": "2025-06-12T01:39:48.587Z"
         }
       ],
       "columns": [
@@ -807,28 +778,11 @@
           "isUpdatable": true,
           "name": "id",
           "type": "int",
-          "createdAt": "2025-06-08T03:08:04.167Z",
-          "updatedAt": "2025-06-08T03:08:04.167Z"
+          "createdAt": "2025-06-12T01:39:48.566Z",
+          "updatedAt": "2025-06-12T01:39:48.566Z"
         },
         {
           "id": 37,
-          "default": "GET",
-          "enumValues": null,
-          "isGenerated": false,
-          "isHidden": false,
-          "isIndex": false,
-          "isNullable": false,
-          "isPrimary": false,
-          "isStatic": true,
-          "isUnique": false,
-          "isUpdatable": true,
-          "name": "method",
-          "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.168Z",
-          "updatedAt": "2025-06-08T03:08:04.168Z"
-        },
-        {
-          "id": 38,
           "default": null,
           "enumValues": null,
           "isGenerated": false,
@@ -841,45 +795,28 @@
           "isUpdatable": true,
           "name": "path",
           "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.168Z",
-          "updatedAt": "2025-06-08T03:08:04.168Z"
+          "createdAt": "2025-06-12T01:39:48.566Z",
+          "updatedAt": "2025-06-12T01:39:48.566Z"
         },
         {
-          "id": 39,
+          "id": 38,
           "default": null,
           "enumValues": null,
           "isGenerated": false,
           "isHidden": false,
           "isIndex": false,
-          "isNullable": false,
+          "isNullable": true,
           "isPrimary": false,
           "isStatic": true,
           "isUnique": false,
           "isUpdatable": true,
-          "name": "handler",
-          "type": "text",
-          "createdAt": "2025-06-08T03:08:04.169Z",
-          "updatedAt": "2025-06-08T03:08:04.169Z"
+          "name": "publishedMethods",
+          "type": "simple-json",
+          "createdAt": "2025-06-12T01:39:48.567Z",
+          "updatedAt": "2025-06-12T01:39:48.567Z"
         },
         {
-          "id": 40,
-          "default": false,
-          "enumValues": null,
-          "isGenerated": false,
-          "isHidden": false,
-          "isIndex": false,
-          "isNullable": false,
-          "isPrimary": false,
-          "isStatic": true,
-          "isUnique": false,
-          "isUpdatable": true,
-          "name": "isPublished",
-          "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.169Z",
-          "updatedAt": "2025-06-08T03:08:04.169Z"
-        },
-        {
-          "id": 41,
+          "id": 39,
           "default": false,
           "enumValues": null,
           "isGenerated": false,
@@ -892,8 +829,8 @@
           "isUpdatable": true,
           "name": "isEnabled",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.170Z",
-          "updatedAt": "2025-06-08T03:08:04.170Z"
+          "createdAt": "2025-06-12T01:39:48.567Z",
+          "updatedAt": "2025-06-12T01:39:48.567Z"
         }
       ]
     },
@@ -904,9 +841,100 @@
       "isStatic": true,
       "name": "role_definition",
       "uniques": null,
-      "createdAt": "2025-06-08T03:08:04.129Z",
-      "updatedAt": "2025-06-08T03:08:04.129Z",
-      "relations": [],
+      "createdAt": "2025-06-12T01:39:48.519Z",
+      "updatedAt": "2025-06-12T01:39:48.519Z",
+      "relations": [
+        {
+          "id": 6,
+          "inversePropertyName": "role",
+          "isEager": false,
+          "isIndex": false,
+          "isInverseEager": false,
+          "isInverseIndex": false,
+          "isNullable": true,
+          "isStatic": true,
+          "propertyName": "users",
+          "type": "one-to-many",
+          "createdAt": "2025-06-12T01:39:48.588Z",
+          "updatedAt": "2025-06-12T01:39:48.588Z"
+        }
+      ],
+      "columns": [
+        {
+          "id": 40,
+          "default": null,
+          "enumValues": null,
+          "isGenerated": true,
+          "isHidden": false,
+          "isIndex": false,
+          "isNullable": false,
+          "isPrimary": true,
+          "isStatic": true,
+          "isUnique": false,
+          "isUpdatable": true,
+          "name": "id",
+          "type": "int",
+          "createdAt": "2025-06-12T01:39:48.568Z",
+          "updatedAt": "2025-06-12T01:39:48.568Z"
+        },
+        {
+          "id": 41,
+          "default": null,
+          "enumValues": null,
+          "isGenerated": false,
+          "isHidden": false,
+          "isIndex": false,
+          "isNullable": false,
+          "isPrimary": false,
+          "isStatic": true,
+          "isUnique": true,
+          "isUpdatable": true,
+          "name": "name",
+          "type": "varchar",
+          "createdAt": "2025-06-12T01:39:48.569Z",
+          "updatedAt": "2025-06-12T01:39:48.569Z"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "alias": null,
+      "indexes": null,
+      "isStatic": true,
+      "name": "permission_definition",
+      "uniques": null,
+      "createdAt": "2025-06-12T01:39:48.520Z",
+      "updatedAt": "2025-06-12T01:39:48.520Z",
+      "relations": [
+        {
+          "id": 7,
+          "inversePropertyName": "permissions",
+          "isEager": false,
+          "isIndex": false,
+          "isInverseEager": false,
+          "isInverseIndex": false,
+          "isNullable": true,
+          "isStatic": true,
+          "propertyName": "role",
+          "type": "many-to-one",
+          "createdAt": "2025-06-12T01:39:48.589Z",
+          "updatedAt": "2025-06-12T01:39:48.589Z"
+        },
+        {
+          "id": 8,
+          "inversePropertyName": "permissions",
+          "isEager": false,
+          "isIndex": false,
+          "isInverseEager": false,
+          "isInverseIndex": false,
+          "isNullable": true,
+          "isStatic": true,
+          "propertyName": "route",
+          "type": "many-to-one",
+          "createdAt": "2025-06-12T01:39:48.590Z",
+          "updatedAt": "2025-06-12T01:39:48.590Z"
+        }
+      ],
       "columns": [
         {
           "id": 42,
@@ -922,12 +950,29 @@
           "isUpdatable": true,
           "name": "id",
           "type": "int",
-          "createdAt": "2025-06-08T03:08:04.171Z",
-          "updatedAt": "2025-06-08T03:08:04.171Z"
+          "createdAt": "2025-06-12T01:39:48.570Z",
+          "updatedAt": "2025-06-12T01:39:48.570Z"
         },
         {
           "id": 43,
           "default": null,
+          "enumValues": null,
+          "isGenerated": false,
+          "isHidden": false,
+          "isIndex": false,
+          "isNullable": true,
+          "isPrimary": false,
+          "isStatic": true,
+          "isUnique": false,
+          "isUpdatable": true,
+          "name": "actions",
+          "type": "simple-json",
+          "createdAt": "2025-06-12T01:39:48.570Z",
+          "updatedAt": "2025-06-12T01:39:48.570Z"
+        },
+        {
+          "id": 44,
+          "default": true,
           "enumValues": null,
           "isGenerated": false,
           "isHidden": false,
@@ -937,41 +982,41 @@
           "isStatic": true,
           "isUnique": false,
           "isUpdatable": true,
-          "name": "name",
-          "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.172Z",
-          "updatedAt": "2025-06-08T03:08:04.172Z"
+          "name": "isEnabled",
+          "type": "boolean",
+          "createdAt": "2025-06-12T01:39:48.571Z",
+          "updatedAt": "2025-06-12T01:39:48.571Z"
         }
       ]
     },
     {
-      "id": 8,
+      "id": 9,
       "alias": null,
       "indexes": null,
       "isStatic": true,
-      "name": "middleware_definition",
+      "name": "route_handler_definition",
       "uniques": null,
-      "createdAt": "2025-06-08T03:08:04.130Z",
-      "updatedAt": "2025-06-08T03:08:04.130Z",
+      "createdAt": "2025-06-12T01:39:48.521Z",
+      "updatedAt": "2025-06-12T01:39:48.521Z",
       "relations": [
         {
-          "id": 8,
-          "inversePropertyName": "middlewares",
+          "id": 9,
+          "inversePropertyName": "handlers",
           "isEager": false,
           "isIndex": false,
           "isInverseEager": false,
           "isInverseIndex": false,
           "isNullable": true,
           "isStatic": true,
-          "propertyName": "routes",
-          "type": "many-to-many",
-          "createdAt": "2025-06-08T03:08:04.193Z",
-          "updatedAt": "2025-06-08T03:08:04.193Z"
+          "propertyName": "route",
+          "type": "many-to-one",
+          "createdAt": "2025-06-12T01:39:48.591Z",
+          "updatedAt": "2025-06-12T01:39:48.591Z"
         }
       ],
       "columns": [
         {
-          "id": 44,
+          "id": 45,
           "default": null,
           "enumValues": null,
           "isGenerated": true,
@@ -984,11 +1029,90 @@
           "isUpdatable": true,
           "name": "id",
           "type": "int",
-          "createdAt": "2025-06-08T03:08:04.173Z",
-          "updatedAt": "2025-06-08T03:08:04.173Z"
+          "createdAt": "2025-06-12T01:39:48.572Z",
+          "updatedAt": "2025-06-12T01:39:48.572Z"
         },
         {
-          "id": 45,
+          "id": 46,
+          "default": null,
+          "enumValues": null,
+          "isGenerated": false,
+          "isHidden": false,
+          "isIndex": false,
+          "isNullable": true,
+          "isPrimary": false,
+          "isStatic": true,
+          "isUnique": false,
+          "isUpdatable": true,
+          "name": "method",
+          "type": "varchar",
+          "createdAt": "2025-06-12T01:39:48.573Z",
+          "updatedAt": "2025-06-12T01:39:48.573Z"
+        },
+        {
+          "id": 47,
+          "default": null,
+          "enumValues": null,
+          "isGenerated": false,
+          "isHidden": false,
+          "isIndex": false,
+          "isNullable": true,
+          "isPrimary": false,
+          "isStatic": true,
+          "isUnique": false,
+          "isUpdatable": true,
+          "name": "logic",
+          "type": "text",
+          "createdAt": "2025-06-12T01:39:48.573Z",
+          "updatedAt": "2025-06-12T01:39:48.573Z"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "alias": null,
+      "indexes": null,
+      "isStatic": true,
+      "name": "middleware_definition",
+      "uniques": null,
+      "createdAt": "2025-06-12T01:39:48.523Z",
+      "updatedAt": "2025-06-12T01:39:48.523Z",
+      "relations": [
+        {
+          "id": 10,
+          "inversePropertyName": "middlewares",
+          "isEager": false,
+          "isIndex": false,
+          "isInverseEager": false,
+          "isInverseIndex": false,
+          "isNullable": true,
+          "isStatic": true,
+          "propertyName": "route",
+          "type": "many-to-one",
+          "createdAt": "2025-06-12T01:39:48.592Z",
+          "updatedAt": "2025-06-12T01:39:48.592Z"
+        }
+      ],
+      "columns": [
+        {
+          "id": 48,
+          "default": null,
+          "enumValues": null,
+          "isGenerated": true,
+          "isHidden": false,
+          "isIndex": false,
+          "isNullable": false,
+          "isPrimary": true,
+          "isStatic": true,
+          "isUnique": false,
+          "isUpdatable": true,
+          "name": "id",
+          "type": "int",
+          "createdAt": "2025-06-12T01:39:48.574Z",
+          "updatedAt": "2025-06-12T01:39:48.574Z"
+        },
+        {
+          "id": 49,
           "default": null,
           "enumValues": null,
           "isGenerated": false,
@@ -1001,11 +1125,11 @@
           "isUpdatable": true,
           "name": "name",
           "type": "varchar",
-          "createdAt": "2025-06-08T03:08:04.174Z",
-          "updatedAt": "2025-06-08T03:08:04.174Z"
+          "createdAt": "2025-06-12T01:39:48.575Z",
+          "updatedAt": "2025-06-12T01:39:48.575Z"
         },
         {
-          "id": 46,
+          "id": 50,
           "default": null,
           "enumValues": null,
           "isGenerated": false,
@@ -1018,11 +1142,11 @@
           "isUpdatable": true,
           "name": "handler",
           "type": "text",
-          "createdAt": "2025-06-08T03:08:04.175Z",
-          "updatedAt": "2025-06-08T03:08:04.175Z"
+          "createdAt": "2025-06-12T01:39:48.575Z",
+          "updatedAt": "2025-06-12T01:39:48.575Z"
         },
         {
-          "id": 47,
+          "id": 51,
           "default": false,
           "enumValues": null,
           "isGenerated": false,
@@ -1035,104 +1159,8 @@
           "isUpdatable": true,
           "name": "isEnabled",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.175Z",
-          "updatedAt": "2025-06-08T03:08:04.175Z"
-        },
-        {
-          "id": 48,
-          "default": 0,
-          "enumValues": null,
-          "isGenerated": false,
-          "isHidden": false,
-          "isIndex": false,
-          "isNullable": true,
-          "isPrimary": false,
-          "isStatic": true,
-          "isUnique": false,
-          "isUpdatable": true,
-          "name": "priority",
-          "type": "int",
-          "createdAt": "2025-06-08T03:08:04.176Z",
-          "updatedAt": "2025-06-08T03:08:04.176Z"
-        }
-      ]
-    },
-    {
-      "id": 9,
-      "alias": null,
-      "indexes": null,
-      "isStatic": true,
-      "name": "hook_definition",
-      "uniques": null,
-      "createdAt": "2025-06-08T03:08:04.131Z",
-      "updatedAt": "2025-06-08T03:08:04.131Z",
-      "relations": [
-        {
-          "id": 9,
-          "inversePropertyName": "hooks",
-          "isEager": false,
-          "isIndex": false,
-          "isInverseEager": false,
-          "isInverseIndex": false,
-          "isNullable": true,
-          "isStatic": true,
-          "propertyName": "routes",
-          "type": "many-to-many",
-          "createdAt": "2025-06-08T03:08:04.194Z",
-          "updatedAt": "2025-06-08T03:08:04.194Z"
-        }
-      ],
-      "columns": [
-        {
-          "id": 49,
-          "default": null,
-          "enumValues": null,
-          "isGenerated": true,
-          "isHidden": false,
-          "isIndex": false,
-          "isNullable": false,
-          "isPrimary": true,
-          "isStatic": true,
-          "isUnique": false,
-          "isUpdatable": true,
-          "name": "id",
-          "type": "int",
-          "createdAt": "2025-06-08T03:08:04.178Z",
-          "updatedAt": "2025-06-08T03:08:04.178Z"
-        },
-        {
-          "id": 50,
-          "default": null,
-          "enumValues": null,
-          "isGenerated": false,
-          "isHidden": false,
-          "isIndex": false,
-          "isNullable": true,
-          "isPrimary": false,
-          "isStatic": true,
-          "isUnique": false,
-          "isUpdatable": true,
-          "name": "preHook",
-          "type": "text",
-          "createdAt": "2025-06-08T03:08:04.178Z",
-          "updatedAt": "2025-06-08T03:08:04.178Z"
-        },
-        {
-          "id": 51,
-          "default": null,
-          "enumValues": null,
-          "isGenerated": false,
-          "isHidden": false,
-          "isIndex": false,
-          "isNullable": true,
-          "isPrimary": false,
-          "isStatic": true,
-          "isUnique": false,
-          "isUpdatable": true,
-          "name": "afterHook",
-          "type": "text",
-          "createdAt": "2025-06-08T03:08:04.179Z",
-          "updatedAt": "2025-06-08T03:08:04.179Z"
+          "createdAt": "2025-06-12T01:39:48.576Z",
+          "updatedAt": "2025-06-12T01:39:48.576Z"
         },
         {
           "id": 52,
@@ -1148,34 +1176,34 @@
           "isUpdatable": true,
           "name": "priority",
           "type": "int",
-          "createdAt": "2025-06-08T03:08:04.179Z",
-          "updatedAt": "2025-06-08T03:08:04.179Z"
+          "createdAt": "2025-06-12T01:39:48.577Z",
+          "updatedAt": "2025-06-12T01:39:48.577Z"
         }
       ]
     },
     {
-      "id": 10,
+      "id": 11,
       "alias": null,
       "indexes": null,
       "isStatic": true,
-      "name": "session_definition",
+      "name": "hook_definition",
       "uniques": null,
-      "createdAt": "2025-06-08T03:08:04.133Z",
-      "updatedAt": "2025-06-08T03:08:04.133Z",
+      "createdAt": "2025-06-12T01:39:48.525Z",
+      "updatedAt": "2025-06-12T01:39:48.525Z",
       "relations": [
         {
-          "id": 10,
-          "inversePropertyName": null,
+          "id": 11,
+          "inversePropertyName": "hooks",
           "isEager": false,
-          "isIndex": true,
+          "isIndex": false,
           "isInverseEager": false,
           "isInverseIndex": false,
-          "isNullable": false,
+          "isNullable": true,
           "isStatic": true,
-          "propertyName": "user",
+          "propertyName": "route",
           "type": "many-to-one",
-          "createdAt": "2025-06-08T03:08:04.196Z",
-          "updatedAt": "2025-06-08T03:08:04.196Z"
+          "createdAt": "2025-06-12T01:39:48.593Z",
+          "updatedAt": "2025-06-12T01:39:48.593Z"
         }
       ],
       "columns": [
@@ -1192,12 +1220,108 @@
           "isUnique": false,
           "isUpdatable": true,
           "name": "id",
-          "type": "uuid",
-          "createdAt": "2025-06-08T03:08:04.181Z",
-          "updatedAt": "2025-06-08T03:08:04.181Z"
+          "type": "int",
+          "createdAt": "2025-06-12T01:39:48.577Z",
+          "updatedAt": "2025-06-12T01:39:48.577Z"
         },
         {
           "id": 54,
+          "default": null,
+          "enumValues": null,
+          "isGenerated": false,
+          "isHidden": false,
+          "isIndex": false,
+          "isNullable": true,
+          "isPrimary": false,
+          "isStatic": true,
+          "isUnique": false,
+          "isUpdatable": true,
+          "name": "preHook",
+          "type": "text",
+          "createdAt": "2025-06-12T01:39:48.578Z",
+          "updatedAt": "2025-06-12T01:39:48.578Z"
+        },
+        {
+          "id": 55,
+          "default": null,
+          "enumValues": null,
+          "isGenerated": false,
+          "isHidden": false,
+          "isIndex": false,
+          "isNullable": true,
+          "isPrimary": false,
+          "isStatic": true,
+          "isUnique": false,
+          "isUpdatable": true,
+          "name": "afterHook",
+          "type": "text",
+          "createdAt": "2025-06-12T01:39:48.579Z",
+          "updatedAt": "2025-06-12T01:39:48.579Z"
+        },
+        {
+          "id": 56,
+          "default": 0,
+          "enumValues": null,
+          "isGenerated": false,
+          "isHidden": false,
+          "isIndex": false,
+          "isNullable": true,
+          "isPrimary": false,
+          "isStatic": true,
+          "isUnique": false,
+          "isUpdatable": true,
+          "name": "priority",
+          "type": "int",
+          "createdAt": "2025-06-12T01:39:48.579Z",
+          "updatedAt": "2025-06-12T01:39:48.579Z"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "alias": null,
+      "indexes": null,
+      "isStatic": true,
+      "name": "session_definition",
+      "uniques": null,
+      "createdAt": "2025-06-12T01:39:48.526Z",
+      "updatedAt": "2025-06-12T01:39:48.526Z",
+      "relations": [
+        {
+          "id": 12,
+          "inversePropertyName": null,
+          "isEager": false,
+          "isIndex": true,
+          "isInverseEager": false,
+          "isInverseIndex": false,
+          "isNullable": false,
+          "isStatic": true,
+          "propertyName": "user",
+          "type": "many-to-one",
+          "createdAt": "2025-06-12T01:39:48.594Z",
+          "updatedAt": "2025-06-12T01:39:48.594Z"
+        }
+      ],
+      "columns": [
+        {
+          "id": 57,
+          "default": null,
+          "enumValues": null,
+          "isGenerated": true,
+          "isHidden": false,
+          "isIndex": false,
+          "isNullable": false,
+          "isPrimary": true,
+          "isStatic": true,
+          "isUnique": false,
+          "isUpdatable": true,
+          "name": "id",
+          "type": "uuid",
+          "createdAt": "2025-06-12T01:39:48.580Z",
+          "updatedAt": "2025-06-12T01:39:48.580Z"
+        },
+        {
+          "id": 58,
           "default": "now",
           "enumValues": null,
           "isGenerated": false,
@@ -1210,11 +1334,11 @@
           "isUpdatable": true,
           "name": "expiredAt",
           "type": "date",
-          "createdAt": "2025-06-08T03:08:04.181Z",
-          "updatedAt": "2025-06-08T03:08:04.181Z"
+          "createdAt": "2025-06-12T01:39:48.581Z",
+          "updatedAt": "2025-06-12T01:39:48.581Z"
         },
         {
-          "id": 55,
+          "id": 59,
           "default": false,
           "enumValues": null,
           "isGenerated": false,
@@ -1227,8 +1351,8 @@
           "isUpdatable": true,
           "name": "remember",
           "type": "boolean",
-          "createdAt": "2025-06-08T03:08:04.182Z",
-          "updatedAt": "2025-06-08T03:08:04.182Z"
+          "createdAt": "2025-06-12T01:39:48.581Z",
+          "updatedAt": "2025-06-12T01:39:48.581Z"
         }
       ]
     },
@@ -1239,12 +1363,12 @@
       "isStatic": false,
       "name": "category",
       "uniques": null,
-      "createdAt": "2025-06-08T20:42:05.227Z",
-      "updatedAt": "2025-06-08T20:42:05.227Z",
+      "createdAt": "2025-06-12T02:00:27.249Z",
+      "updatedAt": "2025-06-12T02:00:27.249Z",
       "relations": [],
       "columns": [
         {
-          "id": 56,
+          "id": 60,
           "default": null,
           "enumValues": null,
           "isGenerated": true,
@@ -1257,11 +1381,11 @@
           "isUpdatable": true,
           "name": "id",
           "type": "int",
-          "createdAt": "2025-06-08T20:42:05.233Z",
-          "updatedAt": "2025-06-08T20:42:05.233Z"
+          "createdAt": "2025-06-12T02:00:27.252Z",
+          "updatedAt": "2025-06-12T02:00:27.252Z"
         },
         {
-          "id": 57,
+          "id": 61,
           "default": null,
           "enumValues": null,
           "isGenerated": false,
@@ -1274,8 +1398,8 @@
           "isUpdatable": true,
           "name": "name",
           "type": "varchar",
-          "createdAt": "2025-06-08T20:42:05.237Z",
-          "updatedAt": "2025-06-08T20:42:05.237Z"
+          "createdAt": "2025-06-12T02:00:27.256Z",
+          "updatedAt": "2025-06-12T02:00:27.256Z"
         }
       ]
     }

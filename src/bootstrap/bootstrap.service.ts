@@ -8,7 +8,6 @@ import { CommonService } from '../common/common.service';
 import { Role_definition } from '../entities/role_definition.entity';
 import { Setting_definition } from '../entities/setting_definition.entity';
 import { User_definition } from '../entities/user_definition.entity';
-import { InjectRepository } from '@nestjs/typeorm';
 import * as path from 'path';
 import { Column_definition } from '../entities/column_definition.entity';
 import { Relation_definition } from '../entities/relation_definition.entity';
@@ -25,8 +24,6 @@ export class BootstrapService implements OnApplicationBootstrap {
     private tableHandlerService: TableHandlerService,
     private autoService: AutoService,
     private commonService: CommonService,
-    @InjectRepository(Table_definition)
-    private tableDefRepo: Repository<Table_definition>,
     private bcryptService: BcryptService,
   ) {}
 
@@ -153,6 +150,8 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   async createInitMetadata() {
+    const tableDefRepo =
+      this.dataSourceService.getRepository('table_definition');
     const snapshot = await import(path.resolve('snapshot.json'));
     const dataSource = this.dataSourceService.getDataSource();
     const queryRunner = dataSource.createQueryRunner();
@@ -167,8 +166,8 @@ export class BootstrapService implements OnApplicationBootstrap {
       for (const [name, defRaw] of Object.entries(snapshot)) {
         const def = defRaw as any;
 
-        const exist = await queryRunner.manager.findOne(
-          this.tableDefRepo.target,
+        const exist: any = await queryRunner.manager.findOne(
+          tableDefRepo.target,
           { where: { name: def.name } },
         );
 
@@ -177,12 +176,9 @@ export class BootstrapService implements OnApplicationBootstrap {
           this.logger.log(`⏩ Bỏ qua ${name}, đã tồn tại`);
         } else {
           const { columns, relations, ...rest } = def;
-          const created = await queryRunner.manager.save(
-            this.tableDefRepo.target,
-            {
-              ...rest,
-            },
-          );
+          const created = await queryRunner.manager.save(tableDefRepo.target, {
+            ...rest,
+          });
           tableNameToId[name] = created.id;
           this.logger.log(`✅ Tạo bảng trắng: ${name}`);
         }

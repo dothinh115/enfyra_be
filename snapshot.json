@@ -164,5 +164,13 @@
         "relations": [
             { "propertyName": "user", "type": "many-to-one", "targetTable": "user_definition", "isStatic": true, "isNullable": false, "isIndex": true }
         ]
+    },
+    "schema_history": {
+        "name": "schema_history",
+        "isStatic": true,
+        "columns": [
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
+            { "name": "metadata", "type": "simple-json", "isNullable": false, "isStatic": true }
+        ]
     }
 }
