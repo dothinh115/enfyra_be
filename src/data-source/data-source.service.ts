@@ -24,13 +24,10 @@ export class DataSourceService implements OnModuleInit {
   }
 
   async reloadDataSource() {
-    if (!this.dataSource.isInitialized) {
-      this.logger.debug('DataSource chưa init, bỏ qua reload!');
-      return;
-    }
-
     this.logger.log('🔁 Chuẩn bị reload DataSource');
-    await this.dataSource.destroy();
+    if (this.dataSource.isInitialized) {
+      await this.dataSource.destroy();
+    }
     this.logger.debug('✅ Destroy DataSource cũ thành công!');
 
     try {
@@ -40,9 +37,10 @@ export class DataSourceService implements OnModuleInit {
       await this.dataSource.initialize();
       this.logger.debug('✅ ReInit DataSource thành công!');
       return this.dataSource;
-    } catch (err: any) {
-      this.logger.error('❌ Lỗi khi reInit DataSource:', err.message);
-      this.logger.error(err.stack || err);
+    } catch (error: any) {
+      this.logger.error('❌ Lỗi khi reInit DataSource:', error.message);
+      this.logger.error(error.stack || error);
+      throw error;
     }
   }
 

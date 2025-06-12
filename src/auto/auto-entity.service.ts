@@ -11,6 +11,9 @@ import {
   TInverseRelationMap,
 } from '../utils/types/common.type';
 import { Project, QuoteKind } from 'ts-morph';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Schema_history } from '../entities/schema_history.entity';
 
 @Injectable()
 export class AutoService {
@@ -20,6 +23,10 @@ export class AutoService {
     private commonService: CommonService,
     @Inject(forwardRef(() => DataSourceService))
     private dataSourceService: DataSourceService,
+    @InjectRepository(Table_definition)
+    private tableDefRepo: Repository<Table_definition>,
+    @InjectRepository(Schema_history)
+    private schemaHistoryRepo: Repository<Schema_history>,
   ) {}
 
   async entityGenerate(
@@ -372,15 +379,11 @@ export class AutoService {
   }
 
   async restore() {
-    const schemaHistoryRepo =
-      this.dataSourceService.getRepository('schema_history');
-    const oldest: any = await schemaHistoryRepo.findOne({
+    const oldest: any = await this.schemaHistoryRepo.findOne({
       order: { createdAt: 'ASC' },
     });
     if (oldest) {
-      const tableRepo =
-        this.dataSourceService.getRepository('table_definition');
-      await tableRepo.save(oldest.schema);
+      await this.tableDefRepo.save(oldest.schema);
       await this.pullMetadataFromDb();
     }
   }
@@ -416,8 +419,7 @@ export class AutoService {
   }
 
   async pullMetadataFromDb() {
-    const tableRepo = this.dataSourceService.getRepository('table_definition');
-    const tables: any = await tableRepo
+    const tables: any = await this.tableDefRepo
       .createQueryBuilder('table')
       .leftJoinAndSelect('table.columns', 'columns')
       .leftJoinAndSelect('table.relations', 'relations')
