@@ -71,6 +71,7 @@ export class BootstrapService implements OnApplicationBootstrap {
       await this.commonService.delay(300);
 
       await this.autoService.pullMetadataFromDb();
+      await this.saveSchemaSnapshotToHistory();
     } else {
       await this.autoService.pullMetadataFromDb();
       const schemaHistoryRepo =
@@ -331,18 +332,18 @@ export class BootstrapService implements OnApplicationBootstrap {
     }
   }
 
-  // async saveSchemaSnapshotToHistory() {
-  //   const tableRepo = this.dataSourceService.getRepository('table_definition');
-  //   const metadata = await tableRepo
-  //     .createQueryBuilder('table')
-  //     .leftJoinAndSelect('table.columns', 'columns')
-  //     .leftJoinAndSelect('table.relations', 'relations')
-  //     .leftJoinAndSelect('relations.targetTable', 'targetTable')
-  //     .getMany();
-  //   const schemaHistoryRepo =
-  //     this.dataSourceService.getRepository('schema_history');
-  //   await schemaHistoryRepo.save({
-  //     metadata,
-  //   });
-  // }
+  async saveSchemaSnapshotToHistory() {
+    const tableRepo = this.dataSourceService.getRepository('table_definition');
+    const schema = await tableRepo
+      .createQueryBuilder('table')
+      .leftJoinAndSelect('table.columns', 'columns')
+      .leftJoinAndSelect('table.relations', 'relations')
+      .leftJoinAndSelect('relations.targetTable', 'targetTable')
+      .getMany();
+    const schemaHistoryRepo =
+      this.dataSourceService.getRepository('schema_history');
+    await schemaHistoryRepo.save({
+      schema,
+    });
+  }
 }

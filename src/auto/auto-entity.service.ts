@@ -370,13 +370,16 @@ export class AutoService {
   }
 
   async restore() {
-    try {
-      execSync(
-        `node ${path.resolve('get-snapshot.js')} && node ${path.resolve('get-entities.js')} && node ${path.resolve('auto-import.js')}`,
-        { stdio: 'inherit' },
-      );
-    } catch (err) {
-      this.logger.error('Lỗi khi chạy shell script:', err);
+    const schemaHistoryRepo =
+      this.dataSourceService.getRepository('schema_history');
+    const oldest: any = await schemaHistoryRepo.findOne({
+      order: { createdAt: 'ASC' },
+    });
+    if (oldest) {
+      const tableRepo =
+        this.dataSourceService.getRepository('table_definition');
+      await tableRepo.save(oldest.schema);
+      await this.pullMetadataFromDb();
     }
   }
 

@@ -170,7 +170,7 @@
         "isStatic": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "metadata", "type": "simple-json", "isNullable": false, "isStatic": true }
+            { "name": "schema", "type": "simple-json", "isNullable": false, "isStatic": true }
         ]
     }
 }

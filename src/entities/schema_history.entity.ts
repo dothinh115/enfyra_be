@@ -5,7 +5,7 @@ export class Schema_history {
     @PrimaryGeneratedColumn('increment')
     id: number;
     @Column({ type: "simple-json", nullable: false })
-    metadata: any;
+    schema: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

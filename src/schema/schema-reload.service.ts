@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
 import {
   SCHEMA_LOCK_EVENT_KEY,
+  SCHEMA_PULLING_EVENT_KEY,
   SCHEMA_UPDATED_EVENT_KEY,
 } from '../utils/constant';
 import { RedisPubSubService } from '../redis-pubsub/redis-pubsub.service';
@@ -71,6 +72,7 @@ export class SchemaReloadService {
     }
 
     if (node_name === data.node_name) {
+      await this.commonService.delay(Math.random() * 300 + 300);
       this.logger.log('Cùng node, chỉ reload lại DataSource');
       await this.dataSourceService.reloadDataSource();
       this.schemaStateService.setVersion(newestSchema['id']);
@@ -80,19 +82,21 @@ export class SchemaReloadService {
       return;
     }
 
-    const sourceIdInMem = await this.cache.get('dynamiq:pulling');
-    if (!sourceIdInMem) {
-      this.logger.log('Không có lock, tiến hành pull metadata từ DB');
-      await this.cache.set('dynamiq:pulling', this.sourceInstanceId, 10);
+    const acquired = await this.commonService.tryAcquireLock(
+      SCHEMA_PULLING_EVENT_KEY,
+      this.sourceInstanceId,
+      10,
+    );
+    if (acquired) {
+      this.logger.log('Đã lấy được lock, tiến hành pull...');
       await this.autoService.pullMetadataFromDb();
-      this.logger.log('Đã pull metadata xong');
-      await this.cache.del('dynamiq:pulling');
-      this.logger.log('Đã xoá lock pulling');
+      await this.cache.del(SCHEMA_PULLING_EVENT_KEY);
+      this.logger.log('Đã pull xong và xoá lock');
       return;
     }
 
     this.logger.log('Có lock pulling, chờ...');
-    while (await this.cache.get('dynamiq:pulling')) {
+    while (await this.cache.get(SCHEMA_PULLING_EVENT_KEY)) {
       await this.commonService.delay(Math.random() * 300 + 300);
     }
 

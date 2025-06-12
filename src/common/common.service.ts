@@ -1,12 +1,15 @@
 import { DBToTSTypeMap, TSToDBTypeMap } from '../utils/types/common.type';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as ts from 'typescript';
 import { match } from 'path-to-regexp';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class CommonService {
+  constructor(@Inject(CACHE_MANAGER) private cache: Cache) {}
   capitalize(str: string): string {
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
@@ -206,5 +209,15 @@ export class CommonService {
       'many-to-many': 'many-to-many',
     };
     return map[type] || 'many-to-one';
+  }
+
+  async tryAcquireLock(
+    key: string,
+    value: string,
+    ttlSeconds: number,
+  ): Promise<boolean> {
+    const redis = this.cache as any;
+    const result = await redis.set(key, value, 'NX', 'EX', ttlSeconds);
+    return result === 'OK';
   }
 }

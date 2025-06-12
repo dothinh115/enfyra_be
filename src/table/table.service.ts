@@ -8,6 +8,7 @@ import {
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { SchemaReloadService } from '../schema/schema-reload.service';
+import { SchemaStateService } from '../schema/schema-state.service';
 
 @Injectable()
 export class TableHandlerService {
@@ -15,6 +16,7 @@ export class TableHandlerService {
     private dataSouceService: DataSourceService,
     private autoService: AutoService,
     private schemaReloadService: SchemaReloadService,
+    private schemaStateService: SchemaStateService,
   ) {}
 
   async createTable(body: CreateTableDto) {
@@ -43,10 +45,7 @@ export class TableHandlerService {
 
       if (!result) result = await manager.save(Table_definition, tableEntity);
       await queryRunner.commitTransaction();
-      await this.schemaReloadService.lockChangeSchema();
-      const backup = await this.autoService.backup();
-      await this.autoService.pullMetadataFromDb();
-      await this.schemaReloadService.publishSchemaUpdated(backup['id']);
+      await this.afterEffect();
 
       return result;
     } catch (error) {
@@ -148,10 +147,7 @@ export class TableHandlerService {
 
       const result = await manager.save(Table_definition, tableEntity);
       await queryRunner.commitTransaction();
-      await this.schemaReloadService.lockChangeSchema();
-      const backup = await this.autoService.backup();
-      await this.autoService.pullMetadataFromDb();
-      await this.schemaReloadService.publishSchemaUpdated(backup['id']);
+      await this.afterEffect();
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -222,15 +218,27 @@ export class TableHandlerService {
       }
 
       const result = await tableDefRepo.remove(exists);
-      await this.schemaReloadService.lockChangeSchema();
-      const backup = await this.autoService.backup();
-      await this.autoService.pullMetadataFromDb();
-      await this.schemaReloadService.publishSchemaUpdated(backup['id']);
-
+      await this.afterEffect();
       return result;
     } catch (error) {
       console.error(error.stack || error.message || error);
       throw new BadRequestException(error.message || 'Unknown error');
+    }
+  }
+
+  async afterEffect() {
+    try {
+      //lock ko cho đổi schema
+      await this.schemaReloadService.lockChangeSchema();
+      //pull metadata mới về và apply
+      await this.autoService.pullMetadataFromDb();
+      //backup version hiện tại
+      const backup = await this.autoService.backup();
+      this.schemaStateService.setVersion(backup['id']);
+      await this.schemaReloadService.publishSchemaUpdated(backup['id']);
+    } catch (error) {
+      await this.autoService.restore();
+      throw error;
     }
   }
 }
