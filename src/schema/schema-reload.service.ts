@@ -90,6 +90,8 @@ export class SchemaReloadService {
       sourceInstanceId: this.sourceInstanceId,
       version,
     };
+    //lưu version hiện tại
+    this.schemaStateService.setVersion(version);
     await this.redisPubSubService.publish(
       SCHEMA_UPDATED_EVENT_KEY,
       JSON.stringify(reloadSchemaMsg),
