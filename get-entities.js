@@ -1,7 +1,9 @@
 import { Project, QuoteKind } from 'ts-morph';
 import fs from 'fs';
-
-const metadata = JSON.parse(fs.readFileSync('./snapshot.json', 'utf8'));
+import * as path from 'path';
+const metadata = JSON.parse(
+  fs.readFileSync(path.resolve('./snapshot.json'), 'utf8'),
+);
 
 const capitalize = (str) => str?.charAt(0).toUpperCase() + str?.slice(1);
 

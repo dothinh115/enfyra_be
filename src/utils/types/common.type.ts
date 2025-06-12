@@ -67,3 +67,10 @@ export type TInverseRelation = {
 };
 
 export type TInverseRelationMap = Map<string, TInverseRelation[]>;
+
+export type TReloadSchema = {
+  node_name: string;
+  sourceInstanceId: string;
+  event: 'schema-updated';
+  version: string;
+};

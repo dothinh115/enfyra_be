@@ -2,7 +2,6 @@ import { BadRequestException } from '@nestjs/common';
 import { DynamicFindService } from '../dynamic-find/dynamic-find.service';
 import { DataSourceService } from '../data-source/data-source.service';
 import { Repository } from 'typeorm';
-import { Table_definition } from '../entities/table_definition.entity';
 import { validateDto } from '../utils/helpers';
 import { TableHandlerService } from '../table/table.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
@@ -61,19 +60,21 @@ export class DynamicRepoService {
   }
 
   async create(body: any) {
-    const tableNameFromEntity =
-      this.dataSourceService.getTableNameFromEntity(Table_definition);
-    if (this.tableName === tableNameFromEntity) {
+    if (this.tableName === 'table_definition') {
       body = await validateDto(CreateTableDto, body);
       const table = await this.tableHandlerService.createTable(body);
       return this.find(table.id);
     }
-    console.log(body);
     const result: any = await this.repo.save(body);
     return await this.find(result.id);
   }
 
   async update(id: string | number, body: any) {
+    if (this.tableName === 'table_definition') {
+      body = await validateDto(CreateTableDto, body);
+      const table = await this.tableHandlerService.updateTable(+id, body);
+      return this.find(table.id);
+    }
     const exists = await this.repo.findOne({
       where: {
         id,
@@ -85,6 +86,10 @@ export class DynamicRepoService {
   }
 
   async delete(id: string | number) {
+    if (this.tableName === 'table_definition') {
+      await this.tableHandlerService.delete(+id);
+      return 'Success';
+    }
     const exists = await this.repo.findOne({
       where: {
         id,

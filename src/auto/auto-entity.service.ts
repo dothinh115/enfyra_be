@@ -346,15 +346,27 @@ export class AutoService {
     await queryRunner.release();
   }
 
-  async backup(payload: any) {
-    const scriptPath = path.resolve('get-snapshot.js');
-    try {
-      const filePath = path.resolve('schema-from-db.json');
-      const jsonStr = JSON.stringify(payload, null, 2);
-      fs.writeFileSync(filePath, jsonStr, { encoding: 'utf-8' });
-    } catch (err) {
-      this.logger.error('Lỗi khi chạy shell script:', err);
+  async backup() {
+    const tableRepo = this.dataSourceService.getRepository('table_definition');
+    const tables = await tableRepo
+      .createQueryBuilder('table')
+      .leftJoinAndSelect('table.columns', 'columns')
+      .leftJoinAndSelect('table.relations', 'relations')
+      .getMany();
+    const schemaHistoryRepo =
+      this.dataSourceService.getRepository('schema_history');
+    const historyCount = await schemaHistoryRepo.count();
+    if (historyCount > 20) {
+      const oldest: any = await schemaHistoryRepo.findOne({
+        order: { createdAt: 'ASC' },
+      });
+      if (oldest) {
+        await schemaHistoryRepo.delete(oldest.id);
+      }
     }
+    return await schemaHistoryRepo.save({
+      metadata: tables,
+    });
   }
 
   async restore() {
@@ -399,14 +411,13 @@ export class AutoService {
   }
 
   async pullMetadataFromDb() {
-    await this.commonService.delay(1000);
-    const tableRepo =
-      await this.dataSourceService.getRepository(Table_definition);
-
-    let tables: any[] = await tableRepo.find({
-      relations: ['relations', 'relations.targetTable', 'columns'],
-    });
-
+    const tableRepo = this.dataSourceService.getRepository('table_definition');
+    const tables: any = await tableRepo
+      .createQueryBuilder('table')
+      .leftJoinAndSelect('table.columns', 'columns')
+      .leftJoinAndSelect('table.relations', 'relations')
+      .leftJoinAndSelect('relations.targetTable', 'targetTable')
+      .getMany();
     if (tables.length === 0) return;
     tables.forEach((table) => {
       table.columns.sort((a, b) => {

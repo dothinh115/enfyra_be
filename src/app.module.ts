@@ -23,6 +23,10 @@ import { MeModule } from './me/me.module';
 import { RouteDetectMiddleware } from './middleware/route-detect.middleware';
 import { DynamicMiddleware } from './middleware/dynamic.middleware';
 import { NotFoundDetectGuard } from './guard/not-found-detect.guard';
+import { SchemaReloadService } from './schema/schema-reload.service';
+import { RedisPubSubService } from './redis-pubsub/redis-pubsub.service';
+import { SchemaStateService } from './schema/schema-state.service';
+import { SchemaLockGuard } from './guard/schema-lock.guard';
 
 @Global()
 @Module({
@@ -64,12 +68,23 @@ import { NotFoundDetectGuard } from './guard/not-found-detect.guard';
     RabbitMQRegistry,
     JwtStrategy,
     HideFieldInterceptor,
+    SchemaStateService,
+    SchemaReloadService,
+    RedisPubSubService,
+    { provide: APP_GUARD, useClass: SchemaLockGuard },
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RoleGuard },
     { provide: APP_INTERCEPTOR, useClass: HideFieldInterceptor },
   ],
-  exports: [RabbitMQRegistry, DataSourceModule, JwtModule],
+  exports: [
+    RabbitMQRegistry,
+    DataSourceModule,
+    JwtModule,
+    SchemaReloadService,
+    SchemaStateService,
+    RedisPubSubService,
+  ],
 })
 export class AppModule implements NestModule {
   async configure(consumer: MiddlewareConsumer) {

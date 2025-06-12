@@ -8,7 +8,6 @@ import { Session_definition } from '../entities/session_definition.entity';
 import { Setting_definition } from '../entities/setting_definition.entity';
 import { Table_definition } from '../entities/table_definition.entity';
 import { User_definition } from '../entities/user_definition.entity';
-import { TableController } from '../table/table.controller';
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TableHandlerService } from './table.service';
@@ -30,7 +29,6 @@ import { TableHandlerService } from './table.service';
       Session_definition,
     ]),
   ],
-  controllers: [TableController],
   providers: [TableHandlerService],
   exports: [TypeOrmModule, TableHandlerService],
 })

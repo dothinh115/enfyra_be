@@ -1,12 +1,10 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
-import { Table_definition } from '../entities/table_definition.entity';
 import { AutoService } from '../auto/auto-entity.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
 import { Repository } from 'typeorm';
 import { CommonService } from '../common/common.service';
 import { Role_definition } from '../entities/role_definition.entity';
-import { Setting_definition } from '../entities/setting_definition.entity';
 import { User_definition } from '../entities/user_definition.entity';
 import * as path from 'path';
 import { Column_definition } from '../entities/column_definition.entity';
@@ -50,40 +48,49 @@ export class BootstrapService implements OnApplicationBootstrap {
   async onApplicationBootstrap() {
     await this.waitForDatabaseConnection();
 
-    await this.createInitMetadata();
-    await this.commonService.delay(300);
+    let settingRepo: any =
+      this.dataSourceService.getRepository('setting_definition');
 
-    await this.autoService.pullMetadataFromDb();
-    await this.commonService.delay(300);
+    // ⚙️ 1. Kiểm tra bản ghi duy nhất trong setting
+    let setting = await settingRepo?.findOne({ where: { id: 1 } });
+    if (!setting || !setting.isInit) {
+      await this.createInitMetadata();
+      await this.commonService.delay(300);
 
-    await Promise.all([
-      this.createDefaultRole(),
-      this.insertDefaultSettingIfEmpty(),
-      this.insertDefaultUserIfEmpty(),
-    ]);
+      await Promise.all([
+        this.createDefaultRole(),
+        this.insertDefaultSettingIfEmpty(),
+        this.insertDefaultUserIfEmpty(),
+      ]);
+      settingRepo = this.dataSourceService.getRepository('setting_definition');
+      setting = await settingRepo?.findOne({ where: { id: 1 } });
+      await settingRepo.update(setting.id, { isInit: true });
+      this.logger.debug(`init thành công`);
+      await this.commonService.delay(300);
+
+      await this.autoService.pullMetadataFromDb();
+    } else await this.autoService.pullMetadataFromDb();
   }
 
   private async insertDefaultSettingIfEmpty(): Promise<void> {
-    const tableName =
-      this.dataSourceService.getTableNameFromEntity(Setting_definition);
     const dataSource = this.dataSourceService.getDataSource();
 
     const [{ count }] = await dataSource.query(
-      `SELECT COUNT(*) as count FROM \`${tableName}\``,
+      `SELECT COUNT(*) as count FROM \`setting_definition\``,
     );
 
     if (Number(count) === 0) {
       this.logger.log(
-        `Bảng '${tableName}' chưa có dữ liệu, tiến hành tạo mặc định.`,
+        `Bảng 'setting_definition' chưa có dữ liệu, tiến hành tạo mặc định.`,
       );
 
-      const repo = await this.dataSourceService.getRepository(tableName);
+      const repo = this.dataSourceService.getRepository('setting_definition');
       const setting = repo.create(initJson.defaultSetting);
       await repo.save(setting);
 
       this.logger.log(`Tạo setting mặc định thành công.`);
     } else {
-      this.logger.debug(`Bảng '${tableName}' đã có dữ liệu.`);
+      this.logger.debug(`Bảng 'setting_definition' đã có dữ liệu.`);
     }
   }
 
@@ -308,4 +315,19 @@ export class BootstrapService implements OnApplicationBootstrap {
       await queryRunner.release();
     }
   }
+
+  // async saveSchemaSnapshotToHistory() {
+  //   const tableRepo = this.dataSourceService.getRepository('table_definition');
+  //   const metadata = await tableRepo
+  //     .createQueryBuilder('table')
+  //     .leftJoinAndSelect('table.columns', 'columns')
+  //     .leftJoinAndSelect('table.relations', 'relations')
+  //     .leftJoinAndSelect('relations.targetTable', 'targetTable')
+  //     .getMany();
+  //   const schemaHistoryRepo =
+  //     this.dataSourceService.getRepository('schema_history');
+  //   await schemaHistoryRepo.save({
+  //     metadata,
+  //   });
+  // }
 }

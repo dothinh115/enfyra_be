@@ -2,9 +2,6 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { BcryptService } from './bcrypt.service';
 import { ConfigService } from '@nestjs/config';
 import { LoginAuthDto } from './dto/login-auth.dto';
-import { Session_definition } from '../entities/session_definition.entity';
-import { Repository } from 'typeorm';
-import { User_definition } from '../entities/user_definition.entity';
 import { JwtService } from '@nestjs/jwt';
 import { LogoutAuthDto } from './dto/logout-auth.dto';
 import { RefreshTokenAuthDto } from './dto/refresh-token-auth.dto';
@@ -23,7 +20,7 @@ export class AuthService {
 
   async login(body: LoginAuthDto) {
     const { email, password } = body;
-    const userDefRepo: Repository<User_definition> =
+    const userDefRepo: any =
       this.dataSourceService.getRepository('user_definition');
     const exists = await userDefRepo.findOne({
       where: {
@@ -35,7 +32,7 @@ export class AuthService {
       !(await this.bcryptService.compare(password, exists.password))
     )
       throw new BadRequestException(`Login failed!`);
-    const sessionDefRepo: Repository<Session_definition> =
+    const sessionDefRepo: any =
       this.dataSourceService.getRepository('session_definition');
     const session = await sessionDefRepo.save({
       ...(body.remember && {
@@ -70,9 +67,9 @@ export class AuthService {
     };
   }
 
-  async logout(body: LogoutAuthDto, req: Request & { user: User_definition }) {
+  async logout(body: LogoutAuthDto, req: Request & { user: any }) {
     const { sessionId } = body;
-    const sessionDefRepo: Repository<Session_definition> =
+    const sessionDefRepo: any =
       this.dataSourceService.getRepository('session_definition');
     const session = await sessionDefRepo.findOne({
       where: {
@@ -93,7 +90,7 @@ export class AuthService {
     } catch (e) {
       throw new BadRequestException('Invalid or expired refresh token!');
     }
-    const sessionDefRepo: Repository<Session_definition> =
+    const sessionDefRepo: any =
       this.dataSourceService.getRepository('session_definition');
     const session = await sessionDefRepo.findOne({
       where: {

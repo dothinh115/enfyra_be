@@ -7,13 +7,14 @@ import {
 } from '../table/dto/create-table.dto';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
-import { Repository } from 'typeorm';
+import { SchemaReloadService } from '../schema/schema-reload.service';
 
 @Injectable()
 export class TableHandlerService {
   constructor(
     private dataSouceService: DataSourceService,
     private autoService: AutoService,
+    private schemaReloadService: SchemaReloadService,
   ) {}
 
   async createTable(body: CreateTableDto) {
@@ -42,7 +43,10 @@ export class TableHandlerService {
 
       if (!result) result = await manager.save(Table_definition, tableEntity);
       await queryRunner.commitTransaction();
+      await this.schemaReloadService.lockChangeSchema();
+      const backup = await this.autoService.backup();
       await this.autoService.pullMetadataFromDb();
+      await this.schemaReloadService.publishSchemaUpdated(backup['createdAt']);
 
       return result;
     } catch (error) {
@@ -144,8 +148,10 @@ export class TableHandlerService {
 
       const result = await manager.save(Table_definition, tableEntity);
       await queryRunner.commitTransaction();
+      await this.schemaReloadService.lockChangeSchema();
+      const backup = await this.autoService.backup();
       await this.autoService.pullMetadataFromDb();
-
+      await this.schemaReloadService.publishSchemaUpdated(backup['createdAt']);
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -197,12 +203,8 @@ export class TableHandlerService {
     return [idColumn, ...filtered];
   }
 
-  // async find(query: TQuery) {}
-
-  // async findOne(id: number, query: TQuery) {}
-
   async delete(id: number) {
-    const tableDefRepo: Repository<Table_definition> =
+    const tableDefRepo: any =
       this.dataSouceService.getRepository('table_definition');
     try {
       const exists = await tableDefRepo.findOne({
@@ -220,11 +222,11 @@ export class TableHandlerService {
       }
 
       const result = await tableDefRepo.remove(exists);
-      const tables = await tableDefRepo.find({
-        relations: ['relations', 'columns'],
-      });
-      await this.autoService.backup({ data: tables });
+      await this.schemaReloadService.lockChangeSchema();
+      const backup = await this.autoService.backup();
       await this.autoService.pullMetadataFromDb();
+      await this.schemaReloadService.publishSchemaUpdated(backup['createdAt']);
+
       return result;
     } catch (error) {
       console.error(error.stack || error.message || error);
