@@ -1,10 +1,21 @@
-import { Inject, Injectable, NestMiddleware } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NestMiddleware,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Route_definition } from '../entities/route_definition.entity';
 import { Repository } from 'typeorm';
 import { CommonService } from '../common/common.service';
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { GLOBAL_ROUTES_KEY } from '../utils/constant';
 import { DataSourceService } from '../data-source/data-source.service';
+import { JwtService } from '@nestjs/jwt';
+import { DynamicFindService } from '../dynamic-find/dynamic-find.service';
+import { TableHandlerService } from '../table/table.service';
+import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
+import { TDynamicContext } from '../utils/types/dynamic-context.type';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
@@ -12,6 +23,9 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private commonService: CommonService,
     @Inject(CACHE_MANAGER) private cache: Cache,
     private dataSourceService: DataSourceService,
+    private jwtService: JwtService,
+    private dynamicFindService: DynamicFindService,
+    private tableHandlerService: TableHandlerService,
   ) {}
 
   async use(req: any, res: any, next: (error?: any) => void) {
@@ -23,6 +37,53 @@ export class RouteDetectMiddleware implements NestMiddleware {
     const matchedRoute = this.findMatchedRoute(routes, req.originalUrl, method);
 
     if (matchedRoute) {
+      const dynamicFindEntries = await Promise.all(
+        [req.routeData.mainTable, ...req.routeData.targetTables]?.map(
+          async (table) => {
+            const dynamicRepo = new DynamicRepoService({
+              fields: req.query.fields as string,
+              filter: req.query.filter,
+              page: Number(req.query.page ?? 1),
+              tableName: table.name,
+              limit: Number(req.query.limit ?? 10),
+              tableHandlerService: this.tableHandlerService,
+              dataSourceService: this.dataSourceService,
+              dynamicFindService: this.dynamicFindService,
+            });
+            await dynamicRepo.init();
+            const name =
+              table.name === req.routeData.mainTable.name
+                ? 'main'
+                : (table.alias ?? table.name);
+            return [`${name}`, dynamicRepo];
+          },
+        ),
+      );
+
+      const dynamicFindMap: { any: any } =
+        Object.fromEntries(dynamicFindEntries);
+
+      const context: TDynamicContext = {
+        $body: req.body,
+        $errors: {
+          throw400: (msg: string) => {
+            throw new BadRequestException(msg);
+          },
+          throw401: () => {
+            throw new UnauthorizedException();
+          },
+        },
+        $logs(...args) {},
+        $helpers: {
+          jwt: (payload: any, ext: string) =>
+            this.jwtService.sign(payload, { expiresIn: ext }),
+        },
+        $params: req.routeData.params ?? {},
+        $query: req.query ?? {},
+        $user: req.user ?? undefined,
+        $repos: dynamicFindMap,
+        $req: req,
+      };
       const { route, params } = matchedRoute;
       req.routeData = {
         ...route,
@@ -30,6 +91,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
         params,
         isPublished:
           matchedRoute.route.publishedMethods?.includes(req.method) || false,
+        context,
       };
     }
 
