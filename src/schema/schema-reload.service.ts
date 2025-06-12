@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { AutoService } from '../auto/auto-entity.service';
 import { SchemaStateService } from './schema-state.service';
@@ -16,6 +16,9 @@ import { CommonService } from '../common/common.service';
 
 @Injectable()
 export class SchemaReloadService {
+  private readonly logger = new Logger(SchemaReloadService.name);
+  private sourceInstanceId: string;
+
   constructor(
     private dataSourceService: DataSourceService,
     private autoService: AutoService,
@@ -27,59 +30,85 @@ export class SchemaReloadService {
     private commonService: CommonService,
   ) {
     this.sourceInstanceId = uuidv4();
+    this.logger.log(`Khởi tạo với sourceInstanceId: ${this.sourceInstanceId}`);
   }
-  private sourceInstanceId: string;
 
   async subscribe(message: string) {
+    this.logger.log(`Nhận message: ${message}`);
     const data: TReloadSchema = JSON.parse(message);
-    //nếu cùng instance, bỏ qua
-    if (this.sourceInstanceId === data.sourceInstanceId) return;
+
+    if (this.sourceInstanceId === data.sourceInstanceId) {
+      this.logger.log(`Cùng sourceInstanceId, bỏ qua`);
+      return;
+    }
+
     const node_name = this.configService.get<string>('NODE_NAME');
+    this.logger.log(`Node hiện tại: ${node_name}, Node gửi: ${data.node_name}`);
+
     const schemaHistoryRepo =
       this.dataSourceService.getRepository('schema_history');
     const newestSchema = await schemaHistoryRepo
       .createQueryBuilder('schema')
       .orderBy('schema.createdAt', 'DESC')
       .getOne();
-    if (!newestSchema) return;
-    const localVersion = this.schemaStateService.getVersion();
 
-    // nếu version trong message bé hơn newest, bỏ qua, để lắng nghe version cao hơn
-    //nếu version hiện tại lớn hơn hoặc bằng version mới nhất, bỏ qua
-
-    if (data.version < newestSchema['id'] || localVersion >= newestSchema['id'])
-      return;
-
-    //nếu cùng 1 node , chỉ tiến hành reload datasource
-    if (node_name === data.node_name) {
-      await this.dataSourceService.reloadDataSource();
-      //update version sau khi reload
-      this.schemaStateService.setVersion(newestSchema['id']);
+    if (!newestSchema) {
+      this.logger.warn('Không tìm thấy schema nào, bỏ qua');
       return;
     }
-    //nếu ko cùng 1 node thì set lock và tiến hành pull metadata
+
+    const localVersion = this.schemaStateService.getVersion();
+    this.logger.log(
+      `Version nhận: ${data.version}, Schema mới nhất: ${newestSchema['id']}, Version hiện tại: ${localVersion}`,
+    );
+
+    if (
+      data.version < newestSchema['id'] ||
+      localVersion >= newestSchema['id']
+    ) {
+      this.logger.log('Version không hợp lệ hoặc đã xử lý rồi, bỏ qua');
+      return;
+    }
+
+    if (node_name === data.node_name) {
+      this.logger.log('Cùng node, chỉ reload lại DataSource');
+      await this.dataSourceService.reloadDataSource();
+      this.schemaStateService.setVersion(newestSchema['id']);
+      this.logger.log(
+        `Reload DataSource xong, set version = ${newestSchema['id']}`,
+      );
+      return;
+    }
+
     const sourceIdInMem = await this.cache.get('dynamiq:pulling');
     if (!sourceIdInMem) {
+      this.logger.log('Không có lock, tiến hành pull metadata từ DB');
       await this.cache.set('dynamiq:pulling', this.sourceInstanceId, 10);
       await this.autoService.pullMetadataFromDb();
-      //sau khi pull xong phải clear lock để các instance khác ko đợi
+      this.logger.log('Đã pull metadata xong');
       await this.cache.del('dynamiq:pulling');
+      this.logger.log('Đã xoá lock pulling');
       return;
     }
-    //nếu đang có lock thì liên tục check lock để reload datasource (không pull)
+
+    this.logger.log('Có lock pulling, chờ...');
     while (await this.cache.get('dynamiq:pulling')) {
       await this.commonService.delay(Math.random() * 300 + 300);
     }
-    //hết lock thì reload DS
+
+    this.logger.log('Lock đã bị xoá, tiến hành reload DataSource');
     await this.dataSourceService.reloadDataSource();
-    //set version
     this.schemaStateService.setVersion(newestSchema['id']);
+    this.logger.log(`Đã reload xong, set version = ${newestSchema['id']}`);
   }
 
   async lockChangeSchema() {
     const isLocked = await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
     if (!isLocked) {
+      this.logger.log('Khoá schema để chuẩn bị thay đổi');
       await this.cache.set(SCHEMA_LOCK_EVENT_KEY, true, 10);
+    } else {
+      this.logger.warn('Schema đã bị khoá trước đó');
     }
   }
 
@@ -90,15 +119,18 @@ export class SchemaReloadService {
       sourceInstanceId: this.sourceInstanceId,
       version,
     };
-    //lưu version hiện tại
     this.schemaStateService.setVersion(version);
+    this.logger.log(`Phát sự kiện schema updated với version: ${version}`);
     await this.redisPubSubService.publish(
       SCHEMA_UPDATED_EVENT_KEY,
       JSON.stringify(reloadSchemaMsg),
     );
+    this.logger.log('Đã phát xong sự kiện schema updated');
   }
 
   async checkLockChangeSchema() {
-    return await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
+    const lock = await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
+    this.logger.log(`Kiểm tra lock schema: ${lock}`);
+    return lock;
   }
 }

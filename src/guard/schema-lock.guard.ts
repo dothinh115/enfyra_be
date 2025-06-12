@@ -11,6 +11,7 @@ export class SchemaLockGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     while (await this.schemaReloadService.checkLockChangeSchema()) {
+      console.log('reloading datasource, waiting...');
       await this.commonService.delay(500);
     }
 

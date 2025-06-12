@@ -33,6 +33,8 @@ export class RedisPubSubService implements OnModuleInit, OnModuleDestroy {
   }
 
   async publish(channel: string, payload: any) {
+    console.log(`[RedisPubSub] Đã nhận message từ channel: ${channel}`);
+    console.log(`[RedisPubSub] Nội dung: ${payload}`);
     const message =
       typeof payload === 'string' ? payload : JSON.stringify(payload);
     await this.pub.publish(channel, message);

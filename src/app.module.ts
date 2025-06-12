@@ -87,6 +87,8 @@ import { SchemaLockGuard } from './guard/schema-lock.guard';
   ],
 })
 export class AppModule implements NestModule {
+  constructor(private readonly redisPubSubService: RedisPubSubService) {}
+
   async configure(consumer: MiddlewareConsumer) {
     consumer.apply(RouteDetectMiddleware).forRoutes('*');
     consumer.apply(DynamicMiddleware).forRoutes('*');
