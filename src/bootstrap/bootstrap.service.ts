@@ -11,6 +11,7 @@ import { Column_definition } from '../entities/column_definition.entity';
 import { Relation_definition } from '../entities/relation_definition.entity';
 import { BcryptService } from '../auth/bcrypt.service';
 import { TableHandlerService } from '../table/table.service';
+import { SchemaStateService } from '../schema/schema-state.service';
 const initJson = require('./init.json');
 
 @Injectable()
@@ -23,6 +24,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     private autoService: AutoService,
     private commonService: CommonService,
     private bcryptService: BcryptService,
+    private schemaStateService: SchemaStateService,
   ) {}
 
   private async waitForDatabaseConnection(
@@ -69,7 +71,20 @@ export class BootstrapService implements OnApplicationBootstrap {
       await this.commonService.delay(300);
 
       await this.autoService.pullMetadataFromDb();
-    } else await this.autoService.pullMetadataFromDb();
+    } else {
+      await this.autoService.pullMetadataFromDb();
+      const schemaHistoryRepo =
+        this.dataSourceService.getRepository('schema_history');
+      const lastVersion: any = await schemaHistoryRepo.findOne({
+        where: {},
+        order: {
+          createdAt: 'ASC',
+        },
+      });
+      if (lastVersion) {
+        this.schemaStateService.setVersion(lastVersion.id);
+      }
+    }
   }
 
   private async insertDefaultSettingIfEmpty(): Promise<void> {
