@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Route_definition } from "./route_definition.entity";
 
 @Entity('middleware_definition')
@@ -13,6 +13,7 @@ export class Middleware_definition {
     name: string;
     @Column({ type: "int", nullable: true, default: 0 })
     priority: number;
+    @Index()
     @ManyToOne(() => Route_definition, (rel) => rel.middlewares, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     route: Route_definition;

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Route_definition } from "./route_definition.entity";
 
 @Entity('route_handler_definition')
@@ -9,6 +9,7 @@ export class Route_handler_definition {
     logic: string;
     @Column({ type: "varchar", nullable: true })
     method: string;
+    @Index()
     @ManyToOne(() => Route_definition, (rel) => rel.handlers, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     route: Route_definition;

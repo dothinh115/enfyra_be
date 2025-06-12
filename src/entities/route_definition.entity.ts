@@ -1,4 +1,4 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, ManyToMany, JoinTable, OneToMany, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, Unique, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, ManyToMany, JoinTable, OneToMany, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Table_definition } from "./table_definition.entity";
 import { Permission_definition } from "./permission_definition.entity";
 import { Route_handler_definition } from "./route_handler_definition.entity";
@@ -16,6 +16,7 @@ export class Route_definition {
     path: string;
     @Column({ type: "simple-json", nullable: true })
     publishedMethods: any;
+    @Index()
     @ManyToOne(() => Table_definition, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     mainTable: Table_definition;

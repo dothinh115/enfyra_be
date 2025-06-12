@@ -131,10 +131,6 @@ export class CreateRelationDto {
   @IsBoolean()
   @IsOptional()
   isIndex?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
-  isInverseIndex?: boolean;
 }
 
 export class CreateIndexDto {

@@ -1,4 +1,4 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, Unique, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Table_definition } from "./table_definition.entity";
 
 @Entity('relation_definition')
@@ -14,8 +14,6 @@ export class Relation_definition {
     isIndex: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
     isInverseEager: boolean;
-    @Column({ type: "boolean", nullable: false, default: false })
-    isInverseIndex: boolean;
     @Column({ type: "boolean", nullable: false, default: true })
     isNullable: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
@@ -24,9 +22,11 @@ export class Relation_definition {
     propertyName: string;
     @Column({ type: "enum", nullable: false, enum: ['one-to-one', 'many-to-one', 'one-to-many', 'many-to-many'] })
     type: 'one-to-one' | 'many-to-one' | 'one-to-many' | 'many-to-many';
+    @Index()
     @ManyToOne(() => Table_definition, (rel) => rel.relations, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     sourceTable: Table_definition;
+    @Index()
     @ManyToOne(() => Table_definition, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     targetTable: Table_definition;

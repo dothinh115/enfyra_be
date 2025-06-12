@@ -51,7 +51,9 @@ export class TableHandlerService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error.stack || error.message || error);
-      throw new BadRequestException(error.message || 'Unknown error');
+      throw new BadRequestException(
+        `Error: "${error.message}", rollback` || 'Unknown error',
+      );
     } finally {
       await queryRunner.release();
     }
@@ -152,7 +154,9 @@ export class TableHandlerService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error.stack || error.message || error);
-      throw new BadRequestException(error.message || 'Unknown error');
+      throw new BadRequestException(
+        `Error: "${error.message}", rollback` || 'Unknown error',
+      );
     } finally {
       await queryRunner.release();
     }
@@ -222,7 +226,9 @@ export class TableHandlerService {
       return result;
     } catch (error) {
       console.error(error.stack || error.message || error);
-      throw new BadRequestException(error.message || 'Unknown error');
+      throw new BadRequestException(
+        `Error: "${error.message}", rollback` || 'Unknown error',
+      );
     }
   }
 

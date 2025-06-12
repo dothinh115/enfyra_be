@@ -168,11 +168,13 @@ export class AutoService {
 
       const decorators = [];
 
-      if (
+      // Chỉ tạo index nếu là many-to-one (hoặc one-to-one một chiều)
+      const shouldAddIndex =
         rel.isIndex &&
         (rel.type === 'many-to-one' ||
-          (rel.type === 'one-to-one' && !isInverse))
-      ) {
+          (rel.type === 'one-to-one' && !isInverse));
+
+      if (shouldAddIndex) {
         decorators.push({ name: 'Index', arguments: [] });
       }
 
@@ -402,7 +404,7 @@ export class AutoService {
           propertyName: rel.inversePropertyName,
           inversePropertyName: rel.propertyName,
           type: inverseRelationType(rel.type),
-          isIndex: rel.isInverseIndex,
+          isIndex: rel.isIndex,
         };
 
         if (!map.has(targetName)) map.set(targetName, []);

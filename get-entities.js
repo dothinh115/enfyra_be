@@ -128,8 +128,15 @@ async function writeEntitiesWithTsMorph() {
       });
     }
 
-    for (const rel of def.relations || []) {
-      const target = capitalize(rel.targetTable);
+    const allRelations = [
+      ...(def.relations || []),
+      ...(inverseMap.get(name) || []),
+    ];
+
+    for (const rel of allRelations) {
+      const target = rel.targetTable
+        ? capitalize(rel.targetTable)
+        : rel.targetClass;
       const relType = {
         'many-to-one': 'ManyToOne',
         'one-to-one': 'OneToOne',
@@ -140,8 +147,15 @@ async function writeEntitiesWithTsMorph() {
       usedImports.add(relType);
 
       const cascadeOpts = ['onDelete: "CASCADE"', 'onUpdate: "CASCADE"'];
-      if (['many-to-many', 'many-to-one'].includes(rel.type))
+      const isInverse = !!rel.targetClass;
+
+      if (
+        (!isInverse && ['many-to-many', 'many-to-one'].includes(rel.type)) ||
+        (isInverse && ['many-to-many', 'one-to-many'].includes(rel.type))
+      ) {
         cascadeOpts.unshift('cascade: true');
+      }
+
       const opts = `{ ${cascadeOpts.join(', ')} }`;
 
       const args = [`() => ${target}`];
@@ -150,58 +164,25 @@ async function writeEntitiesWithTsMorph() {
       }
       args.push(opts);
 
-      const decorators = [{ name: relType, arguments: args }];
+      const decorators = [];
+
+      if (
+        rel.isIndex &&
+        (rel.type === 'many-to-one' || rel.type === 'one-to-one') &&
+        !isInverse
+      ) {
+        decorators.push({ name: 'Index', arguments: [] });
+        usedImports.add('Index');
+      }
+
+      decorators.push({ name: relType, arguments: args });
 
       if (['many-to-one', 'one-to-one'].includes(rel.type)) {
         decorators.push({ name: 'JoinColumn', arguments: [] });
         usedImports.add('JoinColumn');
       }
 
-      if (rel.type === 'many-to-many') {
-        decorators.push({ name: 'JoinTable', arguments: [] });
-        usedImports.add('JoinTable');
-      }
-
-      classDeclaration.addProperty({
-        name: rel.propertyName,
-        type: ['many-to-many', 'one-to-many'].includes(rel.type)
-          ? `${target}[]`
-          : target,
-        decorators,
-      });
-    }
-
-    const inverseRels = inverseMap.get(name) || [];
-    for (const rel of inverseRels) {
-      const target = rel.targetClass;
-      const relType = {
-        'many-to-one': 'ManyToOne',
-        'one-to-one': 'OneToOne',
-        'one-to-many': 'OneToMany',
-        'many-to-many': 'ManyToMany',
-      }[rel.type];
-
-      usedImports.add(relType);
-
-      const cascadeOpts = ['onDelete: "CASCADE"', 'onUpdate: "CASCADE"'];
-      if (['many-to-many', 'one-to-many'].includes(rel.type))
-        cascadeOpts.unshift('cascade: true');
-      const opts = `{ ${cascadeOpts.join(', ')} }`;
-
-      const args = [`() => ${target}`];
-      if (rel.inversePropertyName) {
-        args.push(`(x) => x.${rel.inversePropertyName}`);
-      }
-      args.push(opts);
-
-      const decorators = [{ name: relType, arguments: args }];
-
-      if (['many-to-one', 'one-to-one'].includes(rel.type)) {
-        decorators.push({ name: 'JoinColumn', arguments: [] });
-        usedImports.add('JoinColumn');
-      }
-
-      if (rel.type === 'many-to-many') {
+      if (rel.type === 'many-to-many' && !isInverse) {
         decorators.push({ name: 'JoinTable', arguments: [] });
         usedImports.add('JoinTable');
       }
@@ -232,6 +213,9 @@ async function writeEntitiesWithTsMorph() {
       moduleSpecifier: 'typeorm',
     });
   }
+
+  await Promise.all(project.getSourceFiles().map((file) => file.save()));
+  console.log('✅ Entity generation completed.');
 }
 
 writeEntitiesWithTsMorph();
