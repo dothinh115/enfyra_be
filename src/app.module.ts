@@ -27,6 +27,7 @@ import { SchemaReloadService } from './schema/schema-reload.service';
 import { RedisPubSubService } from './redis-pubsub/redis-pubsub.service';
 import { SchemaStateService } from './schema/schema-state.service';
 import { SchemaLockGuard } from './guard/schema-lock.guard';
+import { SqlFunctionService } from './sql/sql-function.service';
 
 @Global()
 @Module({
@@ -71,6 +72,7 @@ import { SchemaLockGuard } from './guard/schema-lock.guard';
     SchemaStateService,
     SchemaReloadService,
     RedisPubSubService,
+    SqlFunctionService,
     { provide: APP_GUARD, useClass: SchemaLockGuard },
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },

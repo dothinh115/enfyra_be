@@ -12,6 +12,9 @@ const OPERATOR_MAP: Record<string, string> = {
   _in: 'IN',
   _nin: 'NOT IN',
   _like: 'LIKE',
+  _starts_with: 'LIKE',
+  _ends_with: 'LIKE',
+  _contains: 'LIKE',
   _is_null: 'IS NULL',
 };
 
@@ -90,6 +93,7 @@ export class DynamicFindService {
       for (const key in obj) {
         const value = obj[key];
 
+        // ✅ Logic lồng
         if (key === 'and' || key === 'or') {
           const nested = new Brackets((subQb) => {
             for (const sub of value) {
@@ -100,12 +104,13 @@ export class DynamicFindService {
           continue;
         }
 
+        // ✅ Relation
         const rel = currentMeta.relations.find((r) => r.propertyName === key);
         if (rel) {
           const newPath = [...path, key];
           resolveRelationPath(newPath, rootMetadata);
 
-          // _count
+          // ✅ _count
           if (typeof value === 'object' && '_count' in value) {
             const countFilter = value['_count'];
             const joinAlias = `__${newPath.join('_')}__`;
@@ -135,7 +140,7 @@ export class DynamicFindService {
             continue;
           }
 
-          // _eq_set
+          // ✅ _eq_set cho many-to-many
           if (typeof value === 'object' && '_eq_set' in value) {
             const exactIds = value['_eq_set'];
             const pathStr = path.join('.');
@@ -155,25 +160,25 @@ export class DynamicFindService {
             const tableName = junctionMeta.tableName;
 
             qb?.[method](`
-            ${fieldAlias}.id IN (
-              SELECT ${joinCol.databaseName} FROM ${tableName}
-              GROUP BY ${joinCol.databaseName}
-              HAVING COUNT(DISTINCT ${inverseJoinCol.databaseName}) = :__eqset_len
-              AND SUM(${inverseJoinCol.databaseName} IN (:...__eqset_ids)) = :__eqset_len
-            )
-          `);
+          ${fieldAlias}.id IN (
+            SELECT ${joinCol.databaseName} FROM ${tableName}
+            GROUP BY ${joinCol.databaseName}
+            HAVING COUNT(DISTINCT ${inverseJoinCol.databaseName}) = :__eqset_len
+            AND SUM(${inverseJoinCol.databaseName} IN (:...__eqset_ids)) = :__eqset_len
+          )
+        `);
 
             whereParams['__eqset_len'] = exactIds.length;
             whereParams['__eqset_ids'] = exactIds;
             continue;
           }
 
-          // Normal nested relation filter
+          // ✅ Lọc sâu trong quan hệ
           walkFilter(value, newPath, rel.inverseEntityMetadata, 'and', qb);
           continue;
         }
 
-        // Field operators
+        // ✅ Field thường
         if (typeof value === 'object' && value !== null) {
           for (const op in value) {
             const operator = OPERATOR_MAP[op];
@@ -183,21 +188,51 @@ export class DynamicFindService {
             const fieldAlias = aliasMap.get(pathStr) || rootAlias;
             const field = `${fieldAlias}.${key}`;
             const paramName = `param${paramCounter++}`;
+            let finalValue = value[op];
 
+            // ✅ _is_null
             if (op === '_is_null') {
-              qb?.[method](`${field} IS ${value[op] ? '' : 'NOT '}NULL`);
-            } else if (op === '_in' || op === '_nin') {
+              qb?.[method](`${field} IS ${finalValue ? '' : 'NOT '}NULL`);
+              continue;
+            }
+
+            // ✅ _in / _nin
+            if (op === '_in' || op === '_nin') {
               qb?.[method](`${field} ${operator} (:...${paramName})`, {
-                [paramName]: value[op],
-              });
-              whereParams[paramName] = value[op];
-            } else {
-              const finalValue = op === '_like' ? `%${value[op]}%` : value[op];
-              qb?.[method](`${field} ${operator} :${paramName}`, {
                 [paramName]: finalValue,
               });
               whereParams[paramName] = finalValue;
+              continue;
             }
+
+            // ✅ xử lý chuỗi LIKE + unaccent
+            if (op === '_starts_with') {
+              finalValue = `${finalValue}%`;
+            } else if (op === '_ends_with') {
+              finalValue = `%${finalValue}`;
+            } else if (op === '_contains' || op === '_like') {
+              finalValue = `%${finalValue}%`;
+            }
+
+            const isTextCompare = [
+              '_like',
+              '_starts_with',
+              '_ends_with',
+              '_contains',
+            ].includes(op);
+
+            if (isTextCompare) {
+              qb?.[method](
+                `unaccent(${field}) ${operator} unaccent(:${paramName})`,
+                { [paramName]: finalValue },
+              );
+            } else {
+              qb?.[method](`${field} ${operator} :${paramName}`, {
+                [paramName]: finalValue,
+              });
+            }
+
+            whereParams[paramName] = finalValue;
           }
         }
       }
