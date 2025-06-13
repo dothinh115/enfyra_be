@@ -11,6 +11,7 @@ import { User_definition } from '../entities/user_definition.entity';
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TableHandlerService } from './table.service';
+import { Schema_history } from '../entities/schema_history.entity';
 
 @Global()
 @Module({
@@ -27,6 +28,7 @@ import { TableHandlerService } from './table.service';
       Route_definition,
       Setting_definition,
       Session_definition,
+      Schema_history,
     ]),
   ],
   providers: [TableHandlerService],

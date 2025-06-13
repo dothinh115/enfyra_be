@@ -105,11 +105,38 @@ export class DynamicFindService {
           const newPath = [...path, key];
           resolveRelationPath(newPath, rootMetadata);
 
-          if (
-            typeof value === 'object' &&
-            value !== null &&
-            '_eq_set' in value
-          ) {
+          // _count
+          if (typeof value === 'object' && '_count' in value) {
+            const countFilter = value['_count'];
+            const joinAlias = `__${newPath.join('_')}__`;
+            const inverseJoinCol =
+              rel.inverseRelation?.joinColumns?.[0]?.propertyName ??
+              rel.inverseEntityMetadata.primaryColumns[0]?.propertyName ??
+              'id';
+
+            const subQb = dataSource
+              .createQueryBuilder()
+              .select(`${joinAlias}.${inverseJoinCol}`, 'id')
+              .from(rel.inverseEntityMetadata.target, joinAlias)
+              .groupBy(`${joinAlias}.${inverseJoinCol}`);
+
+            for (const op in countFilter) {
+              const operator = OPERATOR_MAP[op];
+              if (!operator) continue;
+              const paramName = `param${paramCounter++}`;
+              subQb.having(`COUNT(*) ${operator} :${paramName}`, {
+                [paramName]: countFilter[op],
+              });
+              whereParams[paramName] = countFilter[op];
+            }
+
+            qb?.[method](`${rootAlias}.id IN (${subQb.getQuery()})`);
+            qb?.setParameters(subQb.getParameters());
+            continue;
+          }
+
+          // _eq_set
+          if (typeof value === 'object' && '_eq_set' in value) {
             const exactIds = value['_eq_set'];
             const pathStr = path.join('.');
             const fieldAlias = aliasMap.get(pathStr) || rootAlias;
@@ -141,10 +168,12 @@ export class DynamicFindService {
             continue;
           }
 
+          // Normal nested relation filter
           walkFilter(value, newPath, rel.inverseEntityMetadata, 'and', qb);
           continue;
         }
 
+        // Field operators
         if (typeof value === 'object' && value !== null) {
           for (const op in value) {
             const operator = OPERATOR_MAP[op];
@@ -174,15 +203,20 @@ export class DynamicFindService {
       }
     }
 
+    // FIELD SELECT
     if (!fields.length) {
       for (const column of rootMetadata.columns) {
         if (!column.relationMetadata) {
           select.add(`${rootAlias}.${column.propertyName}`);
         }
       }
+
       for (const rel of rootMetadata.relations) {
         const alias = `__${rel.propertyName}__`;
-        joinArr.push({ path: `${rootAlias}.${rel.propertyName}`, alias });
+        if (!aliasMap.has(rel.propertyName)) {
+          aliasMap.set(rel.propertyName, alias);
+          joinArr.push({ path: `${rootAlias}.${rel.propertyName}`, alias });
+        }
         const idColumn =
           rel.inverseEntityMetadata.primaryColumns[0]?.propertyName || 'id';
         select.add(`${alias}.${idColumn}`);
@@ -221,16 +255,22 @@ export class DynamicFindService {
 
         if (isWildcard) {
           const pathToEntity = parts.slice(0, -1);
-          const alias = aliasMap.get(pathToEntity.join('.'));
+          const pathStr = pathToEntity.join('.');
+          const alias = aliasMap.get(pathStr);
           const targetMeta = this.getMetadataByPath(pathToEntity, rootMetadata);
+
           if (targetMeta && alias) {
             for (const col of targetMeta.columns) {
+              const fullRelPath = [...pathToEntity, col.propertyName].join('.');
               if (col.relationMetadata) {
-                const relAlias = `__${[...pathToEntity, col.propertyName].join('_')}__`;
-                joinArr.push({
-                  path: `${alias}.${col.propertyName}`,
-                  alias: relAlias,
-                });
+                const relAlias = `__${fullRelPath.replace(/\./g, '_')}__`;
+                if (!aliasMap.has(fullRelPath)) {
+                  aliasMap.set(fullRelPath, relAlias);
+                  joinArr.push({
+                    path: `${alias}.${col.propertyName}`,
+                    alias: relAlias,
+                  });
+                }
                 const idColumn =
                   col.relationMetadata.inverseEntityMetadata.primaryColumns[0]
                     ?.propertyName || 'id';
@@ -322,12 +362,14 @@ export class DynamicFindService {
     filter,
     page = 1,
     limit = 10,
+    meta,
   }: {
     fields: string[] | string;
     tableName: string;
     filter?: any;
     page: number;
     limit: number;
+    meta?: 'filterCount' | 'totalCount' | '*' | undefined;
   }) {
     const repo = await this.dataSourceService.getRepository(tableName);
     const extract = await this.extractRelationsAndFieldsAndWhere({
@@ -335,18 +377,42 @@ export class DynamicFindService {
       filter,
       tableName,
     });
+
     const qb = repo.createQueryBuilder(tableName);
     qb.select(extract.select);
-
     for (const join of extract.joinArr) {
       qb.leftJoin(join.path, join.alias);
     }
-
     qb.where(extract.where).setParameters(extract.params);
     qb.skip(limit * (page - 1));
     qb.take(limit);
-
     const result = await qb.getMany();
-    return this.collapseIdOnlyFields(result);
+
+    const output: any = {
+      data: this.collapseIdOnlyFields(result),
+    };
+
+    // ✳️ Nếu meta được yêu cầu
+    if (meta) {
+      const metaObj: Record<string, any> = {};
+
+      if (meta === 'filterCount' || meta === '*') {
+        const filterCountQb = repo.createQueryBuilder(tableName);
+        for (const join of extract.joinArr) {
+          filterCountQb.leftJoin(join.path, join.alias);
+        }
+        filterCountQb.where(extract.where).setParameters(extract.params);
+        const filterCount = await filterCountQb.getCount();
+        metaObj.filterCount = filterCount;
+      }
+
+      if (meta === 'totalCount' || meta === '*') {
+        metaObj.totalCount = await repo.count();
+      }
+
+      output.meta = metaObj;
+    }
+
+    return output;
   }
 }

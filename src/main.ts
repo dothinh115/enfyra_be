@@ -5,6 +5,7 @@ import { DataSource } from 'typeorm';
 import * as cors from 'cors';
 import * as express from 'express';
 import * as qs from 'qs';
+import { ConfigService } from '@nestjs/config';
 async function ensureDatabaseExists() {
   const DB_TYPE = (process.env.DB_TYPE || 'mysql') as 'mysql' | 'postgres';
   const DB_HOST = process.env.DB_HOST || 'localhost';
@@ -54,6 +55,7 @@ async function bootstrap() {
   await ensureDatabaseExists();
 
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
   app.use(
     cors({
@@ -80,6 +82,6 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(1105);
+  await app.listen(configService.get('PORT') || 1105);
 }
 bootstrap();

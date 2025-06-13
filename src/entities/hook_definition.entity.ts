@@ -7,6 +7,8 @@ export class Hook_definition {
     id: number;
     @Column({ type: "text", nullable: true })
     afterHook: string;
+    @Column({ type: "boolean", nullable: false, default: false })
+    isEnabled: boolean;
     @Column({ type: "text", nullable: true })
     preHook: string;
     @Column({ type: "int", nullable: true, default: 0 })

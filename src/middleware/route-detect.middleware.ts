@@ -34,11 +34,12 @@ export class RouteDetectMiddleware implements NestMiddleware {
       (await this.cache.get(GLOBAL_ROUTES_KEY)) ||
       (await this.loadAndCacheRoutes(method));
 
-    const matchedRoute = this.findMatchedRoute(routes, req.originalUrl, method);
+    const matchedRoute = this.findMatchedRoute(routes, req.baseUrl, method);
+    console.log(matchedRoute);
 
     if (matchedRoute) {
       const dynamicFindEntries = await Promise.all(
-        [req.routeData.mainTable, ...req.routeData.targetTables]?.map(
+        [matchedRoute.route.mainTable, ...matchedRoute.route.targetTables]?.map(
           async (table) => {
             const dynamicRepo = new DynamicRepoService({
               fields: req.query.fields as string,
@@ -49,10 +50,13 @@ export class RouteDetectMiddleware implements NestMiddleware {
               tableHandlerService: this.tableHandlerService,
               dataSourceService: this.dataSourceService,
               dynamicFindService: this.dynamicFindService,
+              ...(req.query.meta && {
+                meta: req.query.meta,
+              }),
             });
             await dynamicRepo.init();
             const name =
-              table.name === req.routeData.mainTable.name
+              table.name === matchedRoute.route.mainTable.name
                 ? 'main'
                 : (table.alias ?? table.name);
             return [`${name}`, dynamicRepo];
@@ -78,7 +82,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
           jwt: (payload: any, ext: string) =>
             this.jwtService.sign(payload, { expiresIn: ext }),
         },
-        $params: req.routeData.params ?? {},
+        $params: matchedRoute.params ?? {},
         $query: req.query ?? {},
         $user: req.user ?? undefined,
         $repos: dynamicFindMap,
@@ -87,7 +91,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
       const { route, params } = matchedRoute;
       req.routeData = {
         ...route,
-        handler: route.handlers?.[0]?.logic,
+        handler: route.handlers.length ? route.handlers[0].logic : null,
         params,
         isPublished:
           matchedRoute.route.publishedMethods?.includes(req.method) || false,
@@ -101,6 +105,18 @@ export class RouteDetectMiddleware implements NestMiddleware {
   private async loadAndCacheRoutes(method: string) {
     const routeDefRepo: Repository<Route_definition> =
       this.dataSourceService.getRepository('route_definition');
+
+    const middlewareRepo = this.dataSourceService.getRepository(
+      'middleware_definition',
+    );
+
+    // ✳️ Query middleware toàn cục
+    const globalMiddlewares = await middlewareRepo.find({
+      where: { isEnabled: true, route: null },
+      order: { priority: 'ASC' },
+    });
+
+    // ✳️ Query route + middleware riêng
     const routes = await routeDefRepo
       .createQueryBuilder('route')
       .leftJoinAndSelect(
@@ -118,21 +134,29 @@ export class RouteDetectMiddleware implements NestMiddleware {
         'route.handlers',
         'handlers',
         'handlers.method = :method',
-        { method },
+        {
+          method,
+        },
       )
       .leftJoinAndSelect(
         'route.permissions',
         'permissions',
         'permissions.isEnabled = :enabled',
-        { enabled: true },
+        {
+          enabled: true,
+        },
       )
       .leftJoinAndSelect('permissions.role', 'role')
       .where('route.isEnabled = :enabled', { enabled: true })
       .getMany();
 
-    routes.forEach((route) => {
+    // ✳️ Merge middleware toàn cục vào từng route
+    routes.forEach((route: any) => {
       route.hooks?.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
-      route.middlewares?.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+      route.middlewares = [
+        ...globalMiddlewares,
+        ...(route.middlewares ?? []),
+      ].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
     });
 
     await this.cache.set(GLOBAL_ROUTES_KEY, routes, 5);
