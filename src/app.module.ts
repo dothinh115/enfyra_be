@@ -13,7 +13,6 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
-import { DynamicFindModule } from './dynamic-find/dynamic-find.module';
 import { HideFieldInterceptor } from './interceptors/hidden-field.interceptor';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-ioredis';
@@ -28,6 +27,7 @@ import { RedisPubSubService } from './redis-pubsub/redis-pubsub.service';
 import { SchemaStateService } from './schema/schema-state.service';
 import { SchemaLockGuard } from './guard/schema-lock.guard';
 import { SqlFunctionService } from './sql/sql-function.service';
+import { DynamicQueryModule } from './dynamic-find/dynamic-query.module';
 
 @Global()
 @Module({
@@ -59,7 +59,7 @@ import { SqlFunctionService } from './sql/sql-function.service';
       }),
       inject: [ConfigService],
     }),
-    DynamicFindModule,
+    DynamicQueryModule,
     AuthModule,
     MeModule,
     DynamicModule,

@@ -1,10 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
-import { DynamicFindService } from '../dynamic-find/dynamic-find.service';
 import { DataSourceService } from '../data-source/data-source.service';
 import { Repository } from 'typeorm';
 import { validateDto } from '../utils/helpers';
 import { TableHandlerService } from '../table/table.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
+import { DynamicQueryService } from '../dynamic-find/dynamic-query.service';
 
 export class DynamicRepoService {
   private fields: string;
@@ -13,7 +13,7 @@ export class DynamicRepoService {
   private limit: number;
   private meta: 'filterCount' | 'totalCount' | '*';
   private tableName: string;
-  private dynamicFindService: DynamicFindService;
+  private dynamicQueryService: DynamicQueryService;
   private dataSourceService: DataSourceService;
   private repo: Repository<any>;
   private tableHandlerService: TableHandlerService;
@@ -23,7 +23,7 @@ export class DynamicRepoService {
     page = 1,
     limit = 10,
     tableName,
-    dynamicFindService,
+    dynamicQueryService,
     dataSourceService,
     tableHandlerService,
     meta,
@@ -33,7 +33,7 @@ export class DynamicRepoService {
     page: number;
     limit: number;
     tableName: string;
-    dynamicFindService: DynamicFindService;
+    dynamicQueryService: DynamicQueryService;
     dataSourceService: DataSourceService;
     tableHandlerService: TableHandlerService;
     meta?: 'filterCount' | 'totalCount' | '*' | undefined;
@@ -43,7 +43,7 @@ export class DynamicRepoService {
     this.page = page;
     this.limit = limit;
     this.tableName = tableName;
-    this.dynamicFindService = dynamicFindService;
+    this.dynamicQueryService = dynamicQueryService;
     this.dataSourceService = dataSourceService;
     this.tableHandlerService = tableHandlerService;
     this.meta = meta;
@@ -54,7 +54,7 @@ export class DynamicRepoService {
   }
 
   async find(id?: string | number) {
-    return await this.dynamicFindService.dynamicFind({
+    return await this.dynamicQueryService.dynamicFind({
       fields: this.fields,
       filter: id ? { ...this.filter, id: { _eq: id } } : this.filter,
       page: this.page,

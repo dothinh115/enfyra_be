@@ -12,10 +12,10 @@ import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { GLOBAL_ROUTES_KEY } from '../utils/constant';
 import { DataSourceService } from '../data-source/data-source.service';
 import { JwtService } from '@nestjs/jwt';
-import { DynamicFindService } from '../dynamic-find/dynamic-find.service';
 import { TableHandlerService } from '../table/table.service';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
+import { DynamicQueryService } from '../dynamic-find/dynamic-query.service';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
@@ -24,7 +24,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
     @Inject(CACHE_MANAGER) private cache: Cache,
     private dataSourceService: DataSourceService,
     private jwtService: JwtService,
-    private dynamicFindService: DynamicFindService,
+    private dynamicQueryService: DynamicQueryService,
     private tableHandlerService: TableHandlerService,
   ) {}
 
@@ -35,7 +35,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
       (await this.loadAndCacheRoutes(method));
 
     const matchedRoute = this.findMatchedRoute(routes, req.baseUrl, method);
-    console.log(matchedRoute);
 
     if (matchedRoute) {
       const dynamicFindEntries = await Promise.all(
@@ -49,7 +48,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
               limit: Number(req.query.limit ?? 10),
               tableHandlerService: this.tableHandlerService,
               dataSourceService: this.dataSourceService,
-              dynamicFindService: this.dynamicFindService,
+              dynamicQueryService: this.dynamicQueryService,
               ...(req.query.meta && {
                 meta: req.query.meta,
               }),

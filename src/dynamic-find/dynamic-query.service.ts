@@ -19,7 +19,7 @@ const OPERATOR_MAP: Record<string, string> = {
 };
 
 @Injectable()
-export class DynamicFindService {
+export class DynamicQueryService {
   constructor(private dataSourceService: DataSourceService) {}
 
   private async extractRelationsAndFieldsAndWhere({
@@ -59,7 +59,7 @@ export class DynamicFindService {
 
     const whereParams: Record<string, any> = {};
     const where = new Brackets((qb) => {
-      if (filter) walkFilter(filter, [], rootMetadata, 'and', qb);
+      if (filter) walkFilter(filter, [], rootMetadata, 'and', qb, whereParams);
     });
 
     function resolveRelationPath(path: string[], currentMeta: EntityMetadata) {
@@ -80,166 +80,280 @@ export class DynamicFindService {
       }
     }
 
+    // ✅ Helper để đảm bảo key param an toàn
+    function safeKey(...parts: (string | number)[]): string {
+      return parts.map((p) => String(p).replace(/[^a-zA-Z0-9]/g, '')).join('');
+    }
+
     function walkFilter(
       obj: any,
       path: string[] = [],
-      currentMeta = rootMetadata,
+      currentMeta: EntityMetadata,
       type: 'and' | 'or' = 'and',
       qb?: any,
+      whereParams: Record<string, any> = {},
+      negate = false,
     ) {
-      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
       const method = type === 'and' ? 'andWhere' : 'orWhere';
 
-      for (const key in obj) {
-        const value = obj[key];
+      function parseValue(raw: any, fieldType: string): any {
+        if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+          try {
+            raw = JSON.parse(raw);
+          } catch {}
+        }
 
-        // ✅ Logic lồng
+        if (Array.isArray(raw)) {
+          return raw
+            .map((v) => {
+              if (fieldType === 'uuid' || fieldType === 'varchar')
+                return String(v).trim();
+              if (['int', 'integer', 'number'].includes(fieldType))
+                return Number(v);
+              return v;
+            })
+            .filter((v) => v !== undefined && v !== null && v !== '');
+        } else {
+          if (fieldType === 'uuid' || fieldType === 'varchar')
+            return String(raw).trim();
+          if (['int', 'integer', 'number'].includes(fieldType))
+            return Number(raw);
+          return raw;
+        }
+      }
+
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+
+      if ('_not' in obj) {
+        const lastKey = path.at(-1);
+        const rel = currentMeta.relations.find(
+          (r) => r.propertyName === lastKey,
+        );
+        let nextMeta = currentMeta;
+        let nextPath = path;
+
+        if (rel) {
+          nextMeta = rel.inverseEntityMetadata;
+          nextPath = [...path];
+          resolveRelationPath(nextPath, currentMeta);
+        }
+
+        const notTarget = obj['_not'];
+        if (
+          typeof notTarget === 'object' &&
+          notTarget !== null &&
+          '_eq_set' in notTarget &&
+          Object.keys(notTarget).length === 1
+        ) {
+          obj['_not'] = { id: notTarget };
+        }
+
+        qb?.[method](
+          new Brackets((subQb) => {
+            walkFilter(
+              obj['_not'],
+              nextPath,
+              nextMeta,
+              'and',
+              subQb,
+              whereParams,
+              true,
+            );
+          }),
+        );
+        return;
+      }
+
+      for (const key in obj) {
+        let value = obj[key];
+
         if (key === 'and' || key === 'or') {
-          const nested = new Brackets((subQb) => {
-            for (const sub of value) {
-              walkFilter(sub, path, currentMeta, key as 'and' | 'or', subQb);
-            }
-          });
-          qb?.[method](nested);
+          qb?.[method](
+            new Brackets((subQb) => {
+              for (const sub of value) {
+                walkFilter(
+                  sub,
+                  path,
+                  currentMeta,
+                  key as 'and' | 'or',
+                  subQb,
+                  whereParams,
+                  negate,
+                );
+              }
+            }),
+          );
           continue;
         }
 
-        // ✅ Relation
         const rel = currentMeta.relations.find((r) => r.propertyName === key);
+
+        if (
+          rel &&
+          typeof value === 'object' &&
+          value !== null &&
+          '_count' in value &&
+          typeof value._count === 'object'
+        ) {
+          const countConditions = value._count;
+          const subAlias = `sub_${paramCounter++}`;
+          const inverseTable = rel.inverseEntityMetadata.tableName;
+          const inverseKey =
+            rel.inverseEntityMetadata.primaryColumns[0]?.propertyName || 'id';
+          const relationKey =
+            rel.inverseRelation?.joinColumns?.[0]?.databaseName;
+          if (!relationKey) continue;
+
+          for (const op in countConditions) {
+            const operator = OPERATOR_MAP[op];
+            if (!operator) continue;
+
+            const paramName = safeKey('count', path.join('_'), paramCounter++);
+            const val = countConditions[op];
+            whereParams[paramName] = val;
+
+            const subquery = `
+          SELECT ${subAlias}.${relationKey}
+          FROM ${inverseTable} ${subAlias}
+          GROUP BY ${subAlias}.${relationKey}
+          HAVING COUNT(DISTINCT ${subAlias}.${inverseKey}) ${operator} :${paramName}
+        `;
+
+            const outer = `${rootAlias}.id ${negate ? 'NOT IN' : 'IN'} (${subquery})`;
+            qb?.[method](outer);
+          }
+          continue;
+        }
+
+        if (
+          rel &&
+          typeof value === 'object' &&
+          value !== null &&
+          Object.keys(value).every(
+            (op) => op in OPERATOR_MAP || op === '_eq_set',
+          )
+        ) {
+          value = { id: value };
+        }
+
+        if (
+          rel &&
+          typeof value === 'object' &&
+          value !== null &&
+          '_eq_set' in value &&
+          Object.keys(value).length === 1
+        ) {
+          value = { id: value };
+        }
+
         if (rel) {
           const newPath = [...path, key];
-          resolveRelationPath(newPath, rootMetadata);
-
-          // ✅ _count
-          if (typeof value === 'object' && '_count' in value) {
-            const countFilter = value['_count'];
-            const joinAlias = `__${newPath.join('_')}__`;
-            const inverseJoinCol =
-              rel.inverseRelation?.joinColumns?.[0]?.propertyName ??
-              rel.inverseEntityMetadata.primaryColumns[0]?.propertyName ??
-              'id';
-
-            const subQb = dataSource
-              .createQueryBuilder()
-              .select(`${joinAlias}.${inverseJoinCol}`, 'id')
-              .from(rel.inverseEntityMetadata.target, joinAlias)
-              .groupBy(`${joinAlias}.${inverseJoinCol}`);
-
-            for (const op in countFilter) {
-              const operator = OPERATOR_MAP[op];
-              if (!operator) continue;
-              const paramName = `param${paramCounter++}`;
-              subQb.having(`COUNT(*) ${operator} :${paramName}`, {
-                [paramName]: countFilter[op],
-              });
-              whereParams[paramName] = countFilter[op];
-            }
-
-            qb?.[method](`${rootAlias}.id IN (${subQb.getQuery()})`);
-            qb?.setParameters(subQb.getParameters());
-            continue;
-          }
-
-          // ✅ _eq_set cho many-to-many
-          if (typeof value === 'object' && '_eq_set' in value) {
-            const exactIds = value['_eq_set'];
-            const pathStr = path.join('.');
-            const fieldAlias = aliasMap.get(pathStr) || rootAlias;
-
-            const junctionMeta = rel.junctionEntityMetadata;
-            if (!junctionMeta) continue;
-
-            const joinCol = junctionMeta.columns.find(
-              (c) => c.databaseName === rel.joinColumns[0]?.databaseName,
-            );
-            const inverseJoinCol = junctionMeta.columns.find(
-              (c) => c.databaseName === rel.inverseJoinColumns[0]?.databaseName,
-            );
-            if (!joinCol || !inverseJoinCol) continue;
-
-            const tableName = junctionMeta.tableName;
-
-            qb?.[method](`
-          ${fieldAlias}.id IN (
-            SELECT ${joinCol.databaseName} FROM ${tableName}
-            GROUP BY ${joinCol.databaseName}
-            HAVING COUNT(DISTINCT ${inverseJoinCol.databaseName}) = :__eqset_len
-            AND SUM(${inverseJoinCol.databaseName} IN (:...__eqset_ids)) = :__eqset_len
-          )
-        `);
-
-            whereParams['__eqset_len'] = exactIds.length;
-            whereParams['__eqset_ids'] = exactIds;
-            continue;
-          }
-
-          // ✅ Lọc sâu trong quan hệ
-          walkFilter(value, newPath, rel.inverseEntityMetadata, 'and', qb);
+          resolveRelationPath(newPath, currentMeta);
+          walkFilter(
+            value,
+            newPath,
+            rel.inverseEntityMetadata,
+            'and',
+            qb,
+            whereParams,
+            negate,
+          );
           continue;
         }
 
-        // ✅ Field thường
+        const column = currentMeta.columns.find((c) => c.propertyName === key);
+        if (!column) {
+          console.warn(
+            `⛔ Field "${key}" not in table "${currentMeta.tableName}", skipping`,
+          );
+          continue;
+        }
+
+        const fieldAlias = aliasMap.get(path.join('.')) || rootAlias;
+        const field = `${fieldAlias}.${key}`;
+
+        let fieldType = 'varchar';
+        if (typeof column.type === 'string') {
+          fieldType = column.type.toLowerCase();
+        } else if (typeof column.type === 'function') {
+          const name = column.type.name.toLowerCase();
+          if (name.includes('number')) fieldType = 'number';
+          else if (name.includes('uuid')) fieldType = 'uuid';
+          else if (name.includes('string')) fieldType = 'varchar';
+          else if (name.includes('boolean')) fieldType = 'boolean';
+        }
+
+        if (typeof value === 'object' && '_eq_set' in value) {
+          const exactIds = parseValue(value['_eq_set'], fieldType);
+          if (!Array.isArray(exactIds) || !exactIds.length) return;
+
+          const paramName = safeKey('eqset', key, paramCounter++);
+          whereParams[paramName] = exactIds;
+
+          if (negate) {
+            qb?.[method](
+              new Brackets((qb1) => {
+                qb1
+                  .where(`${field} IS NULL`)
+                  .orWhere(`${field} NOT IN (:...${paramName})`);
+              }),
+            );
+          } else {
+            qb?.[method](`${field} IN (:...${paramName})`);
+          }
+
+          continue;
+        }
+
         if (typeof value === 'object' && value !== null) {
           for (const op in value) {
             const operator = OPERATOR_MAP[op];
             if (!operator) continue;
 
-            const pathStr = path.join('.');
-            const fieldAlias = aliasMap.get(pathStr) || rootAlias;
-            const field = `${fieldAlias}.${key}`;
-            const paramName = `param${paramCounter++}`;
-            let finalValue = value[op];
+            const paramName = safeKey('param', key, paramCounter++);
+            let finalValue = parseValue(value[op], fieldType);
 
-            // ✅ _is_null
             if (op === '_is_null') {
-              qb?.[method](`${field} IS ${finalValue ? '' : 'NOT '}NULL`);
+              const cond = `${field} IS ${finalValue ? '' : 'NOT '}NULL`;
+              qb?.[method](negate ? `NOT (${cond})` : cond);
               continue;
             }
 
-            // ✅ _in / _nin
             if (op === '_in' || op === '_nin') {
-              qb?.[method](`${field} ${operator} (:...${paramName})`, {
+              if (!Array.isArray(finalValue)) continue;
+              const cond = `${field} ${operator} (:...${paramName})`;
+              qb?.[method](negate ? `NOT (${cond})` : cond, {
                 [paramName]: finalValue,
               });
               whereParams[paramName] = finalValue;
               continue;
             }
 
-            // ✅ xử lý chuỗi LIKE + unaccent
-            if (op === '_starts_with') {
-              finalValue = `${finalValue}%`;
-            } else if (op === '_ends_with') {
-              finalValue = `%${finalValue}`;
-            } else if (op === '_contains' || op === '_like') {
+            if (op === '_starts_with') finalValue = `${finalValue}%`;
+            if (op === '_ends_with') finalValue = `%${finalValue}`;
+            if (op === '_contains' || op === '_like')
               finalValue = `%${finalValue}%`;
-            }
 
-            const isTextCompare = [
+            const isText = [
               '_like',
               '_starts_with',
               '_ends_with',
               '_contains',
             ].includes(op);
+            const cond = isText
+              ? `unaccent(${field}) ${operator} unaccent(:${paramName})`
+              : `${field} ${operator} :${paramName}`;
 
-            if (isTextCompare) {
-              qb?.[method](
-                `unaccent(${field}) ${operator} unaccent(:${paramName})`,
-                { [paramName]: finalValue },
-              );
-            } else {
-              qb?.[method](`${field} ${operator} :${paramName}`, {
-                [paramName]: finalValue,
-              });
-            }
-
+            qb?.[method](negate ? `NOT (${cond})` : cond, {
+              [paramName]: finalValue,
+            });
             whereParams[paramName] = finalValue;
           }
         }
       }
     }
 
-    // FIELD SELECT
-    if (!fields.length) {
+    if (!fields.length || (fields.length === 1 && fields[0] === '*')) {
       for (const column of rootMetadata.columns) {
         if (!column.relationMetadata) {
           select.add(`${rootAlias}.${column.propertyName}`);
@@ -343,14 +457,9 @@ export class DynamicFindService {
   }
 
   private collapseIdOnlyFields(obj: any): any {
-    if (obj instanceof Date) {
-      return obj; // ✅ preserve Date
-    }
-
+    if (obj instanceof Date) return obj;
     if (Array.isArray(obj)) {
       const collapsed = obj.map((item) => this.collapseIdOnlyFields(item));
-
-      // Nếu toàn bộ phần tử là object có đúng { id: ... }
       const isAllIdObjects = collapsed.every(
         (item) =>
           typeof item === 'object' &&
@@ -359,18 +468,10 @@ export class DynamicFindService {
           Object.keys(item).length === 1 &&
           (typeof item.id === 'number' || typeof item.id === 'string'),
       );
-
-      if (isAllIdObjects) {
-        return collapsed.map((item) => item.id);
-      }
-
-      return collapsed;
+      return isAllIdObjects ? collapsed.map((item) => item.id) : collapsed;
     }
-
     if (obj !== null && typeof obj === 'object' && !Array.isArray(obj)) {
       const keys = Object.keys(obj);
-
-      // Nếu là object chỉ chứa { id: number | string }
       if (
         keys.length === 1 &&
         keys[0] === 'id' &&
@@ -378,17 +479,13 @@ export class DynamicFindService {
       ) {
         return obj.id;
       }
-
-      // Deep merge các field
       const result: Record<string, any> = {};
       for (const [key, value] of Object.entries(obj)) {
         result[key] = this.collapseIdOnlyFields(value);
       }
-
       return result;
     }
-
-    return obj; // primitive
+    return obj;
   }
 
   async dynamicFind({
@@ -412,22 +509,35 @@ export class DynamicFindService {
       filter,
       tableName,
     });
-
     const qb = repo.createQueryBuilder(tableName);
+
+    console.log('✅ SQL preview:', qb.getSql());
+    console.log('✅ PARAMS:', extract.params);
+
     qb.select(extract.select);
     for (const join of extract.joinArr) {
       qb.leftJoin(join.path, join.alias);
     }
+    console.log('🔍 extract.params:', extract.params);
+
+    for (const key of Object.keys(extract.params)) {
+      if (!/^[a-zA-Z0-9_.]+$/.test(key)) {
+        console.warn('🚨 INVALID PARAM KEY:', key);
+      }
+    }
+
     qb.where(extract.where).setParameters(extract.params);
     qb.skip(limit * (page - 1));
     qb.take(limit);
+    console.log(qb.getSql());
+    console.log('QB Params:', qb.getParameters());
+
     const result = await qb.getMany();
 
     const output: any = {
       data: this.collapseIdOnlyFields(result),
     };
 
-    // ✳️ Nếu meta được yêu cầu
     if (meta) {
       const metaObj: Record<string, any> = {};
 

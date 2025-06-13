@@ -134,7 +134,6 @@ export class SchemaReloadService {
 
   async checkLockChangeSchema() {
     const lock = await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
-    this.logger.log(`Kiểm tra lock schema: ${lock}`);
     return lock;
   }
 }
