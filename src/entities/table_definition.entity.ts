@@ -1,3 +1,7 @@
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Column_definition } from "./column_definition.entity";
+import { Relation_definition } from "./relation_definition.entity";
+
 @Entity('table_definition')
 export class Table_definition {
     @PrimaryGeneratedColumn('increment')

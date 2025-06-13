@@ -1,3 +1,5 @@
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
+
 @Entity('setting_definition')
 export class Setting_definition {
     @PrimaryGeneratedColumn('increment')

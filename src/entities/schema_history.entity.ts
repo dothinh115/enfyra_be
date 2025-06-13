@@ -1,3 +1,5 @@
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
+
 @Entity('schema_history')
 export class Schema_history {
     @PrimaryGeneratedColumn('increment')

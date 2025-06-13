@@ -1,3 +1,7 @@
+import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Role_definition } from "./role_definition.entity";
+import { Route_definition } from "./route_definition.entity";
+
 @Entity('permission_definition')
 export class Permission_definition {
     @PrimaryGeneratedColumn('increment')

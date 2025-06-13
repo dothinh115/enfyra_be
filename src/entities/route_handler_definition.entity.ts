@@ -1,3 +1,6 @@
+import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Route_definition } from "./route_definition.entity";
+
 @Entity('route_handler_definition')
 export class Route_handler_definition {
     @PrimaryGeneratedColumn('increment')

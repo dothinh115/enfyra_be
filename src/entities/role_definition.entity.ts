@@ -1,3 +1,7 @@
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { User_definition } from "./user_definition.entity";
+import { Permission_definition } from "./permission_definition.entity";
+
 @Entity('role_definition')
 export class Role_definition {
     @PrimaryGeneratedColumn('increment')
