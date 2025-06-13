@@ -27,7 +27,7 @@ import { RedisPubSubService } from './redis-pubsub/redis-pubsub.service';
 import { SchemaStateService } from './schema/schema-state.service';
 import { SchemaLockGuard } from './guard/schema-lock.guard';
 import { SqlFunctionService } from './sql/sql-function.service';
-import { DynamicQueryModule } from './dynamic-query/dynamic-query.module';
+import { QueryBuilderModule } from './query-builder/query-builder.module';
 
 @Global()
 @Module({
@@ -59,7 +59,7 @@ import { DynamicQueryModule } from './dynamic-query/dynamic-query.module';
       }),
       inject: [ConfigService],
     }),
-    DynamicQueryModule,
+    QueryBuilderModule,
     AuthModule,
     MeModule,
     DynamicModule,

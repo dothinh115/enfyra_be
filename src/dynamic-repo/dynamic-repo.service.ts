@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { validateDto } from '../utils/helpers';
 import { TableHandlerService } from '../table/table.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
-import { DynamicQueryService } from '../dynamic-query/dynamic-query.service';
+import { QueryBuilderService } from '../query-builder/query-builder.service';
 
 export class DynamicRepoService {
   private fields: string;
@@ -13,7 +13,7 @@ export class DynamicRepoService {
   private limit: number;
   private meta: 'filterCount' | 'totalCount' | '*';
   private tableName: string;
-  private dynamicQueryService: DynamicQueryService;
+  private queryBuilderService: QueryBuilderService;
   private dataSourceService: DataSourceService;
   private repo: Repository<any>;
   private tableHandlerService: TableHandlerService;
@@ -23,7 +23,7 @@ export class DynamicRepoService {
     page = 1,
     limit = 10,
     tableName,
-    dynamicQueryService,
+    queryBuilderService,
     dataSourceService,
     tableHandlerService,
     meta,
@@ -33,7 +33,7 @@ export class DynamicRepoService {
     page: number;
     limit: number;
     tableName: string;
-    dynamicQueryService: DynamicQueryService;
+    queryBuilderService: QueryBuilderService;
     dataSourceService: DataSourceService;
     tableHandlerService: TableHandlerService;
     meta?: 'filterCount' | 'totalCount' | '*' | undefined;
@@ -43,7 +43,7 @@ export class DynamicRepoService {
     this.page = page;
     this.limit = limit;
     this.tableName = tableName;
-    this.dynamicQueryService = dynamicQueryService;
+    this.queryBuilderService = queryBuilderService;
     this.dataSourceService = dataSourceService;
     this.tableHandlerService = tableHandlerService;
     this.meta = meta;
@@ -54,7 +54,7 @@ export class DynamicRepoService {
   }
 
   async find(id?: string | number) {
-    return await this.dynamicQueryService.dynamicFind({
+    return await this.queryBuilderService.find({
       fields: this.fields,
       filter: id ? { ...this.filter, id: { _eq: id } } : this.filter,
       page: this.page,

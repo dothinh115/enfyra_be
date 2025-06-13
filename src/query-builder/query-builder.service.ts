@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { Brackets, EntityMetadata, SelectQueryBuilder } from 'typeorm';
 import { DataSourceService } from '../data-source/data-source.service';
-import { Brackets, EntityMetadata } from 'typeorm';
 
 const OPERATOR_MAP: Record<string, string> = {
   _eq: '=',
@@ -19,7 +19,7 @@ const OPERATOR_MAP: Record<string, string> = {
 };
 
 @Injectable()
-export class DynamicQueryService {
+export class QueryBuilderService {
   constructor(private dataSourceService: DataSourceService) {}
 
   private async extractRelationsAndFieldsAndWhere({
@@ -464,7 +464,7 @@ export class DynamicQueryService {
     return obj;
   }
 
-  async dynamicFind({
+  async find({
     fields,
     tableName,
     filter,
