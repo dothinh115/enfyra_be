@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Req } from '@nestjs/common';
 import { MeService } from './me.service';
 import { Public } from '../decorators/public-route.decorator';
 import { Request } from 'express';
@@ -15,7 +15,7 @@ export class MeController {
   }
 
   @Public()
-  @Post()
+  @Patch()
   update(@Body() body: any, @Req() req: Request & { user: User_definition }) {
     return this.meService.update(body, req);
   }

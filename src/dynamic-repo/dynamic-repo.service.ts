@@ -12,6 +12,7 @@ export class DynamicRepoService {
   private page: number;
   private limit: number;
   private meta: 'filterCount' | 'totalCount' | '*';
+  private sort: string | string[];
   private tableName: string;
   private queryBuilderService: QueryBuilderService;
   private dataSourceService: DataSourceService;
@@ -27,6 +28,7 @@ export class DynamicRepoService {
     dataSourceService,
     tableHandlerService,
     meta,
+    sort,
   }: {
     fields: string;
     filter: any;
@@ -37,6 +39,7 @@ export class DynamicRepoService {
     dataSourceService: DataSourceService;
     tableHandlerService: TableHandlerService;
     meta?: 'filterCount' | 'totalCount' | '*' | undefined;
+    sort?: string | string[];
   }) {
     this.fields = fields;
     this.filter = filter;
@@ -47,6 +50,7 @@ export class DynamicRepoService {
     this.dataSourceService = dataSourceService;
     this.tableHandlerService = tableHandlerService;
     this.meta = meta;
+    this.sort = sort;
   }
 
   async init() {
@@ -61,6 +65,7 @@ export class DynamicRepoService {
       limit: this.limit,
       tableName: this.tableName,
       meta: this.meta,
+      sort: this.sort,
     });
   }
 

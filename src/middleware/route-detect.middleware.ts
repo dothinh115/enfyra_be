@@ -52,6 +52,9 @@ export class RouteDetectMiddleware implements NestMiddleware {
               ...(req.query.meta && {
                 meta: req.query.meta,
               }),
+              ...(req.query.sort && {
+                sort: req.query.sort,
+              }),
             });
             await dynamicRepo.init();
             const name =

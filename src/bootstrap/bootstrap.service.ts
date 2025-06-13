@@ -49,7 +49,6 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     await this.waitForDatabaseConnection();
-    return;
     let settingRepo: any =
       this.dataSourceService.getRepository('setting_definition');
 

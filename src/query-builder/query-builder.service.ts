@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Brackets, EntityMetadata, SelectQueryBuilder } from 'typeorm';
+import { Brackets, EntityMetadata } from 'typeorm';
 import { DataSourceService } from '../data-source/data-source.service';
 
 const OPERATOR_MAP: Record<string, string> = {
@@ -280,11 +280,17 @@ export class QueryBuilderService {
 
         if (typeof value === 'object' && value !== null) {
           for (const op in value) {
-            const sqlOp = OPERATOR_MAP[op];
-            if (!sqlOp) continue;
+            let sqlOp = OPERATOR_MAP[op];
+            if (!sqlOp && !['_between', '_nbetween'].includes(op)) continue;
 
             const paramKey = `${key}_${Object.keys(params).length}`;
             let val = value[op];
+
+            // Bảo vệ phủ định kép: _not + _nin → _in
+            if (negate && op === '_nin') {
+              sqlOp = 'IN';
+              negate = false;
+            }
 
             if (op === '_in' || op === '_nin') {
               val = parseArray(val);
@@ -294,8 +300,8 @@ export class QueryBuilderService {
               val = `%${val}%`;
               qb[method](
                 negate
-                  ? `NOT (unaccent(${field}) LIKE unaccent(:${paramKey}))`
-                  : `unaccent(${field}) LIKE unaccent(:${paramKey})`,
+                  ? `NOT (LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey})))`
+                  : `LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey}))`,
                 { [paramKey]: val },
               );
               params[paramKey] = val;
@@ -306,8 +312,8 @@ export class QueryBuilderService {
               val = `${val}%`;
               qb[method](
                 negate
-                  ? `NOT (unaccent(${field}) LIKE unaccent(:${paramKey}))`
-                  : `unaccent(${field}) LIKE unaccent(:${paramKey})`,
+                  ? `NOT (LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey})))`
+                  : `LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey}))`,
                 { [paramKey]: val },
               );
               params[paramKey] = val;
@@ -318,8 +324,8 @@ export class QueryBuilderService {
               val = `%${val}`;
               qb[method](
                 negate
-                  ? `NOT (unaccent(${field}) LIKE unaccent(:${paramKey}))`
-                  : `unaccent(${field}) LIKE unaccent(:${paramKey})`,
+                  ? `NOT (LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey})))`
+                  : `LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey}))`,
                 { [paramKey]: val },
               );
               params[paramKey] = val;
@@ -329,11 +335,40 @@ export class QueryBuilderService {
             if (op === '_like') {
               qb[method](
                 negate
-                  ? `NOT (unaccent(${field}) LIKE unaccent(:${paramKey}))`
-                  : `unaccent(${field}) LIKE unaccent(:${paramKey})`,
+                  ? `NOT (LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey})))`
+                  : `LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey}))`,
                 { [paramKey]: val },
               );
               params[paramKey] = val;
+              continue;
+            }
+
+            if (
+              (op === '_between' || op === '_nbetween') &&
+              Array.isArray(val) &&
+              val.length === 2 &&
+              [
+                'int',
+                'float',
+                'double',
+                'decimal',
+                'number',
+                'date',
+                'datetime',
+                'timestamp',
+              ].includes((column.type as string).toLowerCase())
+            ) {
+              const [from, to] = val;
+              const fromKey = `${paramKey}_from`;
+              const toKey = `${paramKey}_to`;
+              params[fromKey] = from;
+              params[toKey] = to;
+              const useNegate = negate || op === '_nbetween';
+              qb[method](
+                useNegate
+                  ? `NOT (${field} BETWEEN :${fromKey} AND :${toKey})`
+                  : `${field} BETWEEN :${fromKey} AND :${toKey}`,
+              );
               continue;
             }
 
@@ -471,6 +506,7 @@ export class QueryBuilderService {
     page = 1,
     limit = 10,
     meta,
+    sort,
   }: {
     fields: string[] | string;
     tableName: string;
@@ -478,20 +514,80 @@ export class QueryBuilderService {
     page: number;
     limit: number;
     meta?: 'filterCount' | 'totalCount' | '*' | undefined;
+    sort?: string | string[];
   }) {
     const repo = await this.dataSourceService.getRepository(tableName);
+
+    // ✳️ Xử lý các field trong sort để join bảng nếu cần
+    const sortFields = Array.isArray(sort)
+      ? sort
+      : typeof sort === 'string'
+        ? sort
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [];
+
+    const extraJoins: { path: string; alias: string }[] = [];
+
+    for (const sortField of sortFields) {
+      const rawPath = sortField.startsWith('-')
+        ? sortField.slice(1)
+        : sortField;
+
+      const parts = rawPath.split('.');
+      if (parts.length <= 1) continue;
+
+      for (let i = 1; i < parts.length; i++) {
+        const relPath = parts.slice(0, i).join('.');
+        const parentPath = parts.slice(0, i - 1).join('.');
+        const alias = relPath;
+        const parentAlias = parentPath || tableName;
+
+        const exists = extraJoins.find((j) => j.alias === alias);
+        if (!exists) {
+          extraJoins.push({
+            path: `${parentAlias}.${parts[i - 1]}`,
+            alias,
+          });
+        }
+      }
+    }
+
     const extract = await this.extractRelationsAndFieldsAndWhere({
       fields,
       filter,
       tableName,
     });
+
+    const allJoins = [
+      ...extract.joinArr,
+      ...extraJoins.filter(
+        (ej) => !extract.joinArr.some((j) => j.alias === ej.alias),
+      ),
+    ];
+
     const qb = repo.createQueryBuilder(tableName);
 
-    for (const join of extract.joinArr) {
+    for (const join of allJoins) {
       qb.leftJoin(join.path, join.alias);
     }
+
     qb.select(extract.select);
     qb.where(extract.where).setParameters(extract.params);
+
+    // ✳️ Sort
+    for (const sortField of sortFields) {
+      const order: 'ASC' | 'DESC' = sortField.startsWith('-') ? 'DESC' : 'ASC';
+      const fieldPath = sortField.replace(/^-/, '').trim();
+
+      const parts = fieldPath.split('.');
+      const aliasPath = parts.slice(0, -1).join('.');
+      const columnName = parts.at(-1)!;
+      const alias = aliasPath || tableName;
+
+      qb.addOrderBy(`${alias}.${columnName}`, order);
+    }
 
     // ✅ Pagination
     qb.skip((page - 1) * limit);
@@ -507,7 +603,7 @@ export class QueryBuilderService {
 
       if (meta === 'filterCount' || meta === '*') {
         const filterQb = repo.createQueryBuilder(tableName);
-        for (const join of extract.joinArr) {
+        for (const join of allJoins) {
           filterQb.leftJoin(join.path, join.alias);
         }
         filterQb.where(extract.where).setParameters(extract.params);
@@ -517,6 +613,7 @@ export class QueryBuilderService {
       if (meta === 'totalCount' || meta === '*') {
         metaObj.totalCount = await repo.count();
       }
+
       obj.meta = metaObj;
     }
 
