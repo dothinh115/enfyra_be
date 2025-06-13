@@ -15,7 +15,7 @@ import { JwtService } from '@nestjs/jwt';
 import { TableHandlerService } from '../table/table.service';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
-import { DynamicQueryService } from '../dynamic-find/dynamic-query.service';
+import { DynamicQueryService } from '../dynamic-query/dynamic-query.service';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {

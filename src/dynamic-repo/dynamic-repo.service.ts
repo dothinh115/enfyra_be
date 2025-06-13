@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { validateDto } from '../utils/helpers';
 import { TableHandlerService } from '../table/table.service';
 import { CreateTableDto } from '../table/dto/create-table.dto';
-import { DynamicQueryService } from '../dynamic-find/dynamic-query.service';
+import { DynamicQueryService } from '../dynamic-query/dynamic-query.service';
 
 export class DynamicRepoService {
   private fields: string;

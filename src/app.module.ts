@@ -27,7 +27,7 @@ import { RedisPubSubService } from './redis-pubsub/redis-pubsub.service';
 import { SchemaStateService } from './schema/schema-state.service';
 import { SchemaLockGuard } from './guard/schema-lock.guard';
 import { SqlFunctionService } from './sql/sql-function.service';
-import { DynamicQueryModule } from './dynamic-find/dynamic-query.module';
+import { DynamicQueryModule } from './dynamic-query/dynamic-query.module';
 
 @Global()
 @Module({
