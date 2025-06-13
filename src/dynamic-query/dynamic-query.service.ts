@@ -492,10 +492,34 @@ export class DynamicQueryService {
     }
     qb.select(extract.select);
     qb.where(extract.where).setParameters(extract.params);
-    console.log(qb.getSql(), qb.getParameters());
+
+    // ✅ Pagination
+    qb.skip((page - 1) * limit);
+    qb.take(limit);
+
     const result = await qb.getMany();
-    const obj: any = {};
-    obj.data = this.collapseIdOnlyFields(result, extract.requestedFields);
+    const obj: any = {
+      data: this.collapseIdOnlyFields(result, extract.requestedFields),
+    };
+
+    if (meta) {
+      const metaObj: Record<string, any> = {};
+
+      if (meta === 'filterCount' || meta === '*') {
+        const filterQb = repo.createQueryBuilder(tableName);
+        for (const join of extract.joinArr) {
+          filterQb.leftJoin(join.path, join.alias);
+        }
+        filterQb.where(extract.where).setParameters(extract.params);
+        metaObj.filterCount = await filterQb.getCount();
+      }
+
+      if (meta === 'totalCount' || meta === '*') {
+        metaObj.totalCount = await repo.count();
+      }
+      obj.meta = metaObj;
+    }
+
     return obj;
   }
 }
