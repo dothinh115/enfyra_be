@@ -1,6 +1,3 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { Table_definition } from "./table_definition.entity";
-
 @Entity('column_definition')
 @Unique(['name', 'table'])
 export class Column_definition {

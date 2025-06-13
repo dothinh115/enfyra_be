@@ -1,6 +1,3 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { User_definition } from "./user_definition.entity";
-
 @Entity('session_definition')
 export class Session_definition {
     @PrimaryGeneratedColumn('uuid')

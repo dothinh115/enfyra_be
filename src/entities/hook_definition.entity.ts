@@ -1,6 +1,3 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { Route_definition } from "./route_definition.entity";
-
 @Entity('hook_definition')
 export class Hook_definition {
     @PrimaryGeneratedColumn('increment')

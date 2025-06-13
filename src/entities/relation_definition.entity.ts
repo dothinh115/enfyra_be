@@ -1,6 +1,3 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { Table_definition } from "./table_definition.entity";
-
 @Entity('relation_definition')
 @Unique(['propertyName', 'sourceTable'])
 export class Relation_definition {
