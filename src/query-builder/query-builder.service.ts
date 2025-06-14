@@ -379,11 +379,12 @@ export class QueryBuilderService {
                   : `${field} ${sqlOp} (:...${paramKey})`,
                 { [paramKey]: val },
               );
-            } else if (op === '_is_null') {
+            } else if (op === '_is_null' || op === '_is_nnull') {
+              const isNullCheck = op === '_is_null';
               qb[method](
                 negate
-                  ? `NOT (${field} IS ${val ? '' : 'NOT '}NULL)`
-                  : `${field} IS ${val ? '' : 'NOT '}NULL`,
+                  ? `NOT (${field} IS ${isNullCheck ? '' : 'NOT '}NULL)`
+                  : `${field} IS ${isNullCheck ? '' : 'NOT '}NULL`,
               );
             } else {
               qb[method](
