@@ -141,14 +141,14 @@ export class RouteDetectMiddleware implements NestMiddleware {
         },
       )
       .leftJoinAndSelect(
-        'route.permissions',
-        'permissions',
-        'permissions.isEnabled = :enabled',
+        'route.routePermissions',
+        'routePermissions',
+        'routePermissions.isEnabled = :enabled',
         {
           enabled: true,
         },
       )
-      .leftJoinAndSelect('permissions.role', 'role')
+      .leftJoinAndSelect('routePermissions.role', 'role')
       .where('route.isEnabled = :enabled', { enabled: true })
       .getMany();
 

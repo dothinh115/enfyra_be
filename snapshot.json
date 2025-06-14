@@ -99,8 +99,8 @@
             { "propertyName": "users", "type": "one-to-many", "isStatic": true, "targetTable": "user_definition", "inversePropertyName": "role" }
         ]
     },
-    "permission_definition" : {
-        "name": "permission_definition",
+    "route_permission_definition" : {
+        "name": "route_permission_definition",
         "isStatic": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
@@ -108,8 +108,8 @@
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "isStatic": true, "default": true }
         ],
         "relations": [
-            { "propertyName": "role", "type": "many-to-one", "isStatic": true, "targetTable": "role_definition", "inversePropertyName": "permissions", "isIndex": true },
-            { "propertyName": "route", "type": "many-to-one", "isStatic": true, "targetTable": "route_definition", "inversePropertyName": "permissions", "isIndex": true } 
+            { "propertyName": "role", "type": "many-to-one", "isStatic": true, "targetTable": "role_definition", "inversePropertyName": "routePermissions", "isIndex": true },
+            { "propertyName": "route", "type": "many-to-one", "isStatic": true, "targetTable": "route_definition", "inversePropertyName": "routePermissions", "isIndex": true } 
         ]
     },
     "route_handler_definition": {
