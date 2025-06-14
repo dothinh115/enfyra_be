@@ -23,9 +23,13 @@ export class HideFieldInterceptor implements NestInterceptor {
 
     if (value && typeof value === 'object') {
       const sanitized = this.sanitizeObject(value);
+
+      // ❗ Chỉ đệ quy tiếp nếu field không phải là Date
       for (const key of Object.keys(sanitized)) {
-        sanitized[key] = this.sanitizeDeep(sanitized[key]);
+        const val = sanitized[key];
+        sanitized[key] = val instanceof Date ? val : this.sanitizeDeep(val);
       }
+
       return sanitized;
     }
 
