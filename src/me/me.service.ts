@@ -2,19 +2,59 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
 import { User_definition } from '../entities/user_definition.entity';
 import { DataSourceService } from '../data-source/data-source.service';
+import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
+import { TableHandlerService } from '../table/table.service';
+import { QueryBuilderService } from '../query-builder/query-builder.service';
 
 @Injectable()
 export class MeService {
-  constructor(private dsService: DataSourceService) {}
+  constructor(
+    private dsService: DataSourceService,
+    private tableHandlerService: TableHandlerService,
+    private dataSourceService: DataSourceService,
+    private queryBuilderService: QueryBuilderService,
+  ) {}
 
   async find(req: Request & { user: User_definition }) {
     if (!req.user) throw new UnauthorizedException();
-    return req.user;
+    const repo = new DynamicRepoService({
+      fields: req.query.fields as string,
+      filter: req.query.filter,
+      page: Number(req.query.page ?? 1),
+      tableName: 'user_definition',
+      limit: Number(req.query.limit ?? 10),
+      tableHandlerService: this.tableHandlerService,
+      dataSourceService: this.dataSourceService,
+      queryBuilderService: this.queryBuilderService,
+      ...(req.query.meta && {
+        meta: req.query.meta as any,
+      }),
+      ...(req.query.sort && {
+        sort: req.query.sort as string,
+      }),
+    });
+    await repo.init();
+    return repo.find(req.user.id);
   }
 
   async update(body: any, req: Request & { user: User_definition }) {
     if (!req.user) throw new UnauthorizedException();
-    const repo = this.dsService.getRepository('user_definition');
+    const repo = new DynamicRepoService({
+      fields: req.query.fields as string,
+      filter: req.query.filter,
+      page: Number(req.query.page ?? 1),
+      tableName: 'user_definition',
+      limit: Number(req.query.limit ?? 10),
+      tableHandlerService: this.tableHandlerService,
+      dataSourceService: this.dataSourceService,
+      queryBuilderService: this.queryBuilderService,
+      ...(req.query.meta && {
+        meta: req.query.meta as any,
+      }),
+      ...(req.query.sort && {
+        sort: req.query.sort as string,
+      }),
+    });
     return await repo.update(req.user.id, body);
   }
 }

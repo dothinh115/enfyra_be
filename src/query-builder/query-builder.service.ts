@@ -326,13 +326,15 @@ export class QueryBuilderService {
 
           resolveRelationPath(newPath, currentMeta);
 
+          // Xử lý _count trên quan hệ
           if (
             typeof value === 'object' &&
             value !== null &&
             '_count' in value
           ) {
             const alias = `sub_${params.__countAlias || 0}`;
-            params.__countAlias = (params.__countAlias || 0) + 1;
+            const countAliasIndex = params.__countAlias || 0;
+            params.__countAlias = countAliasIndex + 1;
 
             const inverseTable = rel.inverseEntityMetadata.tableName;
             const inverseKey =
@@ -345,52 +347,58 @@ export class QueryBuilderService {
               const sqlOp = OPERATOR_MAP[op];
               if (!sqlOp) continue;
 
-              const paramKey = `count_${params.__countAlias || 0}_${Object.keys(params).length}`;
+              const paramKey = `count_${countAliasIndex}_${Object.keys(params).length}`;
               const val = value._count[op];
               params[paramKey] = val;
 
-              const subquery = `SELECT ${alias}.${joinKey} FROM ${inverseTable} ${alias} GROUP BY ${alias}.${joinKey} HAVING COUNT(DISTINCT ${alias}.${inverseKey}) ${sqlOp} :${paramKey}`;
-              const mainId = `${rootAlias}.${currentMeta.primaryColumns[0].propertyName}`;
+              const subquery = `
+            SELECT ${alias}.${joinKey}
+            FROM ${inverseTable} ${alias}
+            GROUP BY ${alias}.${joinKey}
+            HAVING COUNT(DISTINCT ${alias}.${inverseKey}) ${sqlOp} :${paramKey}
+          `;
 
-              qb[method](`${mainId} ${negate ? 'NOT IN' : 'IN'} (${subquery})`);
+              const wrappedSubquery = `(${subquery})`; // 👈 fix lỗi alias
+
+              const mainId = `${rootAlias}.${currentMeta.primaryColumns[0].propertyName}`;
+              qb[method](
+                `${mainId} ${negate ? 'NOT IN' : 'IN'} ${wrappedSubquery}`,
+              );
             }
-          } else {
-            walkFilter(
-              value,
-              newPath,
-              rel.inverseEntityMetadata,
-              'and',
-              qb,
-              params,
-              negate,
-            );
+
+            continue;
           }
 
+          // Quan hệ lồng nhau
+          walkFilter(
+            value,
+            newPath,
+            rel.inverseEntityMetadata,
+            'and',
+            qb,
+            params,
+            negate,
+          );
           continue;
         }
 
-        // Xử lý trường thông thường (column)
         const column = currentMeta.columns.find((c) => c.propertyName === key);
         if (!column) continue;
 
-        const fieldPath = [...path].join('.');
+        const fieldPath = path.join('.');
         const alias = aliasMap.get(fieldPath) || rootAlias;
         const field = `${alias}.${key}`;
 
         if (typeof value === 'object' && value !== null) {
           for (const op in value) {
-            let sqlOp = OPERATOR_MAP[op];
-            if (!sqlOp && !['_between', '_nbetween'].includes(op)) continue;
-
             const paramKey = `${key}_${Object.keys(params).length}`;
             let val = value[op];
+            let sqlOp = OPERATOR_MAP[op];
 
-            if (negate && op === '_nin') {
-              sqlOp = 'IN';
-              negate = false;
+            // Special cases
+            if (op === '_in' || op === '_nin') {
+              val = parseArray(val);
             }
-
-            if (op === '_in' || op === '_nin') val = parseArray(val);
 
             if (
               ['_contains', '_starts_with', '_ends_with', '_like'].includes(op)
@@ -403,6 +411,7 @@ export class QueryBuilderService {
                     : op === '_ends_with'
                       ? `%${val}`
                       : val;
+
               qb[method](
                 negate
                   ? `NOT (LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey})))`
@@ -442,11 +451,11 @@ export class QueryBuilderService {
                   ? `NOT (${field} IS ${isNull ? '' : 'NOT '}NULL)`
                   : `${field} IS ${isNull ? '' : 'NOT '}NULL`,
               );
-            } else {
+            } else if (sqlOp) {
               qb[method](
                 negate
                   ? `NOT (${field} ${sqlOp} :${paramKey})`
-                  : `${field} ${sqlOp} :${paramKey})`,
+                  : `${field} ${sqlOp} :${paramKey}`,
                 { [paramKey]: val },
               );
             }
@@ -459,9 +468,7 @@ export class QueryBuilderService {
             negate
               ? `NOT (${field} = :${paramKey})`
               : `${field} = :${paramKey}`,
-            {
-              [paramKey]: value,
-            },
+            { [paramKey]: value },
           );
           params[paramKey] = value;
         }
