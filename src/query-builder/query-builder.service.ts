@@ -26,16 +26,33 @@ export class QueryBuilderService {
     fields,
     tableName,
     filter = {},
+    aggregate = {},
   }: {
     fields: string[] | string;
     tableName: string;
     filter?: any;
+    aggregate?: Partial<
+      Record<
+        'count' | 'sum' | 'avg' | 'min' | 'max',
+        string | { field: string; condition?: any }
+      >
+    >;
   }): Promise<{
     select: string[];
     joinArr: { path: string; alias: string }[];
     where: Brackets;
     params: Record<string, any>;
     requestedFields: Set<string>;
+    aggregates: Record<
+      string,
+      {
+        fn: string;
+        alias: string;
+        column: string;
+        condition?: Brackets;
+        params?: Record<string, any>;
+      }
+    >;
   }> {
     const dataSource = this.dataSourceService.getDataSource();
     fields =
@@ -57,6 +74,93 @@ export class QueryBuilderService {
       (m) => m.tableName === tableName,
     );
     if (!rootMeta) throw new Error(`Entity not found: ${tableName}`);
+
+    const aggregates: Record<
+      string,
+      {
+        fn: string;
+        alias: string;
+        column: string;
+        condition?: Brackets;
+        params?: Record<string, any>;
+      }
+    > = {};
+
+    if (aggregate) {
+      for (const [fn, raw] of Object.entries(aggregate)) {
+        let rawField = '';
+        let condition: any = undefined;
+
+        if (typeof raw === 'string') {
+          rawField = raw;
+        } else if (typeof raw === 'object' && raw?.field) {
+          rawField = raw.field;
+          condition = raw.condition;
+        } else {
+          continue;
+        }
+
+        const parts = rawField.split('.');
+        const column = parts.pop()!;
+        const relationPath = parts;
+
+        if (relationPath.length) {
+          resolveRelationPath(relationPath, rootMeta);
+        }
+
+        const alias = aliasMap.get(relationPath.join('.')) || rootAlias;
+        const targetMeta =
+          this.getMetadataByPath(relationPath, rootMeta) || rootMeta;
+        const colMeta = targetMeta.columns.find(
+          (c) => c.propertyName === column,
+        );
+
+        if (!colMeta) {
+          throw new Error(`Aggregate field not found: ${rawField}`);
+        }
+
+        const validTypes = [
+          'int',
+          'integer',
+          'float',
+          'double',
+          'decimal',
+          'numeric',
+          'real',
+          'date',
+          'datetime',
+          'timestamp',
+        ];
+        const fnLower = fn.toLowerCase();
+
+        if (
+          fnLower !== 'count' &&
+          !validTypes.includes((colMeta.type as string).toLowerCase())
+        ) {
+          throw new Error(
+            `Cannot apply aggregate '${fn}' on field '${rawField}' of type '${colMeta.type}'`,
+          );
+        }
+
+        const aggItem: (typeof aggregates)[string] = {
+          fn,
+          alias,
+          column,
+        };
+
+        if (condition) {
+          const conditionParams: Record<string, any> = {};
+          const bracket = new Brackets((qb) => {
+            walkFilter(condition, [], rootMeta, 'and', qb, conditionParams);
+          });
+
+          aggItem.condition = bracket;
+          aggItem.params = conditionParams;
+        }
+
+        aggregates[fn] = aggItem;
+      }
+    }
 
     function resolveRelationPath(path: string[], meta: EntityMetadata) {
       for (let i = 0; i < path.length; i++) {
@@ -196,7 +300,15 @@ export class QueryBuilderService {
         if (key === '_not') {
           qb[method](
             new Brackets((subQb) => {
-              walkFilter(value, path, currentMeta, 'and', subQb, params, true);
+              walkFilter(
+                value,
+                path,
+                currentMeta,
+                'and',
+                subQb,
+                params,
+                !negate,
+              );
             }),
           );
           continue;
@@ -205,6 +317,13 @@ export class QueryBuilderService {
         const rel = currentMeta.relations.find((r) => r.propertyName === key);
         if (rel) {
           const newPath = [...path, key];
+
+          if (!rel.inverseEntityMetadata || !rel.inverseRelation) {
+            throw new Error(
+              `Cannot use _count on relation '${key}' — inverse relation missing.`,
+            );
+          }
+
           resolveRelationPath(newPath, currentMeta);
 
           if (
@@ -214,48 +333,26 @@ export class QueryBuilderService {
           ) {
             const alias = `sub_${params.__countAlias || 0}`;
             params.__countAlias = (params.__countAlias || 0) + 1;
+
             const inverseTable = rel.inverseEntityMetadata.tableName;
             const inverseKey =
               rel.inverseEntityMetadata.primaryColumns[0]?.propertyName || 'id';
             const joinKey = rel.inverseRelation?.joinColumns?.[0]?.databaseName;
-            if (!joinKey) continue;
+            if (!joinKey)
+              throw new Error(`Missing join key for relation '${key}'`);
 
             for (const op in value._count) {
               const sqlOp = OPERATOR_MAP[op];
               if (!sqlOp) continue;
+
               const paramKey = `count_${params.__countAlias || 0}_${Object.keys(params).length}`;
               const val = value._count[op];
               params[paramKey] = val;
 
               const subquery = `SELECT ${alias}.${joinKey} FROM ${inverseTable} ${alias} GROUP BY ${alias}.${joinKey} HAVING COUNT(DISTINCT ${alias}.${inverseKey}) ${sqlOp} :${paramKey}`;
-              const mainId =
-                rootAlias + '.' + currentMeta.primaryColumns[0].propertyName;
-              qb[method](`${mainId} ${negate ? 'NOT IN' : 'IN'} (${subquery})`);
-            }
-          } else if (
-            typeof value === 'object' &&
-            value !== null &&
-            '_eq_set' in value
-          ) {
-            const paramKey = `eqset_${params.__eqsetAlias || 0}_${Object.keys(params).length}`;
-            params.__eqsetAlias = (params.__eqsetAlias || 0) + 1;
-            const ids = parseArray(value._eq_set);
-            params[paramKey] = ids;
-            const alias = aliasMap.get(newPath.join('.'));
-            const idCol =
-              rel.inverseEntityMetadata.primaryColumns[0]?.propertyName || 'id';
-            if (!alias) continue;
+              const mainId = `${rootAlias}.${currentMeta.primaryColumns[0].propertyName}`;
 
-            if (negate) {
-              qb[method](
-                new Brackets((b) => {
-                  b.where(`${alias}.${idCol} IS NULL`).orWhere(
-                    `${alias}.${idCol} NOT IN (:...${paramKey})`,
-                  );
-                }),
-              );
-            } else {
-              qb[method](`${alias}.${idCol} IN (:...${paramKey})`);
+              qb[method](`${mainId} ${negate ? 'NOT IN' : 'IN'} (${subquery})`);
             }
           } else {
             walkFilter(
@@ -268,9 +365,11 @@ export class QueryBuilderService {
               negate,
             );
           }
+
           continue;
         }
 
+        // Xử lý trường thông thường (column)
         const column = currentMeta.columns.find((c) => c.propertyName === key);
         if (!column) continue;
 
@@ -286,89 +385,46 @@ export class QueryBuilderService {
             const paramKey = `${key}_${Object.keys(params).length}`;
             let val = value[op];
 
-            // Bảo vệ phủ định kép: _not + _nin → _in
             if (negate && op === '_nin') {
               sqlOp = 'IN';
               negate = false;
             }
 
-            if (op === '_in' || op === '_nin') {
-              val = parseArray(val);
-            }
+            if (op === '_in' || op === '_nin') val = parseArray(val);
 
-            if (op === '_contains') {
-              val = `%${val}%`;
+            if (
+              ['_contains', '_starts_with', '_ends_with', '_like'].includes(op)
+            ) {
+              const pattern =
+                op === '_contains'
+                  ? `%${val}%`
+                  : op === '_starts_with'
+                    ? `${val}%`
+                    : op === '_ends_with'
+                      ? `%${val}`
+                      : val;
               qb[method](
                 negate
                   ? `NOT (LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey})))`
                   : `LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey}))`,
-                { [paramKey]: val },
+                { [paramKey]: pattern },
               );
-              params[paramKey] = val;
-              continue;
-            }
-
-            if (op === '_starts_with') {
-              val = `${val}%`;
-              qb[method](
-                negate
-                  ? `NOT (LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey})))`
-                  : `LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey}))`,
-                { [paramKey]: val },
-              );
-              params[paramKey] = val;
-              continue;
-            }
-
-            if (op === '_ends_with') {
-              val = `%${val}`;
-              qb[method](
-                negate
-                  ? `NOT (LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey})))`
-                  : `LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey}))`,
-                { [paramKey]: val },
-              );
-              params[paramKey] = val;
-              continue;
-            }
-
-            if (op === '_like') {
-              qb[method](
-                negate
-                  ? `NOT (LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey})))`
-                  : `LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey}))`,
-                { [paramKey]: val },
-              );
-              params[paramKey] = val;
+              params[paramKey] = pattern;
               continue;
             }
 
             if (
               (op === '_between' || op === '_nbetween') &&
               Array.isArray(val) &&
-              val.length === 2 &&
-              [
-                'int',
-                'float',
-                'double',
-                'decimal',
-                'number',
-                'date',
-                'datetime',
-                'timestamp',
-              ].includes((column.type as string).toLowerCase())
+              val.length === 2
             ) {
               const [from, to] = val;
-              const fromKey = `${paramKey}_from`;
-              const toKey = `${paramKey}_to`;
+              const fromKey = `${paramKey}_from`,
+                toKey = `${paramKey}_to`;
               params[fromKey] = from;
               params[toKey] = to;
-              const useNegate = negate || op === '_nbetween';
-              qb[method](
-                useNegate
-                  ? `NOT (${field} BETWEEN :${fromKey} AND :${toKey})`
-                  : `${field} BETWEEN :${fromKey} AND :${toKey}`,
-              );
+              const expr = `${field} BETWEEN :${fromKey} AND :${toKey}`;
+              qb[method](negate || op === '_nbetween' ? `NOT (${expr})` : expr);
               continue;
             }
 
@@ -380,20 +436,21 @@ export class QueryBuilderService {
                 { [paramKey]: val },
               );
             } else if (op === '_is_null' || op === '_is_nnull') {
-              const isNullCheck = op === '_is_null';
+              const isNull = op === '_is_null';
               qb[method](
                 negate
-                  ? `NOT (${field} IS ${isNullCheck ? '' : 'NOT '}NULL)`
-                  : `${field} IS ${isNullCheck ? '' : 'NOT '}NULL`,
+                  ? `NOT (${field} IS ${isNull ? '' : 'NOT '}NULL)`
+                  : `${field} IS ${isNull ? '' : 'NOT '}NULL`,
               );
             } else {
               qb[method](
                 negate
                   ? `NOT (${field} ${sqlOp} :${paramKey})`
-                  : `${field} ${sqlOp} :${paramKey}`,
+                  : `${field} ${sqlOp} :${paramKey})`,
                 { [paramKey]: val },
               );
             }
+
             params[paramKey] = val;
           }
         } else {
@@ -402,7 +459,9 @@ export class QueryBuilderService {
             negate
               ? `NOT (${field} = :${paramKey})`
               : `${field} = :${paramKey}`,
-            { [paramKey]: value },
+            {
+              [paramKey]: value,
+            },
           );
           params[paramKey] = value;
         }
@@ -423,6 +482,7 @@ export class QueryBuilderService {
       where,
       params: whereParams,
       requestedFields,
+      aggregates,
     };
   }
 
@@ -508,6 +568,7 @@ export class QueryBuilderService {
     limit = 10,
     meta,
     sort,
+    aggregate,
   }: {
     fields: string[] | string;
     tableName: string;
@@ -516,10 +577,12 @@ export class QueryBuilderService {
     limit: number;
     meta?: 'filterCount' | 'totalCount' | '*' | undefined;
     sort?: string | string[];
+    aggregate?: Partial<
+      Record<'count' | 'sum' | 'avg' | 'min' | 'max', string>
+    >;
   }) {
     const repo = await this.dataSourceService.getRepository(tableName);
 
-    // ✳️ Xử lý các field trong sort để join bảng nếu cần
     const sortFields = Array.isArray(sort)
       ? sort
       : typeof sort === 'string'
@@ -535,7 +598,6 @@ export class QueryBuilderService {
       const rawPath = sortField.startsWith('-')
         ? sortField.slice(1)
         : sortField;
-
       const parts = rawPath.split('.');
       if (parts.length <= 1) continue;
 
@@ -545,12 +607,8 @@ export class QueryBuilderService {
         const alias = relPath;
         const parentAlias = parentPath || tableName;
 
-        const exists = extraJoins.find((j) => j.alias === alias);
-        if (!exists) {
-          extraJoins.push({
-            path: `${parentAlias}.${parts[i - 1]}`,
-            alias,
-          });
+        if (!extraJoins.some((j) => j.alias === alias)) {
+          extraJoins.push({ path: `${parentAlias}.${parts[i - 1]}`, alias });
         }
       }
     }
@@ -559,6 +617,7 @@ export class QueryBuilderService {
       fields,
       filter,
       tableName,
+      aggregate,
     });
 
     const allJoins = [
@@ -577,11 +636,9 @@ export class QueryBuilderService {
     qb.select(extract.select);
     qb.where(extract.where).setParameters(extract.params);
 
-    // ✳️ Sort
     for (const sortField of sortFields) {
       const order: 'ASC' | 'DESC' = sortField.startsWith('-') ? 'DESC' : 'ASC';
       const fieldPath = sortField.replace(/^-/, '').trim();
-
       const parts = fieldPath.split('.');
       const aliasPath = parts.slice(0, -1).join('.');
       const columnName = parts.at(-1)!;
@@ -590,7 +647,6 @@ export class QueryBuilderService {
       qb.addOrderBy(`${alias}.${columnName}`, order);
     }
 
-    // ✅ Pagination
     qb.skip((page - 1) * limit);
     qb.take(limit);
 
@@ -599,8 +655,45 @@ export class QueryBuilderService {
       data: this.collapseIdOnlyFields(result, extract.requestedFields),
     };
 
+    if (aggregate && Object.keys(extract.aggregates).length > 0) {
+      const aggQb = repo.createQueryBuilder(tableName);
+      for (const join of allJoins) {
+        aggQb.leftJoin(join.path, join.alias);
+      }
+
+      aggQb.where(extract.where).setParameters(extract.params);
+
+      for (const [fn, { alias, column, condition, params }] of Object.entries(
+        extract.aggregates,
+      )) {
+        const fnUpper = fn.toUpperCase();
+
+        if (condition) {
+          const subQb = repo.createQueryBuilder('sub');
+          subQb.where(condition).setParameters(params || {});
+
+          const condSql = subQb.expressionMap.wheres
+            .map((w) => w.condition)
+            .join(' AND ');
+
+          aggQb.addSelect(`SUM(CASE WHEN ${condSql} THEN 1 ELSE 0 END)`, fn);
+          if (params) {
+            aggQb.setParameters(params);
+          }
+        } else {
+          aggQb.addSelect(`${fnUpper}(${alias}.${column})`, fn);
+        }
+      }
+
+      const aggResult = await aggQb.getRawOne();
+      obj.meta = {
+        ...(obj.meta || {}),
+        aggregate: aggResult,
+      };
+    }
+
     if (meta) {
-      const metaObj: Record<string, any> = {};
+      const metaObj: Record<string, any> = obj.meta || {};
 
       if (meta === 'filterCount' || meta === '*') {
         const filterQb = repo.createQueryBuilder(tableName);
