@@ -9,6 +9,10 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { SchemaReloadService } from '../schema/schema-reload.service';
 import { SchemaStateService } from '../schema/schema-state.service';
+import { Column_definition } from '../entities/column_definition.entity';
+import { Relation_definition } from '../entities/relation_definition.entity';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class TableHandlerService {
@@ -17,11 +21,11 @@ export class TableHandlerService {
     private autoService: AutoService,
     private schemaReloadService: SchemaReloadService,
     private schemaStateService: SchemaStateService,
+    @InjectDataSource() private dataSource: DataSource,
   ) {}
 
   async createTable(body: CreateTableDto) {
-    const dataSource = this.dataSouceService.getDataSource();
-    const queryRunner = dataSource.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     const manager = queryRunner.manager;
@@ -60,8 +64,7 @@ export class TableHandlerService {
   }
 
   async updateTable(id: number, body: CreateTableDto) {
-    const dataSource = this.dataSouceService.getDataSource();
-    const queryRunner = dataSource.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     const manager = queryRunner.manager;
@@ -71,83 +74,12 @@ export class TableHandlerService {
         where: { id },
         relations: ['columns', 'relations'],
       });
-      console.dir(exists, { depth: null });
 
       if (!exists) {
         throw new BadRequestException(`Table ${body.name} không tồn tại.`);
       }
 
-      const oldColumns = exists.columns;
-      const oldRelations = exists.relations;
-
-      const newColumns = body.columns || [];
-      const newRelations = body.relations || [];
-
-      // Detect deleted columns
-      for (const oldCol of oldColumns) {
-        const stillExists = newColumns.find((col) => col.id === oldCol.id);
-        if (!stillExists && oldCol.isStatic) {
-          throw new BadRequestException(
-            `Không thể xoá column static: ${oldCol.name}`,
-          );
-        }
-      }
-
-      for (const newCol of newColumns) {
-        if (!newCol.id) continue; // Skip newly added columns
-        const oldCol = oldColumns.find((col) => col.id === newCol.id);
-        if (!oldCol) continue;
-        if (oldCol.isStatic) {
-          if (newCol.name !== oldCol.name || newCol.type !== oldCol.type) {
-            throw new BadRequestException(
-              `Không thể sửa column static: ${oldCol.name}`,
-            );
-          }
-        } else {
-          if (newCol.name !== oldCol.name) {
-            await queryRunner.query(
-              `ALTER TABLE \`${exists.name}\` RENAME COLUMN \`${oldCol.name}\` TO \`${newCol.name}\`;`,
-            );
-          }
-        }
-      }
-
-      // Detect deleted relations
-      for (const oldRel of oldRelations) {
-        const stillExists = newRelations.find((rel) => rel.id === oldRel.id);
-        if (!stillExists && oldRel.isStatic) {
-          throw new BadRequestException(
-            `Không thể xoá relation static: ${oldRel.propertyName}`,
-          );
-        }
-      }
-
-      // Detect updated relations
-      for (const newRel of newRelations) {
-        if (!newRel.id) continue; // Skip new relations
-        const oldRel = oldRelations.find((rel) => rel.id === newRel.id);
-        if (!oldRel) continue;
-        if (oldRel.isStatic) {
-          if (
-            newRel.propertyName !== oldRel.propertyName ||
-            newRel.type !== oldRel.type
-          ) {
-            throw new BadRequestException(
-              `Không thể sửa relation static: ${oldRel.propertyName}`,
-            );
-          }
-        }
-      }
-
-      // Save updated entity with new + updated columns/relations
-      const tableEntity = manager.create(Table_definition, {
-        id: body.id,
-        ...body,
-        columns: this.normalizeColumnsWithAutoId(body.columns),
-        relations: this.prepareRelations(body.relations),
-      });
-
-      const result = await manager.save(Table_definition, tableEntity);
+      const result = await manager.save(Table_definition, body as any);
       await queryRunner.commitTransaction();
       await this.afterEffect();
       return result;
@@ -165,7 +97,9 @@ export class TableHandlerService {
   prepareRelations(relationsDto: CreateRelationDto[] = []) {
     const result = relationsDto.map((relation) => ({
       ...relation,
-      targetTable: { id: relation.targetTable },
+      ...(relation.targetTable && {
+        targetTable: { id: relation.targetTable },
+      }),
     }));
     return result;
   }
@@ -215,7 +149,7 @@ export class TableHandlerService {
         throw new BadRequestException(`Table với id ${id} không tồn tại.`);
       }
 
-      if (exists.isStatic) {
+      if (exists.isSystem) {
         throw new BadRequestException(
           `Không thể xoá bảng static (${exists.name}).`,
         );

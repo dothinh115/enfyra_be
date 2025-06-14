@@ -1,177 +1,184 @@
 {
     "column_definition": {
         "name": "column_definition",
-        "isStatic": true,
+        "isSystem": true,
         "uniques": [["name", "table"]],
         "columns": [
-            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true },
-            { "name": "type", "type": "varchar", "isNullable": false, "isStatic": true },
-            { "name": "isGenerated", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "isPrimary", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "isNullable", "type": "boolean", "isStatic": true, "default": true },
-            { "name": "isStatic", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "default", "type": "simple-json", "isNullable": true, "isStatic": true },
-            { "name": "enumValues", "type": "simple-json", "isNullable": true, "isStatic": true },
-            { "name": "isUnique", "type": "boolean", "isNullable": true, "isStatic": true, "default": false },
-            { "name": "isUpdatable", "type": "boolean", "isNullable": false, "isStatic": true, "default": true },
-            { "name": "isHidden", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "isIndex", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true },
+            { "name": "type", "type": "varchar", "isNullable": false, "isSystem": true },
+            { "name": "isGenerated", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "isPrimary", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "isNullable", "type": "boolean", "isSystem": true, "default": true },
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "default", "type": "simple-json", "isNullable": true, "isSystem": true },
+            { "name": "enumValues", "type": "simple-json", "isNullable": true, "isSystem": true },
+            { "name": "isUnique", "type": "boolean", "isNullable": true, "isSystem": true, "default": false },
+            { "name": "isUpdatable", "type": "boolean", "isNullable": false, "isSystem": true, "default": true },
+            { "name": "isHidden", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "isIndex", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }
         ],
         "relations": [
-            { "propertyName": "table", "type": "many-to-one", "targetTable": "table_definition", "isStatic": true, "inversePropertyName": "columns", "isInverseEager": true }
+            { "propertyName": "table", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "inversePropertyName": "columns", "isInverseEager": true }
         ]
     },
     "relation_definition": 
         {
         "name": "relation_definition",
-        "isStatic": true,
+        "isSystem": true,
         "uniques": [["propertyName", "sourceTable"]],
         "columns": [
-            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "type", "type": "enum", "isNullable": false, "isStatic": true, "enumValues": ["one-to-one", "many-to-one", "one-to-many", "many-to-many"] },
-            { "name": "propertyName", "type": "varchar", "isNullable": false, "isStatic": true},
-            { "name": "inversePropertyName", "type": "varchar", "isNullable": true, "isStatic": true },
-            { "name": "isEager", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "isNullable", "type": "boolean", "isNullable": false, "isStatic": true, "default": true },
-            { "name": "isStatic", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "isInverseEager", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "isIndex", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "type", "type": "enum", "isNullable": false, "isSystem": true, "enumValues": ["one-to-one", "many-to-one", "one-to-many", "many-to-many"] },
+            { "name": "propertyName", "type": "varchar", "isNullable": false, "isSystem": true},
+            { "name": "inversePropertyName", "type": "varchar", "isNullable": true, "isSystem": true },
+            { "name": "isEager", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "isNullable", "type": "boolean", "isNullable": false, "isSystem": true, "default": true },
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "isInverseEager", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "isIndex", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }
         ],
         "relations": [
-            { "propertyName": "sourceTable", "type": "many-to-one", "targetTable": "table_definition", "isStatic": true, "inversePropertyName": "relations", "isInverseEager": true, "isIndex": true },
-            { "propertyName": "targetTable", "type": "many-to-one", "targetTable": "table_definition", "isStatic": true, "isIndex": true }
+            { "propertyName": "sourceTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "inversePropertyName": "relations", "isInverseEager": true, "isIndex": true },
+            { "propertyName": "targetTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "isIndex": true }
         ]
 
     },
     "table_definition": {
         "name": "table_definition",
-        "isStatic": true,
+        "isSystem": true,
         "columns": [
-            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true, "isUnique": true },
-            { "name": "isStatic", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "uniques", "type": "simple-json", "isNullable": true, "isStatic": true },
-            { "name": "indexes", "type": "simple-json", "isNullable": true, "isStatic": true },
-            { "name": "alias", "type": "varchar", "isNullable": true, "isStatic": true, "isUnique": true }
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "isUnique": true },
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "uniques", "type": "simple-json", "isNullable": true, "isSystem": true },
+            { "name": "indexes", "type": "simple-json", "isNullable": true, "isSystem": true },
+            { "name": "alias", "type": "varchar", "isNullable": true, "isSystem": true, "isUnique": true }
         ]
     },
     "user_definition": 
     {
         "name": "user_definition",
-        "isStatic": true,
+        "isSystem": true,
         "columns": [
-            { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "email", "type": "varchar", "isNullable": false, "isStatic": true, "default": null },
-            { "name": "password", "type": "varchar", "isNullable": false, "isStatic": true, "default": null, "isHidden": true },
-            { "name": "isRootAdmin", "type": "boolean", "isNullable": false, "isStatic": true, "default": false, "isUpdatable": false }
+            { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "email", "type": "varchar", "isNullable": false, "isSystem": true, "default": null },
+            { "name": "password", "type": "varchar", "isNullable": false, "isSystem": true, "default": null, "isHidden": true },
+            { "name": "isRootAdmin", "type": "boolean", "isNullable": false, "isSystem": true, "default": false, "isUpdatable": false },
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }
         ]
     },
     "setting_definition": {
         "name": "setting_definition",
-        "isStatic": true,
-        "columns": [ { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true }, { "name": "isInit", "type": "boolean", "isNullable": false, "isStatic": true, "default": false } ],
+        "isSystem": true,
+        "columns": [ 
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true }, 
+            { "name": "isInit", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }  
+        ],
+            
         "relations": []
     },
     "route_definition": {
         "name": "route_definition",
-        "isStatic": true,
+        "isSystem": true,
         "uniques": [["path", "mainTable"]],
         "columns": [
-            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "path", "type": "varchar", "isNullable": false, "isStatic": true, "default": null },
-            { "name": "publishedMethods", "type": "simple-json", "isStatic": true },
-            { "name": "isEnabled", "type": "boolean", "isNullable": true, "isStatic": true, "default": false }
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "path", "type": "varchar", "isNullable": false, "isSystem": true, "default": null },
+            { "name": "publishedMethods", "type": "simple-json", "isSystem": true },
+            { "name": "isEnabled", "type": "boolean", "isNullable": true, "isSystem": true, "default": false },
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }  
         ],
         "relations": [
-            { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isStatic": true, "isEager": true },
-            { "propertyName": "mainTable", "type": "many-to-one", "targetTable": "table_definition", "isStatic": true, "isNullable": false, "isIndex": true }
+            { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isSystem": true, "isEager": true },
+            { "propertyName": "mainTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "isNullable": false, "isIndex": true }
         ]
     },
     "role_definition": {
         "name": "role_definition",
-        "isStatic": true,
+        "isSystem": true,
         "columns": [
-            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true, "default": null, "isUnique": true }
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "default": null, "isUnique": true }
         ],
         "relations": [
-            { "propertyName": "users", "type": "one-to-many", "isStatic": true, "targetTable": "user_definition", "inversePropertyName": "role" }
+            { "propertyName": "users", "type": "one-to-many", "isSystem": true, "targetTable": "user_definition", "inversePropertyName": "role" }
         ]
     },
     "route_permission_definition" : {
         "name": "route_permission_definition",
-        "isStatic": true,
+        "isSystem": true,
         "columns": [
-            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "actions", "type": "simple-json", "isStatic": true },
-            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isStatic": true, "default": true }
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "actions", "type": "simple-json", "isSystem": true },
+            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "default": true }
         ],
         "relations": [
-            { "propertyName": "role", "type": "many-to-one", "isStatic": true, "targetTable": "role_definition", "inversePropertyName": "routePermissions", "isIndex": true },
-            { "propertyName": "route", "type": "many-to-one", "isStatic": true, "targetTable": "route_definition", "inversePropertyName": "routePermissions", "isIndex": true } 
+            { "propertyName": "role", "type": "many-to-one", "isSystem": true, "targetTable": "role_definition", "inversePropertyName": "routePermissions", "isIndex": true },
+            { "propertyName": "route", "type": "many-to-one", "isSystem": true, "targetTable": "route_definition", "inversePropertyName": "routePermissions", "isIndex": true } 
         ]
     },
     "route_handler_definition": {
         "name": "route_handler_definition",
-        "isStatic": true,
+        "isSystem": true,
         "columns": [
-            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "method", "type": "varchar", "isStatic": true },
-            { "name": "logic", "type": "text", "isStatic":true }
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "method", "type": "varchar", "isSystem": true },
+            { "name": "logic", "type": "text", "isSystem":true }
         ],
         "relations": [
-            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isStatic": true, "inversePropertyName": "handlers", "isIndex": true }
+            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "handlers", "isIndex": true }
         ]
     },
     "middleware_definition": {
         "name": "middleware_definition",
-        "isStatic": true,
+        "isSystem": true,
         "columns": [
-            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "name", "type": "varchar", "isNullable": false, "isStatic": true, "isUnique":true },
-            { "name": "handler", "type": "text", "isNullable": false, "isStatic": true },
-            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isStatic": true, "default": false },
-            { "name": "priority", "type": "int", "isNullable": true, "isStatic": true, "default": 0 }
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "isUnique":true },
+            { "name": "handler", "type": "text", "isNullable": false, "isSystem": true },
+            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "priority", "type": "int", "isNullable": true, "isSystem": true, "default": 0 }
 
         ],
         "relations": [
-            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isStatic": true, "inversePropertyName": "middlewares", "isIndex": true }
+            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "middlewares", "isIndex": true }
         ]
     },
     "hook_definition": {
         "name": "hook_definition",
-        "isStatic": true,
+        "isSystem": true,
         "columns": [
-            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "preHook", "type": "text", "isNullable": true, "isStatic": true },
-            { "name": "afterHook", "type": "text", "isNullable": true, "isStatic": true },
-            { "name": "priority", "type": "int", "isNullable": true, "isStatic": true, "default": 0 },
-            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isStatic": true, "default": false }
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "preHook", "type": "text", "isNullable": true, "isSystem": true },
+            { "name": "afterHook", "type": "text", "isNullable": true, "isSystem": true },
+            { "name": "priority", "type": "int", "isNullable": true, "isSystem": true, "default": 0 },
+            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }
 
         ],
         "relations": [
-            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isStatic": true, "inversePropertyName": "hooks", "isIndex": true }
+            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "hooks", "isIndex": true }
         ]
     },
     "session_definition": {
         "name": "session_definition",
-        "isStatic": true,
+        "isSystem": true,
         "columns": [
-            { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "expiredAt", "type": "date", "isNullable": false, "isStatic": true, "default": "now" },
-            { "name": "remember", "type": "boolean", "isStatic": true, "default": false }
+            { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "expiredAt", "type": "date", "isNullable": false, "isSystem": true, "default": "now" },
+            { "name": "remember", "type": "boolean", "isSystem": true, "default": false }
         ],
         "relations": [
-            { "propertyName": "user", "type": "many-to-one", "targetTable": "user_definition", "isStatic": true, "isNullable": false, "isIndex": true }
+            { "propertyName": "user", "type": "many-to-one", "targetTable": "user_definition", "isSystem": true, "isNullable": false, "isIndex": true }
         ]
     },
     "schema_history": {
         "name": "schema_history",
-        "isStatic": true,
+        "isSystem": true,
         "columns": [
-            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isStatic": true },
-            { "name": "schema", "type": "simple-json", "isNullable": false, "isStatic": true }
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "schema", "type": "simple-json", "isNullable": false, "isSystem": true }
         ]
     }
 }

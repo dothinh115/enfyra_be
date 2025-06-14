@@ -11,7 +11,7 @@ export class Table_definition {
     @Column({ type: "simple-json", nullable: true })
     indexes: any;
     @Column({ type: "boolean", nullable: false, default: false })
-    isStatic: boolean;
+    isSystem: boolean;
     @Column({ type: "varchar", nullable: false, unique: true })
     name: string;
     @Column({ type: "simple-json", nullable: true })

@@ -49,6 +49,7 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     await this.waitForDatabaseConnection();
+    return;
     let settingRepo: any =
       this.dataSourceService.getRepository('setting_definition');
 
@@ -62,6 +63,7 @@ export class BootstrapService implements OnApplicationBootstrap {
         this.createDefaultRole(),
         this.insertDefaultSettingIfEmpty(),
         this.insertDefaultUserIfEmpty(),
+        this.createDefaultRoutes(),
       ]);
       settingRepo = this.dataSourceService.getRepository('setting_definition');
       setting = await settingRepo?.findOne({ where: { id: 1 } });
@@ -131,6 +133,37 @@ export class BootstrapService implements OnApplicationBootstrap {
       this.logger.debug(
         `Vai trò mặc định '${initJson.defaultRole.name}' đã tồn tại.`,
       );
+    }
+  }
+
+  private async createDefaultRoutes(): Promise<void> {
+    const routeRepo = this.dataSourceService.getRepository('route_definition');
+    const tableRepo = this.dataSourceService.getRepository('table_definition');
+
+    for (const route of initJson.defaultRoute || []) {
+      const { path, mainTable, isEnabled = true } = route;
+
+      const existed = await routeRepo.findOne({ where: { path } });
+      if (existed) {
+        this.logger.log(`⏩ Route ${path} đã tồn tại, bỏ qua.`);
+        continue;
+      }
+
+      const table = await tableRepo.findOne({ where: { name: mainTable } });
+      if (!table) {
+        this.logger.warn(
+          `⚠️ Không tìm thấy bảng '${mainTable}' cho route ${path}, bỏ qua.`,
+        );
+        continue;
+      }
+
+      const newRoute = routeRepo.create({
+        ...route,
+        mainTable: table,
+      });
+
+      await routeRepo.save(newRoute);
+      this.logger.log(`✅ Tạo route mặc định: ${path} → ${mainTable}`);
     }
   }
 

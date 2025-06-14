@@ -10,6 +10,8 @@ export class User_definition {
     email: string;
     @Column({ type: "boolean", nullable: false, default: false, update: false })
     isRootAdmin: boolean;
+    @Column({ type: "boolean", nullable: false, default: false })
+    isSystem: boolean;
     @Column({ type: "varchar", nullable: false })
     @HiddenField()
     password: string;

@@ -17,7 +17,7 @@ export class Relation_definition {
     @Column({ type: "boolean", nullable: false, default: true })
     isNullable: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
-    isStatic: boolean;
+    isSystem: boolean;
     @Column({ type: "varchar", nullable: false })
     propertyName: string;
     @Column({ type: "enum", nullable: false, enum: ['one-to-one', 'many-to-one', 'one-to-many', 'many-to-many'] })

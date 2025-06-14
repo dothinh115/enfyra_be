@@ -29,6 +29,7 @@ import { SchemaLockGuard } from './guard/schema-lock.guard';
 import { SqlFunctionService } from './sql/sql-function.service';
 import { QueryBuilderModule } from './query-builder/query-builder.module';
 import { ResponseInterceptor } from './interceptors/response.interceptor';
+import { SystemRecordProtectGuard } from './guard/system-record-protect.guard';
 
 @Global()
 @Module({
@@ -78,6 +79,7 @@ import { ResponseInterceptor } from './interceptors/response.interceptor';
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RoleGuard },
+    { provide: APP_GUARD, useClass: SystemRecordProtectGuard },
     { provide: APP_INTERCEPTOR, useClass: HideFieldInterceptor },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
   ],

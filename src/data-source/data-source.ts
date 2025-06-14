@@ -1,4 +1,3 @@
-// src/data-source.ts
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import * as path from 'path';
@@ -17,9 +16,9 @@ export const createDataSource: (entities: any[]) => DataSource = (
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     synchronize: false,
-    logging: false,
     entities,
     migrations: [path.resolve('src', 'migrations', '*.js')],
+    logging: false,
   });
 };
 

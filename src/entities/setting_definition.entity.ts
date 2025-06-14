@@ -6,6 +6,8 @@ export class Setting_definition {
     id: number;
     @Column({ type: "boolean", nullable: false, default: false })
     isInit: boolean;
+    @Column({ type: "boolean", nullable: false, default: false })
+    isSystem: boolean;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

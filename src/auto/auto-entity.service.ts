@@ -362,19 +362,18 @@ export class AutoService {
       .leftJoinAndSelect('table.columns', 'columns')
       .leftJoinAndSelect('table.relations', 'relations')
       .getMany();
-    const schemaHistoryRepo =
-      this.dataSourceService.getRepository('schema_history');
-    const historyCount = await schemaHistoryRepo.count();
+
+    const historyCount = await this.schemaHistoryRepo.count();
     if (historyCount > 20) {
-      const oldest: any = await schemaHistoryRepo.findOne({
+      const oldest: any = await this.schemaHistoryRepo.findOne({
         order: { createdAt: 'ASC' },
       });
       if (oldest) {
-        await schemaHistoryRepo.delete(oldest.id);
+        await this.schemaHistoryRepo.delete(oldest.id);
       }
     }
-    return await schemaHistoryRepo.save({
-      metadata: tables,
+    return await this.schemaHistoryRepo.save({
+      schema: tables,
     });
   }
 

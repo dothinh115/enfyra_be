@@ -21,7 +21,7 @@ export class Column_definition {
     @Column({ type: "boolean", nullable: false, default: false })
     isPrimary: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
-    isStatic: boolean;
+    isSystem: boolean;
     @Column({ type: "boolean", nullable: true, default: false })
     isUnique: boolean;
     @Column({ type: "boolean", nullable: false, default: true })

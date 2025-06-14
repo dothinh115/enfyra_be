@@ -31,7 +31,7 @@ export class RelationDefinition {
   isNullable: boolean;
 
   @Column({ default: false, update: false })
-  isStatic: boolean;
+  isSystem: boolean;
 
   @ManyToOne(() => Table_definition, { onDelete: 'CASCADE' })
   @JoinColumn()

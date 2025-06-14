@@ -71,7 +71,6 @@ export class DynamicRepoService {
 
   async create(body: any) {
     if (this.tableName === 'table_definition') {
-      body = await validateDto(CreateTableDto, body);
       const table = await this.tableHandlerService.createTable(body);
       return this.find(table.id);
     }
@@ -80,18 +79,18 @@ export class DynamicRepoService {
   }
 
   async update(id: string | number, body: any) {
-    if (this.tableName === 'table_definition') {
-      body = await validateDto(CreateTableDto, body);
-      const table = await this.tableHandlerService.updateTable(+id, body);
-      return this.find(table.id);
-    }
     const exists = await this.repo.findOne({
       where: {
         id,
       },
     });
+    if (this.tableName === 'table_definition') {
+      const table: any = await this.tableHandlerService.updateTable(+id, body);
+      return this.find(table.id);
+    }
+    const merged = this.repo.merge(exists, body);
     if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
-    await this.repo.update(id, body);
+    await this.repo.save(merged);
     return await this.find(id);
   }
 
@@ -106,6 +105,8 @@ export class DynamicRepoService {
       },
     });
     if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
+    const repo = this.dataSourceService.getRepository(this.tableName);
+    await repo.delete(id);
     return `Delete successfully!`;
   }
 }

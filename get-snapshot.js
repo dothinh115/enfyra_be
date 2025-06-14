@@ -13,7 +13,7 @@ function generateSnapshotFromPayload(payload) {
     result[table.name] = {
       id: table.id,
       name: table.name,
-      isStatic: table.isStatic,
+      isSystem: table.isSystem,
       unique: table.unique,
       columns: (table.columns || []).map((col) => ({
         id: col.id,
@@ -22,7 +22,7 @@ function generateSnapshotFromPayload(payload) {
         isPrimary: col.isPrimary,
         isNullable: col.isNullable,
         isGenerated: col.isGenerated,
-        isStatic: col.isStatic,
+        isSystem: col.isSystem,
         isUnique: col.isUnique,
         isUpdatable: col.isUpdatable,
         default: col.default,
@@ -37,7 +37,7 @@ function generateSnapshotFromPayload(payload) {
         isNullable: rel.isNullable,
         isEager: rel.isEager,
         isInverseEager: rel.isInverseEager,
-        isStatic: rel.isStatic,
+        isSystem: rel.isSystem,
         sourceTable: tableMap.get(rel.sourceTable) || rel.sourceTable,
         targetTable: tableMap.get(rel.targetTable) || rel.targetTable,
       })),

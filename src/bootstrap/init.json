@@ -5,11 +5,45 @@
     "defaultUser": {
         "email": "dynamiq@admin.com",
         "password": "1234",
-        "isRootAdmin": true
+        "isRootAdmin": true,
+        "isSystem":true
     },
     "defaultSetting": {
-        "isInit": false
-    }
+        "isInit": false,
+        "isSystem":true
+    },
+    "defaultRoute": [
+        {
+            "path": "/route_definition",
+            "mainTable": "route_definition",
+            "isEnabled": true,
+            "isSystem":true
+        },
+        {
+            "path": "/table_definition",
+            "mainTable": "table_definition",
+            "isEnabled": true,
+            "isSystem":true
+        },
+        {
+            "path": "/user_definition",
+            "mainTable": "user_definition",
+            "isEnabled": true,
+            "isSystem":true
+        },
+        {
+            "path": "/setting_definition",
+            "mainTable": "setting_definition",
+            "isEnabled": true,
+            "isSystem":true
+        },
+        {
+            "path": "/role_definition",
+            "mainTable": "role_definition",
+            "isEnabled": true,
+            "isSystem":true
+        }
+    ]
 }
 
 
