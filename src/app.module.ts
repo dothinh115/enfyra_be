@@ -28,6 +28,7 @@ import { SchemaStateService } from './schema/schema-state.service';
 import { SchemaLockGuard } from './guard/schema-lock.guard';
 import { SqlFunctionService } from './sql/sql-function.service';
 import { QueryBuilderModule } from './query-builder/query-builder.module';
+import { ResponseInterceptor } from './interceptors/response.interceptor';
 
 @Global()
 @Module({
@@ -78,6 +79,7 @@ import { QueryBuilderModule } from './query-builder/query-builder.module';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RoleGuard },
     { provide: APP_INTERCEPTOR, useClass: HideFieldInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
   ],
   exports: [
     RabbitMQRegistry,

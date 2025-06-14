@@ -68,7 +68,13 @@ export class AuthService {
   }
 
   async logout(body: LogoutAuthDto, req: Request & { user: any }) {
-    const { sessionId } = body;
+    let decoded: any;
+    try {
+      decoded = this.jwtService.verify(body.refreshToken);
+    } catch (e) {
+      throw new BadRequestException('Invalid or expired refresh token!');
+    }
+    const { sessionId } = decoded;
     const sessionDefRepo: any =
       this.dataSourceService.getRepository('session_definition');
     const session = await sessionDefRepo.findOne({

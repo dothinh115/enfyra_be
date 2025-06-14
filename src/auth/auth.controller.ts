@@ -7,17 +7,18 @@ import { User_definition } from '../entities/user_definition.entity';
 import { RefreshTokenAuthDto } from './dto/refresh-token-auth.dto';
 import { Public } from '../decorators/public-route.decorator';
 
-@Controller()
+@Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Public()
-  @Post('auth/login')
+  @Post('login')
   login(@Body() body: LoginAuthDto) {
     return this.authService.login(body);
   }
 
-  @Post('auth/logout')
+  @Public()
+  @Post('logout')
   logout(
     @Body() body: LogoutAuthDto,
     @Req() req: Request & { user: User_definition },
@@ -26,7 +27,7 @@ export class AuthController {
   }
 
   @Public()
-  @Post('auth/refresh-token')
+  @Post('refresh-token')
   refreshToken(@Body() body: RefreshTokenAuthDto) {
     return this.authService.refreshToken(body);
   }
