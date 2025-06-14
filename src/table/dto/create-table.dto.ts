@@ -12,6 +12,12 @@ import { Transform, Type } from 'class-transformer';
 import { IsSafeIdentifier } from '../../validator/is-safe-identifer.validator';
 import { PrimaryKeyValidCheck } from '../../validator/primary-key-valid-check.validator';
 
+export class RelationIdDto {
+  @IsNumber()
+  @IsNotEmpty()
+  id: number;
+}
+
 export class CreateColumnDto {
   @IsOptional()
   @IsNumber()
@@ -81,9 +87,10 @@ export class CreateRelationDto {
   @IsNumber()
   id?: number;
 
-  @IsNumber()
+  @ValidateNested()
+  @Type(() => RelationIdDto)
   @IsNotEmpty()
-  targetTable: number;
+  targetTable: RelationIdDto;
 
   @IsOptional()
   @IsBoolean()

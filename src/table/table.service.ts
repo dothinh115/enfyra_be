@@ -1,16 +1,10 @@
 import { AutoService } from '../auto/auto-entity.service';
 import { Table_definition } from '../entities/table_definition.entity';
-import {
-  CreateColumnDto,
-  CreateRelationDto,
-  CreateTableDto,
-} from '../table/dto/create-table.dto';
+import { CreateColumnDto, CreateTableDto } from '../table/dto/create-table.dto';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { SchemaReloadService } from '../schema/schema-reload.service';
 import { SchemaStateService } from '../schema/schema-state.service';
-import { Column_definition } from '../entities/column_definition.entity';
-import { Relation_definition } from '../entities/relation_definition.entity';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
@@ -42,21 +36,25 @@ export class TableHandlerService {
 
       // Tạo entity từ dữ liệu đã được xử lý
       const tableEntity = manager.create(Table_definition, {
-        name: body.name,
         columns: this.normalizeColumnsWithAutoId(body.columns),
-        relations: body.relations ? this.prepareRelations(body.relations) : [],
+        ...body,
       } as any);
 
-      if (!result) result = await manager.save(Table_definition, tableEntity);
+      result = await manager.save(Table_definition, tableEntity);
       await queryRunner.commitTransaction();
       await this.afterEffect();
-
+      const routeDefRepo =
+        this.dataSouceService.getRepository('route_definition');
+      await routeDefRepo.save({
+        path: `/${result.name}`,
+        mainTable: result.id,
+      });
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error.stack || error.message || error);
       throw new BadRequestException(
-        `Error: "${error.message}", rollback` || 'Unknown error',
+        `Error: "${error.message}"` || 'Unknown error',
       );
     } finally {
       await queryRunner.release();
@@ -87,21 +85,11 @@ export class TableHandlerService {
       await queryRunner.rollbackTransaction();
       console.error(error.stack || error.message || error);
       throw new BadRequestException(
-        `Error: "${error.message}", rollback` || 'Unknown error',
+        `Error: "${error.message}"` || 'Unknown error',
       );
     } finally {
       await queryRunner.release();
     }
-  }
-
-  prepareRelations(relationsDto: CreateRelationDto[] = []) {
-    const result = relationsDto.map((relation) => ({
-      ...relation,
-      ...(relation.targetTable && {
-        targetTable: { id: relation.targetTable },
-      }),
-    }));
-    return result;
   }
 
   normalizeColumnsWithAutoId(columns: CreateColumnDto[]): CreateColumnDto[] {
@@ -157,11 +145,12 @@ export class TableHandlerService {
 
       const result = await tableDefRepo.remove(exists);
       await this.afterEffect();
+
       return result;
     } catch (error) {
       console.error(error.stack || error.message || error);
       throw new BadRequestException(
-        `Error: "${error.message}", rollback` || 'Unknown error',
+        `Error: "${error.message}"` || 'Unknown error',
       );
     }
   }

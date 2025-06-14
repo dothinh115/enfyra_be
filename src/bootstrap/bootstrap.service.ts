@@ -10,7 +10,6 @@ import * as path from 'path';
 import { Column_definition } from '../entities/column_definition.entity';
 import { Relation_definition } from '../entities/relation_definition.entity';
 import { BcryptService } from '../auth/bcrypt.service';
-import { TableHandlerService } from '../table/table.service';
 import { SchemaStateService } from '../schema/schema-state.service';
 const initJson = require('./init.json');
 
@@ -20,7 +19,6 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   constructor(
     private dataSourceService: DataSourceService,
-    private tableHandlerService: TableHandlerService,
     private autoService: AutoService,
     private commonService: CommonService,
     private bcryptService: BcryptService,
@@ -49,7 +47,6 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     await this.waitForDatabaseConnection();
-    return;
     let settingRepo: any =
       this.dataSourceService.getRepository('setting_definition');
 
@@ -72,7 +69,8 @@ export class BootstrapService implements OnApplicationBootstrap {
       await this.commonService.delay(300);
 
       await this.autoService.pullMetadataFromDb();
-      await this.saveSchemaSnapshotToHistory();
+      const lastVersion: any = await this.saveSchemaSnapshotToHistory();
+      this.schemaStateService.setVersion(lastVersion.id);
     } else {
       await this.autoService.pullMetadataFromDb();
       const schemaHistoryRepo =
@@ -195,12 +193,8 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   async saveToDb(payload: CreateTableDto, repo: Repository<any>) {
-    const newPayload = {
-      ...payload,
-      relations: this.tableHandlerService.prepareRelations(payload.relations),
-    };
     try {
-      return await repo.save(newPayload);
+      return await repo.save(payload);
     } catch (error) {}
   }
 
@@ -374,7 +368,7 @@ export class BootstrapService implements OnApplicationBootstrap {
       .getMany();
     const schemaHistoryRepo =
       this.dataSourceService.getRepository('schema_history');
-    await schemaHistoryRepo.save({
+    return await schemaHistoryRepo.save({
       schema,
     });
   }

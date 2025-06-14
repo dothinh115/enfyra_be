@@ -366,6 +366,7 @@ export class AutoService {
     const historyCount = await this.schemaHistoryRepo.count();
     if (historyCount > 20) {
       const oldest: any = await this.schemaHistoryRepo.findOne({
+        where: {},
         order: { createdAt: 'ASC' },
       });
       if (oldest) {
@@ -379,6 +380,7 @@ export class AutoService {
 
   async restore() {
     const oldest: any = await this.schemaHistoryRepo.findOne({
+      where: {},
       order: { createdAt: 'ASC' },
     });
     if (oldest) {
