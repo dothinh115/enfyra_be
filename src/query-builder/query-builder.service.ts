@@ -164,34 +164,61 @@ export class QueryBuilderService {
 
     function resolveRelationPath(path: string[], meta: EntityMetadata) {
       for (let i = 0; i < path.length; i++) {
-        const fullPath = path.slice(0, i + 1).join('.');
-        const parentPath = path.slice(0, i).join('.');
-        const parentAlias = aliasMap.get(parentPath) || rootAlias;
+        const aliasKey = path.slice(0, i + 1).join('.'); // cha.con.con
+        const parentKey = path.slice(0, i).join('.');
+        const parentAlias = aliasMap.get(parentKey) || rootAlias;
         const part = path[i];
-        const alias = fullPath;
 
-        if (!aliasMap.has(fullPath)) {
-          joinSet.add(`${parentAlias}.${part}|${alias}`);
-          aliasMap.set(fullPath, alias);
+        const aliasSafe = aliasKey.replace(/\./g, '_'); // để dùng trong SQL
+
+        if (!aliasMap.has(aliasKey)) {
+          joinSet.add(`${parentAlias}.${part}|${aliasSafe}`); // dùng aliasSafe để join
+          aliasMap.set(aliasKey, aliasSafe); // vẫn dùng key là cha.con
         }
 
         const rel = meta.relations.find((r) => r.propertyName === part);
         if (!rel) break;
+
         meta = rel.inverseEntityMetadata;
 
         const idCol = meta.primaryColumns[0]?.propertyName || 'id';
-        select.add(`${alias}.${idCol}`);
+        select.add(`${aliasSafe}.${idCol}`); // dùng aliasSafe
       }
     }
 
-    function selectAllFieldsForEntity(meta: EntityMetadata, path: string[]) {
+    function selectAllFieldsForEntity(
+      meta: EntityMetadata,
+      path: string[],
+      depth = 1,
+    ) {
       const alias = aliasMap.get(path.join('.')) || rootAlias;
+
+      // Pick all scalar fields
       for (const col of meta.columns) {
         if (!col.relationMetadata) {
           select.add(`${alias}.${col.propertyName}`);
-        } else {
-          const relPath = [...path, col.propertyName];
-          resolveRelationPath(relPath, meta);
+        }
+      }
+
+      // Pick ID of direct relations
+      if (depth > 0) {
+        for (const rel of meta.relations) {
+          const relPath = [...path, rel.propertyName];
+
+          // 👇 Fix: always resolve path from rootMeta, not current meta
+          resolveRelationPath(relPath, rootMeta); // ❗ SỬA CHỖ NÀY
+
+          const relAlias = aliasMap.get(relPath.join('.'));
+          const relMeta = rel.inverseEntityMetadata;
+          const idCol = relMeta.primaryColumns[0]?.propertyName || 'id';
+
+          if (relAlias) {
+            select.add(`${relAlias}.${idCol}`);
+          } else {
+            console.warn(
+              `⚠️ Alias not found for ${relPath.join('.')}, skipping`,
+            );
+          }
         }
       }
     }
@@ -205,6 +232,7 @@ export class QueryBuilderService {
       for (const rel of rootMeta.relations) {
         const relPath = [rel.propertyName];
         resolveRelationPath(relPath, rootMeta);
+        selectAllFieldsForEntity(rel.inverseEntityMetadata, relPath, 0);
       }
     } else {
       for (const rawField of fields) {
@@ -230,7 +258,9 @@ export class QueryBuilderService {
         if (isWildcard) {
           const targetMeta = this.getMetadataByPath(pathToEntity, rootMeta);
           if (targetMeta) {
-            selectAllFieldsForEntity(targetMeta, pathToEntity);
+            resolveRelationPath(pathToEntity, rootMeta);
+
+            selectAllFieldsForEntity(targetMeta, pathToEntity, 1);
           }
         } else if (isRelationOnly && relationExists) {
           const rel = rootMeta.relations.find(
