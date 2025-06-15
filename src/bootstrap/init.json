@@ -17,31 +17,36 @@
             "path": "/route_definition",
             "mainTable": "route_definition",
             "isEnabled": true,
-            "isSystem":true
+            "isSystem":true,
+            "icon": "lucide:git-branch"
         },
         {
             "path": "/table_definition",
             "mainTable": "table_definition",
             "isEnabled": true,
-            "isSystem":true
+            "isSystem":true,
+            "icon": "lucide:table"
         },
         {
             "path": "/user_definition",
             "mainTable": "user_definition",
             "isEnabled": true,
-            "isSystem":true
+            "isSystem":true,
+            "icon": "lucide:user"
         },
         {
             "path": "/setting_definition",
             "mainTable": "setting_definition",
             "isEnabled": true,
-            "isSystem":true
+            "isSystem":true,
+            "icon": "lucide:settings"
         },
         {
             "path": "/role_definition",
             "mainTable": "role_definition",
             "isEnabled": true,
-            "isSystem":true
+            "isSystem":true,
+            "icon":"lucide:shield-check"
         }
     ]
 }

@@ -6,6 +6,8 @@ import { Route_permission_definition } from "./route_permission_definition.entit
 export class Role_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
+    @Column({ type: "text", nullable: true })
+    description: string;
     @Column({ type: "varchar", nullable: false, unique: true })
     name: string;
     @OneToMany(() => User_definition, (rel) => rel.role, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })

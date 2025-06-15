@@ -10,6 +10,10 @@ import { Hook_definition } from "./hook_definition.entity";
 export class Route_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
+    @Column({ type: "text", nullable: true })
+    description: string;
+    @Column({ type: "varchar", nullable: false, default: "lucide:route" })
+    icon: string;
     @Column({ type: "boolean", nullable: true, default: false })
     isEnabled: boolean;
     @Column({ type: "boolean", nullable: false, default: false })

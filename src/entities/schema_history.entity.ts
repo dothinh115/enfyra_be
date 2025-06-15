@@ -4,6 +4,8 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 export class Schema_history {
     @PrimaryGeneratedColumn('increment')
     id: number;
+    @Column({ type: "text", nullable: true })
+    description: string;
     @Column({ type: "simple-json", nullable: false })
     schema: any;
     @CreateDateColumn()

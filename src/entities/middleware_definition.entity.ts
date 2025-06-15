@@ -5,6 +5,8 @@ import { Route_definition } from "./route_definition.entity";
 export class Middleware_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
+    @Column({ type: "text", nullable: true })
+    description: string;
     @Column({ type: "text", nullable: false })
     handler: string;
     @Column({ type: "boolean", nullable: false, default: false })

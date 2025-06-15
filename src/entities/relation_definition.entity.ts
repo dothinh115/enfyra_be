@@ -6,6 +6,8 @@ import { Table_definition } from "./table_definition.entity";
 export class Relation_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
+    @Column({ type: "text", nullable: true })
+    description: string;
     @Column({ type: "varchar", nullable: true })
     inversePropertyName: string;
     @Column({ type: "boolean", nullable: false, default: false })

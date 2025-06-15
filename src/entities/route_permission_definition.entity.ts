@@ -8,6 +8,8 @@ export class Route_permission_definition {
     id: number;
     @Column({ type: "simple-json", nullable: true })
     actions: any;
+    @Column({ type: "text", nullable: true })
+    description: string;
     @Column({ type: "boolean", nullable: false, default: true })
     isEnabled: boolean;
     @Index()

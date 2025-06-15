@@ -8,6 +8,8 @@ export class Column_definition {
     id: number;
     @Column({ type: "simple-json", nullable: true })
     default: any;
+    @Column({ type: "text", nullable: true })
+    description: string;
     @Column({ type: "simple-json", nullable: true })
     enumValues: any;
     @Column({ type: "boolean", nullable: false, default: false })

@@ -76,7 +76,7 @@ export class TableHandlerService {
       if (!exists) {
         throw new BadRequestException(`Table ${body.name} không tồn tại.`);
       }
-
+      console.log(body);
       const result = await manager.save(Table_definition, body as any);
       await queryRunner.commitTransaction();
       await this.afterEffect();

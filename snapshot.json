@@ -16,7 +16,8 @@
             { "name": "isUnique", "type": "boolean", "isNullable": true, "isSystem": true, "default": false },
             { "name": "isUpdatable", "type": "boolean", "isNullable": false, "isSystem": true, "default": true },
             { "name": "isHidden", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
-            { "name": "isIndex", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }
+            { "name": "isIndex", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "description", "type": "text", "isSystem": true }
         ],
         "relations": [
             { "propertyName": "table", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "inversePropertyName": "columns", "isInverseEager": true }
@@ -36,7 +37,9 @@
             { "name": "isNullable", "type": "boolean", "isNullable": false, "isSystem": true, "default": true },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
             { "name": "isInverseEager", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
-            { "name": "isIndex", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }
+            { "name": "isIndex", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "description", "type": "text", "isSystem": true }
+
         ],
         "relations": [
             { "propertyName": "sourceTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "inversePropertyName": "relations", "isInverseEager": true, "isIndex": true },
@@ -53,7 +56,9 @@
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
             { "name": "uniques", "type": "simple-json", "isNullable": true, "isSystem": true },
             { "name": "indexes", "type": "simple-json", "isNullable": true, "isSystem": true },
-            { "name": "alias", "type": "varchar", "isNullable": true, "isSystem": true, "isUnique": true }
+            { "name": "alias", "type": "varchar", "isNullable": true, "isSystem": true, "isUnique": true },
+            { "name": "description", "type": "text", "isSystem": true }
+
         ]
     },
     "user_definition": 
@@ -65,7 +70,8 @@
             { "name": "email", "type": "varchar", "isNullable": false, "isSystem": true, "default": null },
             { "name": "password", "type": "varchar", "isNullable": false, "isSystem": true, "default": null, "isHidden": true },
             { "name": "isRootAdmin", "type": "boolean", "isNullable": false, "isSystem": true, "default": false, "isUpdatable": false },
-            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "description", "type": "text", "isSystem": true }
         ]
     },
     "setting_definition": {
@@ -74,7 +80,8 @@
         "columns": [ 
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true }, 
             { "name": "isInit", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
-            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }  
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "description", "type": "text", "isSystem": true }  
         ],
             
         "relations": []
@@ -88,7 +95,9 @@
             { "name": "path", "type": "varchar", "isNullable": false, "isSystem": true, "default": null },
             { "name": "publishedMethods", "type": "simple-json", "isSystem": true },
             { "name": "isEnabled", "type": "boolean", "isNullable": true, "isSystem": true, "default": false },
-            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }  
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "icon", "type": "varchar", "isNullable": false, "isSystem": true, "default": "lucide:route" },
+            { "name": "description", "type": "text", "isSystem": true }  
         ],
         "relations": [
             { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isSystem": true, "isEager": true },
@@ -100,7 +109,8 @@
         "isSystem": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "default": null, "isUnique": true }
+            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "default": null, "isUnique": true },
+            { "name": "description", "type": "text", "isSystem": true }
         ],
         "relations": [
             { "propertyName": "users", "type": "one-to-many", "isSystem": true, "targetTable": "user_definition", "inversePropertyName": "role" }
@@ -112,7 +122,8 @@
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
             { "name": "actions", "type": "simple-json", "isSystem": true },
-            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "default": true }
+            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "default": true },
+            { "name": "description", "type": "text", "isSystem": true }
         ],
         "relations": [
             { "propertyName": "role", "type": "many-to-one", "isSystem": true, "targetTable": "role_definition", "inversePropertyName": "routePermissions", "isIndex": true },
@@ -125,7 +136,8 @@
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
             { "name": "method", "type": "varchar", "isSystem": true },
-            { "name": "logic", "type": "text", "isSystem":true }
+            { "name": "logic", "type": "text", "isSystem":true },
+            { "name": "description", "type": "text", "isSystem": true }
         ],
         "relations": [
             { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "handlers", "isIndex": true }
@@ -139,7 +151,8 @@
             { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "isUnique":true },
             { "name": "handler", "type": "text", "isNullable": false, "isSystem": true },
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
-            { "name": "priority", "type": "int", "isNullable": true, "isSystem": true, "default": 0 }
+            { "name": "priority", "type": "int", "isNullable": true, "isSystem": true, "default": 0 },
+            { "name": "description", "type": "text", "isSystem": true }
 
         ],
         "relations": [
@@ -154,7 +167,8 @@
             { "name": "preHook", "type": "text", "isNullable": true, "isSystem": true },
             { "name": "afterHook", "type": "text", "isNullable": true, "isSystem": true },
             { "name": "priority", "type": "int", "isNullable": true, "isSystem": true, "default": 0 },
-            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "default": false }
+            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
+            { "name": "description", "type": "text", "isSystem": true }
 
         ],
         "relations": [
@@ -178,7 +192,8 @@
         "isSystem": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "schema", "type": "simple-json", "isNullable": false, "isSystem": true }
+            { "name": "schema", "type": "simple-json", "isNullable": false, "isSystem": true },
+            { "name": "description", "type": "text", "isSystem": true }
         ]
     }
 }

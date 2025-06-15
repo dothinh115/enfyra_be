@@ -6,6 +6,8 @@ export class Route_handler_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
     @Column({ type: "text", nullable: true })
+    description: string;
+    @Column({ type: "text", nullable: true })
     logic: string;
     @Column({ type: "varchar", nullable: true })
     method: string;

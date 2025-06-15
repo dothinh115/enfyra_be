@@ -23,6 +23,9 @@ export class CreateColumnDto {
   @IsNumber()
   id?: number;
 
+  @IsString()
+  description?: string;
+
   @IsSafeIdentifier()
   @IsNotEmpty()
   name: string;
@@ -86,6 +89,9 @@ export class CreateRelationDto {
   @IsOptional()
   @IsNumber()
   id?: number;
+
+  @IsString()
+  description?: string;
 
   @ValidateNested()
   @Type(() => RelationIdDto)
@@ -170,6 +176,9 @@ export class CreateTableDto {
   @Type(() => CreateColumnDto)
   @PrimaryKeyValidCheck()
   columns: CreateColumnDto[];
+
+  @IsString()
+  description?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

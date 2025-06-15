@@ -6,6 +6,8 @@ import { Role_definition } from "./role_definition.entity";
 export class User_definition {
     @PrimaryGeneratedColumn('uuid')
     id: string;
+    @Column({ type: "text", nullable: true })
+    description: string;
     @Column({ type: "varchar", nullable: false })
     email: string;
     @Column({ type: "boolean", nullable: false, default: false, update: false })

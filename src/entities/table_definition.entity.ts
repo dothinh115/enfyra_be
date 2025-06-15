@@ -8,6 +8,8 @@ export class Table_definition {
     id: number;
     @Column({ type: "varchar", nullable: true, unique: true })
     alias: string;
+    @Column({ type: "text", nullable: true })
+    description: string;
     @Column({ type: "simple-json", nullable: true })
     indexes: any;
     @Column({ type: "boolean", nullable: false, default: false })
