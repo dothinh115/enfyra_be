@@ -16,10 +16,7 @@ export class SystemRecordProtectGuard implements CanActivate {
     const req: any = context.switchToHttp().getRequest<Request>();
     const method = req.method;
 
-    console.log('🧪 [Guard] method =', method);
-
     if (!['PATCH', 'DELETE'].includes(method)) {
-      console.log('🛑 [Guard] method không phải PATCH/DELETE → bỏ qua');
       return true;
     }
 
@@ -27,23 +24,17 @@ export class SystemRecordProtectGuard implements CanActivate {
     const mainTableName = routeData?.mainTable?.name;
     const id = routeData?.params?.id;
 
-    console.log('🧪 [Guard] routeData =', { mainTableName, id });
-
     if (!mainTableName || !id) {
-      console.log('🛑 [Guard] Thiếu mainTableName hoặc id → bỏ qua');
       return true;
     }
 
     const repo = this.dataSourceService.getRepository(mainTableName);
 
     if (method === 'DELETE') {
-      console.log('🧨 [Guard] Kiểm tra DELETE bản ghi chính...');
       const record: any = await repo.findOne({
         where: { id },
         select: ['id', 'isSystem'],
       });
-
-      console.log('🧨 [Guard] Bản ghi hiện tại =', record);
 
       if (record?.isSystem) {
         throw new ForbiddenException(
@@ -53,7 +44,6 @@ export class SystemRecordProtectGuard implements CanActivate {
     }
 
     if (!req.body || typeof req.body !== 'object') {
-      console.log('🛑 [Guard] Không có body hoặc body không hợp lệ → bỏ qua');
       return true;
     }
 
@@ -63,28 +53,17 @@ export class SystemRecordProtectGuard implements CanActivate {
     );
 
     if (!meta) {
-      console.log('🛑 [Guard] Không tìm thấy metadata → bỏ qua');
       return true;
     }
 
     const relations = meta.relations;
-    console.log(
-      '🧩 [Guard] relations:',
-      relations.map((r) => r.propertyName),
-    );
 
     for (const [key, value] of Object.entries(req.body)) {
-      console.log(`🔍 [Guard] Đang xử lý key: "${key}"`);
-
       const rel = relations.find((r) => r.propertyName === key);
-
       if (!rel) {
-        console.log(`ℹ️ [Guard] "${key}" không phải quan hệ → bỏ qua`);
         continue;
       }
-
       if (!rel.inverseEntityMetadata?.tableName) {
-        console.log(`ℹ️ [Guard] "${key}" không có bảng ngược → bỏ qua`);
         continue;
       }
 
@@ -93,8 +72,6 @@ export class SystemRecordProtectGuard implements CanActivate {
       );
 
       if (method === 'PATCH') {
-        console.log(`🛠️ [Guard] PATCH kiểm tra thay đổi quan hệ: ${key}`);
-
         const current = await repo
           .createQueryBuilder('entity')
           .leftJoinAndSelect(`entity.${key}`, 'rel')
@@ -133,14 +110,11 @@ export class SystemRecordProtectGuard implements CanActivate {
           return [];
         })();
 
-        console.log('🧪 [Guard] Quan hệ:', { key, currentIds, incomingIds });
-
         const isSame =
           incomingIds.length === currentIds.length &&
           incomingIds.every((id) => currentIds.includes(id));
 
         if (isSame) {
-          console.log(`✅ [Guard] Quan hệ "${key}" không thay đổi`);
           continue;
         }
 
@@ -166,15 +140,7 @@ export class SystemRecordProtectGuard implements CanActivate {
               select: ['id', 'isSystem'],
             });
 
-            console.log(
-              '⬅️ [Guard] currentId:',
-              currentId,
-              'record:',
-              relRecord,
-            );
-
             if (!relRecord) {
-              console.log(`⚠️ Bỏ qua currentId ${currentId} vì không tìm thấy`);
               continue;
             }
 
@@ -196,8 +162,6 @@ export class SystemRecordProtectGuard implements CanActivate {
             select: ['id', 'isSystem'],
           });
 
-          console.log('🗑️ [Guard] DELETE item:', item.id, 'record:', relRecord);
-
           if (relRecord?.isSystem) {
             throw new ForbiddenException(
               `Không thể xoá bản ghi liên kết hệ thống (${key} → ${item.id}).`,
@@ -207,7 +171,6 @@ export class SystemRecordProtectGuard implements CanActivate {
       }
     }
 
-    console.log('✅ [Guard] Không có vấn đề gì → tiếp tục');
     return true;
   }
 }
