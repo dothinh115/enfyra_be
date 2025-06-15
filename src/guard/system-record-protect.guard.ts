@@ -16,22 +16,34 @@ export class SystemRecordProtectGuard implements CanActivate {
     const req: any = context.switchToHttp().getRequest<Request>();
     const method = req.method;
 
-    if (!['PATCH', 'DELETE'].includes(method)) return true;
+    console.log('🧪 [Guard] method =', method);
+
+    if (!['PATCH', 'DELETE'].includes(method)) {
+      console.log('🛑 [Guard] method không phải PATCH/DELETE → bỏ qua');
+      return true;
+    }
 
     const routeData: any = req.routeData;
     const mainTableName = routeData?.mainTable?.name;
     const id = routeData?.params?.id;
 
-    if (!mainTableName || !id) return true;
+    console.log('🧪 [Guard] routeData =', { mainTableName, id });
+
+    if (!mainTableName || !id) {
+      console.log('🛑 [Guard] Thiếu mainTableName hoặc id → bỏ qua');
+      return true;
+    }
 
     const repo = this.dataSourceService.getRepository(mainTableName);
 
-    // ❌ Chặn DELETE bản ghi chính nếu là isSystem
     if (method === 'DELETE') {
+      console.log('🧨 [Guard] Kiểm tra DELETE bản ghi chính...');
       const record: any = await repo.findOne({
         where: { id },
         select: ['id', 'isSystem'],
       });
+
+      console.log('🧨 [Guard] Bản ghi hiện tại =', record);
 
       if (record?.isSystem) {
         throw new ForbiddenException(
@@ -40,28 +52,49 @@ export class SystemRecordProtectGuard implements CanActivate {
       }
     }
 
-    // 🧠 Nếu không có body thì bỏ qua
-    if (!req.body || typeof req.body !== 'object') return true;
+    if (!req.body || typeof req.body !== 'object') {
+      console.log('🛑 [Guard] Không có body hoặc body không hợp lệ → bỏ qua');
+      return true;
+    }
 
-    // Lấy metadata thực từ TypeORM
     const dataSource = this.dataSourceService.getDataSource();
     const meta: EntityMetadata = dataSource.entityMetadatas.find(
       (m) => m.tableName === mainTableName,
     );
-    if (!meta) return true;
+
+    if (!meta) {
+      console.log('🛑 [Guard] Không tìm thấy metadata → bỏ qua');
+      return true;
+    }
 
     const relations = meta.relations;
+    console.log(
+      '🧩 [Guard] relations:',
+      relations.map((r) => r.propertyName),
+    );
 
     for (const [key, value] of Object.entries(req.body)) {
+      console.log(`🔍 [Guard] Đang xử lý key: "${key}"`);
+
       const rel = relations.find((r) => r.propertyName === key);
-      if (!rel || !rel.inverseEntityMetadata?.tableName) continue;
+
+      if (!rel) {
+        console.log(`ℹ️ [Guard] "${key}" không phải quan hệ → bỏ qua`);
+        continue;
+      }
+
+      if (!rel.inverseEntityMetadata?.tableName) {
+        console.log(`ℹ️ [Guard] "${key}" không có bảng ngược → bỏ qua`);
+        continue;
+      }
 
       const relRepo = this.dataSourceService.getRepository(
         rel.inverseEntityMetadata.tableName,
       );
 
-      // ✅ PATCH: bảo vệ quan hệ khỏi trỏ đến / xoá khỏi isSystem
       if (method === 'PATCH') {
+        console.log(`🛠️ [Guard] PATCH kiểm tra thay đổi quan hệ: ${key}`);
+
         const current = await repo
           .createQueryBuilder('entity')
           .leftJoinAndSelect(`entity.${key}`, 'rel')
@@ -100,13 +133,20 @@ export class SystemRecordProtectGuard implements CanActivate {
           return [];
         })();
 
+        console.log('🧪 [Guard] Quan hệ:', { key, currentIds, incomingIds });
+
         const isSame =
           incomingIds.length === currentIds.length &&
           incomingIds.every((id) => currentIds.includes(id));
 
-        if (isSame) continue;
+        if (isSame) {
+          console.log(`✅ [Guard] Quan hệ "${key}" không thay đổi`);
+          continue;
+        }
 
         for (const incomingId of incomingIds) {
+          if (currentIds.includes(incomingId)) continue; // ✅ đã có sẵn, không phải "cập nhật"
+
           const relRecord: any = await relRepo.findOne({
             where: { id: incomingId },
             select: ['id', 'isSystem'],
@@ -126,7 +166,19 @@ export class SystemRecordProtectGuard implements CanActivate {
               select: ['id', 'isSystem'],
             });
 
-            if (relRecord?.isSystem) {
+            console.log(
+              '⬅️ [Guard] currentId:',
+              currentId,
+              'record:',
+              relRecord,
+            );
+
+            if (!relRecord) {
+              console.log(`⚠️ Bỏ qua currentId ${currentId} vì không tìm thấy`);
+              continue;
+            }
+
+            if (relRecord.isSystem === true) {
               throw new ForbiddenException(
                 `Không thể xoá quan hệ ${key} đang trỏ đến bản ghi hệ thống (id: ${currentId}).`,
               );
@@ -135,7 +187,6 @@ export class SystemRecordProtectGuard implements CanActivate {
         }
       }
 
-      // ✅ DELETE: chặn xoá các quan hệ chứa bản ghi isSystem
       if (method === 'DELETE' && Array.isArray(value)) {
         for (const item of value) {
           if (!item?.id) continue;
@@ -144,6 +195,8 @@ export class SystemRecordProtectGuard implements CanActivate {
             where: { id: item.id },
             select: ['id', 'isSystem'],
           });
+
+          console.log('🗑️ [Guard] DELETE item:', item.id, 'record:', relRecord);
 
           if (relRecord?.isSystem) {
             throw new ForbiddenException(
@@ -154,6 +207,7 @@ export class SystemRecordProtectGuard implements CanActivate {
       }
     }
 
+    console.log('✅ [Guard] Không có vấn đề gì → tiếp tục');
     return true;
   }
 }
