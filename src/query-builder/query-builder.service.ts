@@ -1,22 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Brackets, EntityMetadata } from 'typeorm';
 import { DataSourceService } from '../data-source/data-source.service';
-
-const OPERATOR_MAP: Record<string, string> = {
-  _eq: '=',
-  _ne: '!=',
-  _lt: '<',
-  _lte: '<=',
-  _gt: '>',
-  _gte: '>=',
-  _in: 'IN',
-  _nin: 'NOT IN',
-  _like: 'LIKE',
-  _starts_with: 'LIKE',
-  _ends_with: 'LIKE',
-  _contains: 'LIKE',
-  _is_null: 'IS NULL',
-};
+import { walkFilter } from './utils/walk-filter';
+import { resolveRelationPath } from './utils/resolve-relation-path';
+import { collapseIdOnlyFields } from './utils/collapse-id';
 
 @Injectable()
 export class QueryBuilderService {
@@ -105,7 +92,14 @@ export class QueryBuilderService {
         const relationPath = parts;
 
         if (relationPath.length) {
-          resolveRelationPath(relationPath, rootMeta);
+          resolveRelationPath(
+            relationPath,
+            rootMeta,
+            rootAlias,
+            aliasMap,
+            joinSet,
+            select,
+          );
         }
 
         const alias = aliasMap.get(relationPath.join('.')) || rootAlias;
@@ -151,7 +145,19 @@ export class QueryBuilderService {
         if (condition) {
           const conditionParams: Record<string, any> = {};
           const bracket = new Brackets((qb) => {
-            walkFilter(condition, [], rootMeta, 'and', qb, conditionParams);
+            walkFilter(
+              condition,
+              [],
+              rootMeta,
+              'and',
+              qb,
+              conditionParams,
+              false,
+              rootAlias,
+              aliasMap,
+              joinSet,
+              select,
+            );
           });
 
           aggItem.condition = bracket;
@@ -159,30 +165,6 @@ export class QueryBuilderService {
         }
 
         aggregates[fn] = aggItem;
-      }
-    }
-
-    function resolveRelationPath(path: string[], meta: EntityMetadata) {
-      for (let i = 0; i < path.length; i++) {
-        const aliasKey = path.slice(0, i + 1).join('.'); // cha.con.con
-        const parentKey = path.slice(0, i).join('.');
-        const parentAlias = aliasMap.get(parentKey) || rootAlias;
-        const part = path[i];
-
-        const aliasSafe = aliasKey.replace(/\./g, '_'); // để dùng trong SQL
-
-        if (!aliasMap.has(aliasKey)) {
-          joinSet.add(`${parentAlias}.${part}|${aliasSafe}`); // dùng aliasSafe để join
-          aliasMap.set(aliasKey, aliasSafe); // vẫn dùng key là cha.con
-        }
-
-        const rel = meta.relations.find((r) => r.propertyName === part);
-        if (!rel) break;
-
-        meta = rel.inverseEntityMetadata;
-
-        const idCol = meta.primaryColumns[0]?.propertyName || 'id';
-        select.add(`${aliasSafe}.${idCol}`); // dùng aliasSafe
       }
     }
 
@@ -206,7 +188,14 @@ export class QueryBuilderService {
           const relPath = [...path, rel.propertyName];
 
           // 👇 Fix: always resolve path from rootMeta, not current meta
-          resolveRelationPath(relPath, rootMeta); // ❗ SỬA CHỖ NÀY
+          resolveRelationPath(
+            relPath,
+            rootMeta,
+            rootAlias,
+            aliasMap,
+            joinSet,
+            select,
+          );
 
           const relAlias = aliasMap.get(relPath.join('.'));
           const relMeta = rel.inverseEntityMetadata;
@@ -232,7 +221,14 @@ export class QueryBuilderService {
 
       for (const rel of rootMeta.relations) {
         const relPath = [rel.propertyName];
-        resolveRelationPath(relPath, rootMeta);
+        resolveRelationPath(
+          relPath,
+          rootMeta,
+          rootAlias,
+          aliasMap,
+          joinSet,
+          select,
+        );
 
         const relAlias = aliasMap.get(relPath.join('.'));
         const relMeta = rel.inverseEntityMetadata;
@@ -258,7 +254,14 @@ export class QueryBuilderService {
             : parts.slice(0, -1);
 
         if (pathToEntity.length) {
-          resolveRelationPath(pathToEntity, rootMeta);
+          resolveRelationPath(
+            pathToEntity,
+            rootMeta,
+            rootAlias,
+            aliasMap,
+            joinSet,
+            select,
+          );
         }
 
         const alias = aliasMap.get(pathToEntity.join('.')) || rootAlias;
@@ -266,7 +269,14 @@ export class QueryBuilderService {
         if (isWildcard) {
           const targetMeta = this.getMetadataByPath(pathToEntity, rootMeta);
           if (targetMeta) {
-            resolveRelationPath(pathToEntity, rootMeta);
+            resolveRelationPath(
+              pathToEntity,
+              rootMeta,
+              rootAlias,
+              aliasMap,
+              joinSet,
+              select,
+            );
 
             selectAllFieldsForEntity(targetMeta, pathToEntity, 1);
           }
@@ -275,7 +285,14 @@ export class QueryBuilderService {
             (r) => r.propertyName === parts[0],
           );
           if (rel) {
-            resolveRelationPath(parts, rootMeta);
+            resolveRelationPath(
+              parts,
+              rootMeta,
+              rootAlias,
+              aliasMap,
+              joinSet,
+              select,
+            );
           }
         } else {
           select.add(`${alias}.${parts.at(-1)}`);
@@ -286,281 +303,21 @@ export class QueryBuilderService {
     const whereParams: Record<string, any> = {};
     const where = new Brackets((qb) => {
       if (filter) {
-        walkFilter(filter, [], rootMeta, 'and', qb, whereParams);
+        walkFilter(
+          filter,
+          [],
+          rootMeta,
+          'and',
+          qb,
+          whereParams,
+          false,
+          rootAlias,
+          aliasMap,
+          joinSet,
+          select,
+        );
       }
     });
-
-    function parseArray(val: any): any[] {
-      if (typeof val === 'string') {
-        try {
-          val = JSON.parse(val);
-        } catch {
-          val = val.split(',').map((v) => v.trim());
-        }
-      }
-      return Array.isArray(val) ? val : [val];
-    }
-
-    function walkFilter(
-      obj: any,
-      path: string[],
-      currentMeta: EntityMetadata,
-      type: 'and' | 'or',
-      qb: any,
-      params: Record<string, any>,
-      negate = false,
-    ) {
-      const method = type === 'and' ? 'andWhere' : 'orWhere';
-      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
-
-      for (const key in obj) {
-        const value = obj[key];
-
-        if (key === 'and' || key === 'or') {
-          qb[method](
-            new Brackets((subQb) => {
-              for (const item of value) {
-                walkFilter(
-                  item,
-                  path,
-                  currentMeta,
-                  key as 'and' | 'or',
-                  subQb,
-                  params,
-                  negate,
-                );
-              }
-            }),
-          );
-          continue;
-        }
-
-        if (key === '_not') {
-          qb[method](
-            new Brackets((subQb) => {
-              walkFilter(
-                value,
-                path,
-                currentMeta,
-                'and',
-                subQb,
-                params,
-                !negate,
-              );
-            }),
-          );
-          continue;
-        }
-
-        const rel = currentMeta.relations.find((r) => r.propertyName === key);
-        if (rel) {
-          const newPath = [...path, key];
-
-          if (!rel.inverseEntityMetadata || !rel.inverseRelation) {
-            throw new Error(
-              `Cannot use _count on relation '${key}' — inverse relation missing.`,
-            );
-          }
-
-          resolveRelationPath(newPath, currentMeta);
-
-          // Xử lý _count trên quan hệ
-          if (
-            typeof value === 'object' &&
-            value !== null &&
-            '_count' in value
-          ) {
-            const alias = `sub_${params.__countAlias || 0}`;
-            const countAliasIndex = params.__countAlias || 0;
-            params.__countAlias = countAliasIndex + 1;
-
-            const inverseTable = rel.inverseEntityMetadata.tableName;
-            const inverseKey =
-              rel.inverseEntityMetadata.primaryColumns[0]?.propertyName || 'id';
-            const joinKey = rel.inverseRelation?.joinColumns?.[0]?.databaseName;
-            if (!joinKey)
-              throw new Error(`Missing join key for relation '${key}'`);
-
-            for (const op in value._count) {
-              const sqlOp = OPERATOR_MAP[op];
-              if (!sqlOp) continue;
-
-              const paramKey = `count_${countAliasIndex}_${Object.keys(params).length}`;
-              const val = value._count[op];
-              params[paramKey] = val;
-
-              const subquery = `
-            SELECT ${alias}.${joinKey}
-            FROM ${inverseTable} ${alias}
-            GROUP BY ${alias}.${joinKey}
-            HAVING COUNT(DISTINCT ${alias}.${inverseKey}) ${sqlOp} :${paramKey}
-          `;
-
-              const wrappedSubquery = `(${subquery})`; // 👈 fix lỗi alias
-
-              const mainId = `${rootAlias}.${currentMeta.primaryColumns[0].propertyName}`;
-              qb[method](
-                `${mainId} ${negate ? 'NOT IN' : 'IN'} ${wrappedSubquery}`,
-              );
-            }
-
-            continue;
-          }
-
-          if (
-            typeof value === 'object' &&
-            value !== null &&
-            'id' in value &&
-            typeof value.id === 'object' &&
-            (value.id._in || value.id._nin)
-          ) {
-            const ids = parseArray(value.id._in || value.id._nin);
-            const paramKey = `rel_${key}_ids_${Object.keys(params).length}`;
-            params[paramKey] = ids;
-
-            const subAlias = `sub_${key}`;
-            const inverseTable = rel.inverseEntityMetadata.tableName;
-            const foreignKey =
-              rel.inverseRelation?.joinColumns?.[0]?.databaseName;
-            const rootKey = currentMeta.primaryColumns[0].propertyName;
-            const inverseKey =
-              rel.inverseEntityMetadata.primaryColumns[0].propertyName;
-
-            if (!foreignKey) {
-              throw new Error(`Relation ${key} is missing join column`);
-            }
-
-            const subquery = `
-          SELECT 1 FROM ${inverseTable} ${subAlias}
-          WHERE ${subAlias}.${foreignKey} = ${rootAlias}.${rootKey}
-          AND ${subAlias}.${inverseKey} ${value.id._nin ? 'NOT IN' : 'IN'} (:...${paramKey})
-        `;
-
-            qb[method](`${negate ? 'NOT EXISTS' : 'EXISTS'} (${subquery})`);
-            continue;
-          }
-
-          resolveRelationPath(newPath, currentMeta);
-
-          // Quan hệ lồng nhau
-          walkFilter(
-            value,
-            newPath,
-            rel.inverseEntityMetadata,
-            'and',
-            qb,
-            params,
-            negate,
-          );
-          continue;
-        }
-
-        const column = currentMeta.columns.find((c) => c.propertyName === key);
-        if (!column) continue;
-
-        const fieldPath = path.join('.');
-        let alias = aliasMap.get(fieldPath) || rootAlias;
-        const originalAlias = alias;
-
-        // Nếu đang filter field trong relation, dùng alias phụ
-        if (
-          path.length > 0 &&
-          currentMeta.relations.some((r) => r.propertyName === path.at(-1))
-        ) {
-          alias = `${alias}_filter`; // tạo alias phụ để lọc
-          const joinPath =
-            aliasMap.get(path.slice(0, -1).join('.')) || rootAlias;
-          const joinString = `${joinPath}.${path.at(-1)}|${alias}`;
-          if (!joinSet.has(joinString)) joinSet.add(joinString); // join phụ
-        }
-
-        const field = `${alias}.${key}`;
-
-        if (typeof value === 'object' && value !== null) {
-          for (const op in value) {
-            const paramKey = `${key}_${Object.keys(params).length}`;
-            let val = value[op];
-            let sqlOp = OPERATOR_MAP[op];
-
-            // Special cases
-            if (op === '_in' || op === '_nin') {
-              val = parseArray(val);
-            }
-
-            if (
-              ['_contains', '_starts_with', '_ends_with', '_like'].includes(op)
-            ) {
-              const pattern =
-                op === '_contains'
-                  ? `%${val}%`
-                  : op === '_starts_with'
-                    ? `${val}%`
-                    : op === '_ends_with'
-                      ? `%${val}`
-                      : val;
-
-              qb[method](
-                negate
-                  ? `NOT (LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey})))`
-                  : `LOWER(unaccent(${field})) LIKE LOWER(unaccent(:${paramKey}))`,
-                { [paramKey]: pattern },
-              );
-              params[paramKey] = pattern;
-              continue;
-            }
-
-            if (
-              (op === '_between' || op === '_nbetween') &&
-              Array.isArray(val) &&
-              val.length === 2
-            ) {
-              const [from, to] = val;
-              const fromKey = `${paramKey}_from`,
-                toKey = `${paramKey}_to`;
-              params[fromKey] = from;
-              params[toKey] = to;
-              const expr = `${field} BETWEEN :${fromKey} AND :${toKey}`;
-              qb[method](negate || op === '_nbetween' ? `NOT (${expr})` : expr);
-              continue;
-            }
-
-            if (sqlOp === 'IN' || sqlOp === 'NOT IN') {
-              qb[method](
-                negate
-                  ? `NOT (${field} ${sqlOp} (:...${paramKey}))`
-                  : `${field} ${sqlOp} (:...${paramKey})`,
-                { [paramKey]: val },
-              );
-            } else if (op === '_is_null' || op === '_is_nnull') {
-              const isNull = op === '_is_null';
-              qb[method](
-                negate
-                  ? `NOT (${field} IS ${isNull ? '' : 'NOT '}NULL)`
-                  : `${field} IS ${isNull ? '' : 'NOT '}NULL`,
-              );
-            } else if (sqlOp) {
-              qb[method](
-                negate
-                  ? `NOT (${field} ${sqlOp} :${paramKey})`
-                  : `${field} ${sqlOp} :${paramKey}`,
-                { [paramKey]: val },
-              );
-            }
-
-            params[paramKey] = val;
-          }
-        } else {
-          const paramKey = `${key}_${Object.keys(params).length}`;
-          qb[method](
-            negate
-              ? `NOT (${field} = :${paramKey})`
-              : `${field} = :${paramKey}`,
-            { [paramKey]: value },
-          );
-          params[paramKey] = value;
-        }
-      }
-    }
 
     const joinArr = Array.from(joinSet).map((str) => {
       const [path, alias] = str.split('|');
@@ -591,67 +348,6 @@ export class QueryBuilderService {
       current = rel.inverseEntityMetadata;
     }
     return current;
-  }
-
-  private collapseIdOnlyFields(
-    obj: any,
-    requestedFields: Set<string>,
-    parentPath = '',
-  ): any {
-    if (obj instanceof Date) return obj;
-
-    if (Array.isArray(obj)) {
-      const collapsed = obj.map((item) =>
-        this.collapseIdOnlyFields(item, requestedFields, parentPath),
-      );
-
-      const isAllIdObjects = collapsed.every(
-        (item) =>
-          typeof item === 'object' &&
-          item !== null &&
-          !Array.isArray(item) &&
-          Object.keys(item).length === 1 &&
-          (typeof item.id === 'number' || typeof item.id === 'string'),
-      );
-
-      const idFieldPath = parentPath ? `${parentPath}.id` : 'id';
-      const shouldCollapse =
-        !requestedFields.has(idFieldPath) &&
-        !requestedFields.has(`${parentPath}.*`);
-
-      return isAllIdObjects && shouldCollapse
-        ? collapsed.map((item) => item.id)
-        : collapsed;
-    }
-
-    if (obj !== null && typeof obj === 'object' && !Array.isArray(obj)) {
-      const keys = Object.keys(obj);
-      const idFieldPath = parentPath ? `${parentPath}.id` : 'id';
-
-      const shouldCollapse =
-        keys.length === 1 &&
-        keys[0] === 'id' &&
-        (typeof obj.id === 'string' || typeof obj.id === 'number') &&
-        !requestedFields.has(idFieldPath) &&
-        !requestedFields.has(`${parentPath}.*`);
-
-      if (shouldCollapse) {
-        return obj.id;
-      }
-
-      const result: Record<string, any> = {};
-      for (const [key, value] of Object.entries(obj)) {
-        const newPath = parentPath ? `${parentPath}.${key}` : key;
-        result[key] = this.collapseIdOnlyFields(
-          value,
-          requestedFields,
-          newPath,
-        );
-      }
-      return result;
-    }
-
-    return obj;
   }
 
   async find({
@@ -746,7 +442,7 @@ export class QueryBuilderService {
     }
     const result = await qb.getMany();
     const obj: any = {
-      data: this.collapseIdOnlyFields(result, extract.requestedFields),
+      data: collapseIdOnlyFields(result, extract.requestedFields),
     };
 
     if (aggregate && Object.keys(extract.aggregates).length > 0) {

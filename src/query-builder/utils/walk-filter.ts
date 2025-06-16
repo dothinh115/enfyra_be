@@ -1,6 +1,7 @@
 import { Brackets, EntityMetadata } from 'typeorm';
 import { OPERATOR_MAP } from './operator-map';
 import { parseArray } from './parse-array';
+import { resolveRelationPath } from './resolve-relation-path';
 
 export function walkFilter(
   obj: any,
@@ -10,14 +11,6 @@ export function walkFilter(
   qb: any,
   params: Record<string, any>,
   negate = false,
-  resolveRelationPath: (
-    path: string[],
-    meta: EntityMetadata,
-    rootAlias: string,
-    aliasMap: Map<string, string>,
-    joinSet: Set<string>,
-    select: Set<string>,
-  ) => void,
   rootAlias: string,
   aliasMap: Map<string, string>,
   joinSet: Set<string>,
@@ -41,7 +34,6 @@ export function walkFilter(
               subQb,
               params,
               negate,
-              resolveRelationPath,
               rootAlias,
               aliasMap,
               joinSet,
@@ -64,7 +56,6 @@ export function walkFilter(
             subQb,
             params,
             !negate,
-            resolveRelationPath,
             rootAlias,
             aliasMap,
             joinSet,
@@ -182,7 +173,6 @@ export function walkFilter(
         qb,
         params,
         negate,
-        resolveRelationPath,
         rootAlias,
         aliasMap,
         joinSet,
