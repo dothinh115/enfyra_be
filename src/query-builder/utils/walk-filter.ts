@@ -130,7 +130,8 @@ export function walkFilter(
         typeof value.id === 'object' &&
         (value.id._in || value.id._nin)
       ) {
-        const ids = parseArray(value.id._in || value.id._nin);
+        const isNin = '_nin' in value.id;
+        const ids = parseArray(isNin ? value.id._nin : value.id._in);
         const paramKey = `rel_${key}_ids_${Object.keys(params).length}`;
         params[paramKey] = ids;
 
