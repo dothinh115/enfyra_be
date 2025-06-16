@@ -109,10 +109,18 @@ export class SchemaReloadService {
   async lockChangeSchema() {
     const isLocked = await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
     if (!isLocked) {
-      this.logger.log('Khoá schema để chuẩn bị thay đổi');
-      await this.cache.set(SCHEMA_LOCK_EVENT_KEY, true, 10);
+      await this.cache.set(SCHEMA_LOCK_EVENT_KEY, true, 10000);
+      const confirm = await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
+      this.logger.log(`🔐 Set schema lock: ${confirm}`);
     } else {
       this.logger.warn('Schema đã bị khoá trước đó');
+    }
+  }
+
+  async deleteLockSchema() {
+    const isLocked = await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
+    if (isLocked) {
+      await this.cache.del(SCHEMA_LOCK_EVENT_KEY);
     }
   }
 

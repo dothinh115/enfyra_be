@@ -161,7 +161,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
       ].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
     });
 
-    await this.cache.set(GLOBAL_ROUTES_KEY, routes, 5);
+    await this.cache.set(GLOBAL_ROUTES_KEY, routes, 5000);
     return routes;
   }
 

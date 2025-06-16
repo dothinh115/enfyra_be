@@ -39,7 +39,7 @@ export class RoleGuard implements CanActivate {
       await this.cache.get<Record<string, string>>(GLOBAL_SETTINGS_KEY);
     if (!methodMap) {
       methodMap = await this.getPermissionMap();
-      await this.cache.set(GLOBAL_SETTINGS_KEY, methodMap, 60);
+      await this.cache.set(GLOBAL_SETTINGS_KEY, methodMap, 60000);
     }
 
     const action = methodMap[req.method];

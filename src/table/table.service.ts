@@ -164,6 +164,7 @@ export class TableHandlerService {
       const backup = await this.autoService.backup();
       this.schemaStateService.setVersion(backup['id']);
       await this.schemaReloadService.publishSchemaUpdated(backup['id']);
+      await this.schemaReloadService.deleteLockSchema();
     } catch (error) {
       await this.autoService.restore();
       throw error;
