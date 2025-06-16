@@ -626,8 +626,7 @@ export class QueryBuilderService {
       Record<'count' | 'sum' | 'avg' | 'min' | 'max', string>
     >;
   }) {
-    const repo = await this.dataSourceService.getRepository(tableName);
-
+    const repo = this.dataSourceService.getRepository(tableName);
     const sortFields = Array.isArray(sort)
       ? sort
       : typeof sort === 'string'
@@ -696,7 +695,6 @@ export class QueryBuilderService {
     if (limit !== 0) {
       qb.take(limit);
     }
-
     const result = await qb.getMany();
     const obj: any = {
       data: this.collapseIdOnlyFields(result, extract.requestedFields),

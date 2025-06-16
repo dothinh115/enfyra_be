@@ -45,6 +45,7 @@ export class DynamicService {
           handler = `return await $repos.main.find()`;
       }
       if (req.routeData.handler) handler = req.routeData.handler;
+      if (!handler) throw new BadRequestException(`Không có handler tương ứng`);
 
       const script = new vm.Script(`(async () => { ${handler} })()`);
       const vmContext = vm.createContext(req.routeData.context);

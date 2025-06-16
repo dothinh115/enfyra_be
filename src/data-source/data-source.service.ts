@@ -3,7 +3,6 @@ import { CommonService } from '../common/common.service';
 import { createDataSource } from '../data-source/data-source';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntitySchema, EntityTarget, Repository } from 'typeorm';
-import { RELOADING_DATASOURCE_KEY } from '../utils/constant';
 
 const entityDir = path.resolve('dist', 'entities');
 
@@ -17,22 +16,20 @@ export class DataSourceService implements OnModuleInit {
   async onModuleInit() {
     this.logger.log('Chuẩn bị gán và init DataSource.');
 
-    const entities = await this.commonService.loadDynamicEntities(entityDir);
-    this.dataSource = createDataSource(entities);
-    await this.dataSource.initialize();
+    await this.reloadDataSource();
     this.logger.debug('Gán và init DataSource thành công!');
   }
 
   async reloadDataSource() {
     this.logger.log('🔁 Chuẩn bị reload DataSource');
-    if (this.dataSource.isInitialized) {
+    if (this.dataSource?.isInitialized) {
       await this.dataSource.destroy();
+      this.clearMetadata();
     }
     this.logger.debug('✅ Destroy DataSource cũ thành công!');
 
     try {
       const entities = await this.commonService.loadDynamicEntities(entityDir);
-
       this.dataSource = createDataSource(entities);
       await this.dataSource.initialize();
       this.logger.debug('✅ ReInit DataSource thành công!');
@@ -47,8 +44,7 @@ export class DataSourceService implements OnModuleInit {
   getRepository<Entity>(
     identifier: string | Function | EntitySchema<any>,
   ): Repository<Entity> | null {
-    const dataSource = this.getDataSource();
-    if (!dataSource?.isInitialized) {
+    if (!this.dataSource?.isInitialized) {
       throw new Error('DataSource chưa được khởi tạo!');
     }
 
@@ -56,12 +52,12 @@ export class DataSourceService implements OnModuleInit {
 
     if (typeof identifier === 'string') {
       // Tìm theo tên bảng
-      metadata = dataSource.entityMetadatas.find(
+      metadata = this.dataSource.entityMetadatas.find(
         (meta) => meta.tableName === identifier,
       );
     } else {
       try {
-        metadata = dataSource.getMetadata(identifier);
+        metadata = this.dataSource.getMetadata(identifier);
       } catch {
         return null; // Không tìm thấy metadata
       }
@@ -71,7 +67,7 @@ export class DataSourceService implements OnModuleInit {
       return null;
     }
 
-    return dataSource.getRepository<Entity>(metadata.target as any);
+    return this.dataSource.getRepository<Entity>(metadata.target as any);
   }
 
   getDataSource() {
@@ -90,5 +86,11 @@ export class DataSourceService implements OnModuleInit {
   getTableNameFromEntity(entity: EntityTarget<any>): string {
     const metadata = this.dataSource.getMetadata(entity);
     return metadata.tableName;
+  }
+
+  clearMetadata() {
+    (this.dataSource as any).entityMetadatas = [];
+    (this.dataSource as any).entityMetadatasMap = new Map();
+    (this.dataSource as any).repositories = [];
   }
 }

@@ -10,7 +10,15 @@
     },
     "defaultSetting": {
         "isInit": false,
-        "isSystem":true
+        "actionPermissionValue": {
+            "GET": "read",
+            "POST": "create",
+            "PATCH": "update",
+            "DELETE": "delete"
+        },
+        "isSystem":true,
+        "projectName": "Dynamiq CMS",
+        "projectDescription": "Description for Dynamiq CMS"
     },
     "defaultRoute": [
         {

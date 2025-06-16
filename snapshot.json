@@ -81,7 +81,10 @@
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true }, 
             { "name": "isInit", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
-            { "name": "description", "type": "text", "isSystem": true }  
+            { "name": "actionPermissionValue", "type": "simple-json", "isSystem": true, "isUpdatable": false },
+            { "name": "projectName", "type": "varchar", "isSystem": true },
+            { "name": "projectDescription", "type": "varchar", "isSystem": true },
+            { "name": "projectUrl", "type": "varchar", "isSystem": true }
         ],
             
         "relations": []

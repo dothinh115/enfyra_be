@@ -84,9 +84,15 @@ export class CommonService {
     const files = fs.readdirSync(entityDir);
     for (const file of files) {
       if (file.endsWith('.js')) {
-        const module = await import(path.join(entityDir, file));
+        const fullPath = path.join(entityDir, file);
+        const resolved = require.resolve(fullPath);
+
+        const module = require(fullPath);
         for (const exported in module) {
           entities.push(module[exported]);
+        }
+        if (require.cache[resolved]) {
+          delete require.cache[resolved];
         }
       }
     }

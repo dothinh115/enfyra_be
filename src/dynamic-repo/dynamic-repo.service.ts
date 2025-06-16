@@ -88,10 +88,13 @@ export class DynamicRepoService {
       const table: any = await this.tableHandlerService.updateTable(+id, body);
       return this.find(table.id);
     }
-    const merged = this.repo.merge(exists, body);
     if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
-    await this.repo.save(merged);
-    return await this.find(id);
+    const merged = this.repo.merge(exists, body);
+    await this.repo.save(body);
+
+    const res = await this.find(id);
+    console.log(res);
+    return res;
   }
 
   async delete(id: string | number) {
