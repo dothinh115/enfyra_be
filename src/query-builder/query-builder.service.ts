@@ -407,6 +407,41 @@ export class QueryBuilderService {
             continue;
           }
 
+          if (
+            typeof value === 'object' &&
+            value !== null &&
+            'id' in value &&
+            typeof value.id === 'object' &&
+            (value.id._in || value.id._nin)
+          ) {
+            const ids = parseArray(value.id._in || value.id._nin);
+            const paramKey = `rel_${key}_ids_${Object.keys(params).length}`;
+            params[paramKey] = ids;
+
+            const subAlias = `sub_${key}`;
+            const inverseTable = rel.inverseEntityMetadata.tableName;
+            const foreignKey =
+              rel.inverseRelation?.joinColumns?.[0]?.databaseName;
+            const rootKey = currentMeta.primaryColumns[0].propertyName;
+            const inverseKey =
+              rel.inverseEntityMetadata.primaryColumns[0].propertyName;
+
+            if (!foreignKey) {
+              throw new Error(`Relation ${key} is missing join column`);
+            }
+
+            const subquery = `
+          SELECT 1 FROM ${inverseTable} ${subAlias}
+          WHERE ${subAlias}.${foreignKey} = ${rootAlias}.${rootKey}
+          AND ${subAlias}.${inverseKey} ${value.id._nin ? 'NOT IN' : 'IN'} (:...${paramKey})
+        `;
+
+            qb[method](`${negate ? 'NOT EXISTS' : 'EXISTS'} (${subquery})`);
+            continue;
+          }
+
+          resolveRelationPath(newPath, currentMeta);
+
           // Quan hệ lồng nhau
           walkFilter(
             value,
@@ -424,7 +459,21 @@ export class QueryBuilderService {
         if (!column) continue;
 
         const fieldPath = path.join('.');
-        const alias = aliasMap.get(fieldPath) || rootAlias;
+        let alias = aliasMap.get(fieldPath) || rootAlias;
+        const originalAlias = alias;
+
+        // Nếu đang filter field trong relation, dùng alias phụ
+        if (
+          path.length > 0 &&
+          currentMeta.relations.some((r) => r.propertyName === path.at(-1))
+        ) {
+          alias = `${alias}_filter`; // tạo alias phụ để lọc
+          const joinPath =
+            aliasMap.get(path.slice(0, -1).join('.')) || rootAlias;
+          const joinString = `${joinPath}.${path.at(-1)}|${alias}`;
+          if (!joinSet.has(joinString)) joinSet.add(joinString); // join phụ
+        }
+
         const field = `${alias}.${key}`;
 
         if (typeof value === 'object' && value !== null) {

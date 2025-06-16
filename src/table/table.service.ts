@@ -1,4 +1,4 @@
-import { AutoService } from '../auto/auto-entity.service';
+import { AutoService } from '../auto/auto.service';
 import { Table_definition } from '../entities/table_definition.entity';
 import { CreateColumnDto, CreateTableDto } from '../table/dto/create-table.dto';
 import { BadRequestException, Injectable } from '@nestjs/common';
@@ -7,6 +7,8 @@ import { SchemaReloadService } from '../schema/schema-reload.service';
 import { SchemaStateService } from '../schema/schema-state.service';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { MetadataSyncService } from '../metadata/metadata-sync.service';
+import { SchemaHistoryService } from '../metadata/schema-history.service';
 
 @Injectable()
 export class TableHandlerService {
@@ -16,6 +18,8 @@ export class TableHandlerService {
     private schemaReloadService: SchemaReloadService,
     private schemaStateService: SchemaStateService,
     @InjectDataSource() private dataSource: DataSource,
+    private metadataSyncService: MetadataSyncService,
+    private schemaHistoryService: SchemaHistoryService,
   ) {}
 
   async createTable(body: CreateTableDto) {
@@ -42,7 +46,7 @@ export class TableHandlerService {
 
       result = await manager.save(Table_definition, tableEntity);
       await queryRunner.commitTransaction();
-      await this.afterEffect();
+      await this.metadataSyncService.syncAll();
       const routeDefRepo =
         this.dataSouceService.getRepository('route_definition');
       await routeDefRepo.save({
@@ -78,7 +82,7 @@ export class TableHandlerService {
       }
       const result = await manager.save(Table_definition, body as any);
       await queryRunner.commitTransaction();
-      await this.afterEffect();
+      await this.metadataSyncService.syncAll();
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -143,7 +147,7 @@ export class TableHandlerService {
       }
 
       const result = await tableDefRepo.remove(exists);
-      await this.afterEffect();
+      await this.metadataSyncService.syncAll();
 
       return result;
     } catch (error) {
@@ -151,23 +155,6 @@ export class TableHandlerService {
       throw new BadRequestException(
         `Error: "${error.message}"` || 'Unknown error',
       );
-    }
-  }
-
-  async afterEffect() {
-    try {
-      //lock ko cho đổi schema
-      await this.schemaReloadService.lockChangeSchema();
-      //pull metadata mới về và apply
-      await this.autoService.pullMetadataFromDb();
-      //backup version hiện tại
-      const backup = await this.autoService.backup();
-      this.schemaStateService.setVersion(backup['id']);
-      await this.schemaReloadService.publishSchemaUpdated(backup['id']);
-      await this.schemaReloadService.deleteLockSchema();
-    } catch (error) {
-      await this.autoService.restore();
-      throw error;
     }
   }
 }

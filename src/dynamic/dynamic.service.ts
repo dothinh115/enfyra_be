@@ -29,25 +29,16 @@ export class DynamicService {
     req.routeData.context.$logs = (...args: any[]) => {
       logs.push(...args);
     };
-    try {
-      let handler: string;
-      switch (req.method) {
-        case 'DELETE':
-          handler = `return await $repos.main.delete($params.id);`;
-          break;
-        case 'POST':
-          handler = `return await $repos.main.create($body);`;
-          break;
-        case 'PATCH':
-          handler = `return await $repos.main.update($params.id, $body);`;
-          break;
-        default:
-          handler = `return await $repos.main.find()`;
-      }
-      if (req.routeData.handler) handler = req.routeData.handler;
-      if (!handler) throw new BadRequestException(`Không có handler tương ứng`);
 
-      const script = new vm.Script(`(async () => { ${handler} })()`);
+    try {
+      const userHandler = req.routeData.handler?.trim();
+      const defaultHandler = this.getDefaultHandler(req.method);
+      if (!userHandler && !defaultHandler)
+        throw new BadRequestException('Không có handler tương ứng');
+
+      const scriptCode = `(async () => { ${userHandler || defaultHandler} })()`;
+
+      const script = new vm.Script(scriptCode);
       const vmContext = vm.createContext(req.routeData.context);
       const result = await script.runInContext(vmContext, { timeout: 3000 });
 
@@ -68,6 +59,19 @@ export class DynamicService {
         'Lỗi trong quá trình thực thi script hoặc xử lý dữ liệu.',
         error.message,
       );
+    }
+  }
+
+  private getDefaultHandler(method: string): string {
+    switch (method) {
+      case 'DELETE':
+        return `return await $repos.main.delete($params.id);`;
+      case 'POST':
+        return `return await $repos.main.create($body);`;
+      case 'PATCH':
+        return `return await $repos.main.update($params.id, $body);`;
+      default:
+        return `return await $repos.main.find();`;
     }
   }
 }

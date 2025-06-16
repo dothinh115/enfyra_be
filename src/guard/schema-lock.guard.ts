@@ -5,7 +5,6 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { SchemaReloadService } from '../schema/schema-reload.service';
 import { CommonService } from '../common/common.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
@@ -14,7 +13,6 @@ import { SCHEMA_LOCK_EVENT_KEY } from '../utils/constant';
 @Injectable()
 export class SchemaLockGuard implements CanActivate {
   constructor(
-    private schemaReloadService: SchemaReloadService,
     private commonService: CommonService,
     @Inject(CACHE_MANAGER) private cache: Cache,
   ) {}

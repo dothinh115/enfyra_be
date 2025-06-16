@@ -1,0 +1,77 @@
+import { Column_definition } from '../../entities/column_definition.entity';
+import { ClassDeclaration } from 'ts-morph';
+
+interface ColumnWriterContext {
+  classDeclaration: ClassDeclaration;
+  col: Partial<Column_definition>;
+  usedImports: Set<string>;
+  helpers: {
+    capitalize: (s: string) => string;
+    dbTypeToTSType: (type: string) => string;
+  };
+}
+
+export function addColumnToClass({
+  classDeclaration,
+  col,
+  usedImports,
+  helpers,
+}: ColumnWriterContext): void {
+  const decorators: { name: string; arguments: string[] }[] = [];
+
+  if (col.isPrimary) {
+    const strategy = col.type === 'uuid' ? `'uuid'` : `'increment'`;
+    decorators.push({ name: 'PrimaryGeneratedColumn', arguments: [strategy] });
+    usedImports.add('PrimaryGeneratedColumn');
+  } else {
+    const type = col.type === 'date' ? 'timestamp' : col.type;
+    const opts = [`type: "${type}"`, `nullable: ${col.isNullable}`];
+
+    if (col.default !== undefined && col.default !== null) {
+      if (col.default === 'now') {
+        opts.push(`default: () => "now()"`);
+      } else {
+        opts.push(
+          typeof col.default === 'string'
+            ? `default: "${col.default}"`
+            : `default: ${col.default}`,
+        );
+      }
+    }
+
+    if (col.isUnique) opts.push('unique: true');
+    if (col.type === 'enum' && col.enumValues) {
+      opts.push(`enum: [${col.enumValues.map((v) => `'${v}'`).join(', ')}]`);
+    }
+    if (col.isUpdatable === false) {
+      opts.push(`update: false`);
+    }
+
+    decorators.push({ name: 'Column', arguments: [`{ ${opts.join(', ')} }`] });
+    usedImports.add('Column');
+
+    if (col.isIndex) {
+      decorators.push({ name: 'Index', arguments: [] });
+      usedImports.add('Index');
+    }
+  }
+
+  if (col.isHidden) {
+    decorators.push({ name: 'HiddenField', arguments: [] });
+    usedImports.add('HiddenField');
+  }
+
+  const tsType =
+    col.type === 'enum'
+      ? col.enumValues.map((v) => `'${v}'`).join(' | ')
+      : col.type === 'date'
+        ? 'Date'
+        : helpers.dbTypeToTSType(col.type);
+
+  classDeclaration.addProperty({
+    name: col.name,
+    type: tsType,
+    hasExclamationToken: false,
+    decorators,
+  });
+}

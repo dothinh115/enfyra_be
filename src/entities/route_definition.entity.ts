@@ -6,7 +6,7 @@ import { Middleware_definition } from './middleware_definition.entity';
 import { Hook_definition } from './hook_definition.entity';
 
 @Entity('route_definition')
-@Unique(['path', 'mainTable'])
+@Unique(['mainTable', 'path'])
 export class Route_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;

@@ -1,6 +1,5 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
-import { AutoService } from '../auto/auto-entity.service';
 import { SchemaStateService } from './schema-state.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,6 +13,7 @@ import {
 } from '../utils/constant';
 import { RedisPubSubService } from '../redis-pubsub/redis-pubsub.service';
 import { CommonService } from '../common/common.service';
+import { MetadataSyncService } from '../metadata/metadata-sync.service';
 
 @Injectable()
 export class SchemaReloadService {
@@ -22,13 +22,13 @@ export class SchemaReloadService {
 
   constructor(
     private dataSourceService: DataSourceService,
-    private autoService: AutoService,
     private schemaStateService: SchemaStateService,
     @Inject(CACHE_MANAGER) private cache: Cache,
     private configService: ConfigService,
     @Inject(forwardRef(() => RedisPubSubService))
     private redisPubSubService: RedisPubSubService,
     private commonService: CommonService,
+    private metadataSyncService: MetadataSyncService,
   ) {
     this.sourceInstanceId = uuidv4();
     this.logger.log(`Khởi tạo với sourceInstanceId: ${this.sourceInstanceId}`);
@@ -89,7 +89,7 @@ export class SchemaReloadService {
     );
     if (acquired) {
       this.logger.log('Đã lấy được lock, tiến hành pull...');
-      await this.autoService.pullMetadataFromDb();
+      await this.metadataSyncService.syncAll();
       await this.cache.del(SCHEMA_PULLING_EVENT_KEY);
       this.logger.log('Đã pull xong và xoá lock');
       return;

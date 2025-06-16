@@ -1,9 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { Repository } from 'typeorm';
-import { validateDto } from '../utils/helpers';
 import { TableHandlerService } from '../table/table.service';
-import { CreateTableDto } from '../table/dto/create-table.dto';
 import { QueryBuilderService } from '../query-builder/query-builder.service';
 
 export class DynamicRepoService {
@@ -89,7 +87,6 @@ export class DynamicRepoService {
       return this.find(table.id);
     }
     if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
-    const merged = this.repo.merge(exists, body);
     await this.repo.save(body);
 
     const res = await this.find(id);

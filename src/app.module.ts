@@ -8,7 +8,7 @@ import { RabbitMQRegistry } from './rabbitmq/rabbitmq.service';
 import { DataSourceModule } from './data-source/data-source.module';
 import { CommonModule } from './common/common.module';
 import { BootstrapService } from './bootstrap/bootstrap.service';
-import { AutoGenerateModule } from './auto/auto.module';
+import { AutoModule } from './auto/auto.module';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
@@ -30,6 +30,9 @@ import { SqlFunctionService } from './sql/sql-function.service';
 import { QueryBuilderModule } from './query-builder/query-builder.module';
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { SystemRecordProtectGuard } from './guard/system-record-protect.guard';
+import { MetadataSyncService } from './metadata/metadata-sync.service';
+import { SchemaHistoryService } from './metadata/schema-history.service';
+import { BootstrapModule } from './bootstrap/bootstrap.module';
 
 @Global()
 @Module({
@@ -42,7 +45,7 @@ import { SystemRecordProtectGuard } from './guard/system-record-protect.guard';
     DatabaseModule,
     CommonModule,
     DataSourceModule,
-    AutoGenerateModule,
+    AutoModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
@@ -65,9 +68,9 @@ import { SystemRecordProtectGuard } from './guard/system-record-protect.guard';
     AuthModule,
     MeModule,
     DynamicModule,
+    BootstrapModule,
   ],
   providers: [
-    BootstrapService,
     RabbitMQRegistry,
     JwtStrategy,
     HideFieldInterceptor,
@@ -75,6 +78,8 @@ import { SystemRecordProtectGuard } from './guard/system-record-protect.guard';
     SchemaReloadService,
     RedisPubSubService,
     SqlFunctionService,
+    MetadataSyncService,
+    SchemaHistoryService,
     { provide: APP_GUARD, useClass: SchemaLockGuard },
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
@@ -90,6 +95,8 @@ import { SystemRecordProtectGuard } from './guard/system-record-protect.guard';
     SchemaReloadService,
     SchemaStateService,
     RedisPubSubService,
+    MetadataSyncService,
+    SchemaHistoryService,
   ],
 })
 export class AppModule implements NestModule {
