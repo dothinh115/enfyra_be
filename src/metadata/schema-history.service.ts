@@ -49,7 +49,7 @@ export class SchemaHistoryService {
     if (oldest) {
       await this.tableDefRepo.save(oldest.schema);
       this.logger.warn('⚠️ Đã khôi phục metadata từ schema_history');
-      await this.metadataSyncService.pullMetadataFromDb();
+      await this.metadataSyncService.syncAll();
     } else {
       this.logger.warn('⚠️ Không có bản backup schema nào để khôi phục');
     }
