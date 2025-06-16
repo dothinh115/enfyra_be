@@ -156,6 +156,46 @@ export function walkFilter(
         continue;
       }
 
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        'id' in value &&
+        typeof value.id === 'object' &&
+        value.id._eq_set
+      ) {
+        const ids = parseArray(value.id._eq_set);
+        const paramKey = `eqset_${key}_${Object.keys(params).length}`;
+        params[paramKey] = ids;
+
+        const subAlias = `sub_${key}`;
+        const inverseTable = rel.inverseEntityMetadata.tableName;
+        const foreignKey = rel.inverseRelation?.joinColumns?.[0]?.databaseName;
+        const rootKey = currentMeta.primaryColumns[0].propertyName;
+        const inverseKey =
+          rel.inverseEntityMetadata.primaryColumns[0].propertyName;
+
+        if (!foreignKey) {
+          throw new Error(`Relation ${key} is missing join column`);
+        }
+
+        const countKey = `${paramKey}_count`;
+        params[paramKey] = ids;
+        params[countKey] = ids.length;
+
+        const subquery = `
+  SELECT ${subAlias}.${foreignKey}
+  FROM ${inverseTable} ${subAlias}
+  GROUP BY ${subAlias}.${foreignKey}
+  HAVING 
+    COUNT(DISTINCT ${subAlias}.${inverseKey}) = :${countKey}
+    AND COUNT(DISTINCT CASE WHEN ${subAlias}.${inverseKey} IN (:...${paramKey}) THEN ${subAlias}.${inverseKey} END) = :${countKey}
+`;
+
+        const mainId = `${rootAlias}.${rootKey}`;
+        qb[method](`${mainId} ${negate ? 'NOT IN' : 'IN'} (${subquery})`);
+        continue;
+      }
+
       resolveRelationPath(
         newPath,
         currentMeta,
