@@ -1,6 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { Role_definition } from "./role_definition.entity";
-import { Route_definition } from "./route_definition.entity";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Role_definition } from './role_definition.entity';
+import { Route_definition } from './route_definition.entity';
 
 @Entity('route_permission_definition')
 export class Route_permission_definition {

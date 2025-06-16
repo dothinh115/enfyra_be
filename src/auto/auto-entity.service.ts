@@ -15,6 +15,23 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Schema_history } from '../entities/schema_history.entity';
 
+const importMap: Record<string, string> = {
+  Entity: 'typeorm',
+  Column: 'typeorm',
+  PrimaryGeneratedColumn: 'typeorm',
+  CreateDateColumn: 'typeorm',
+  UpdateDateColumn: 'typeorm',
+  JoinColumn: 'typeorm',
+  JoinTable: 'typeorm',
+  OneToOne: 'typeorm',
+  OneToMany: 'typeorm',
+  ManyToOne: 'typeorm',
+  ManyToMany: 'typeorm',
+  Unique: 'typeorm',
+  Index: 'typeorm',
+  HiddenField: '../decorators/hidden-field.decorator', // giả sử bạn đặt ở đây
+};
+
 @Injectable()
 export class AutoService {
   private readonly logger = new Logger(AutoService.name);
@@ -51,17 +68,18 @@ export class AutoService {
         quoteKind: QuoteKind.Single,
       },
     });
+
+    const usedImports = new Set<string>();
+    const usedEntityImports = new Set<string>();
+
     const sourceFile = project.createSourceFile(entityPath, '', {
       overwrite: true,
     });
 
-    // Entity-level decorators
     const classDecorators = [
-      {
-        name: 'Entity',
-        arguments: [`'${payload.name.toLowerCase()}'`],
-      },
+      { name: 'Entity', arguments: [`'${payload.name.toLowerCase()}'`] },
     ];
+    usedImports.add('Entity');
 
     for (const unique of payload.uniques || []) {
       const fields = Array.isArray(unique) ? unique : [unique];
@@ -69,6 +87,7 @@ export class AutoService {
         name: 'Unique',
         arguments: [`[${fields.map((f) => `'${f}'`).join(', ')}]`],
       });
+      usedImports.add('Unique');
     }
 
     const uniqueKeySet = new Set(
@@ -85,6 +104,7 @@ export class AutoService {
           name: 'Index',
           arguments: [`[${fields.map((f) => `'${f}'`).join(', ')}]`],
         });
+        usedImports.add('Index');
       }
     }
 
@@ -94,7 +114,6 @@ export class AutoService {
       decorators: classDecorators,
     });
 
-    // Columns
     for (const col of payload.columns) {
       const decorators = [];
 
@@ -104,6 +123,7 @@ export class AutoService {
           name: 'PrimaryGeneratedColumn',
           arguments: [strategy],
         });
+        usedImports.add('PrimaryGeneratedColumn');
       } else {
         const type = col.type === 'date' ? 'timestamp' : col.type;
         const opts = [`type: "${type}"`, `nullable: ${col.isNullable}`];
@@ -134,14 +154,17 @@ export class AutoService {
           name: 'Column',
           arguments: [`{ ${opts.join(', ')} }`],
         });
+        usedImports.add('Column');
 
         if (col.isIndex) {
           decorators.push({ name: 'Index', arguments: [] });
+          usedImports.add('Index');
         }
       }
 
       if (col.isHidden) {
         decorators.push({ name: 'HiddenField', arguments: [] });
+        usedImports.add('HiddenField');
       }
 
       const tsType =
@@ -159,7 +182,6 @@ export class AutoService {
       });
     }
 
-    // Relations
     const generateRelation = (rel: any, isInverse = false) => {
       const typeMap = {
         'many-to-many': 'ManyToMany',
@@ -168,21 +190,23 @@ export class AutoService {
         'one-to-many': 'OneToMany',
       };
       const relationType = typeMap[rel.type] || 'ManyToOne';
+      usedImports.add(relationType);
+
       const target = capitalize(rel.targetTable?.name || rel.targetClass || '');
+      if (target && target !== className) usedEntityImports.add(target);
+
       const propertyType = ['many-to-many', 'one-to-many'].includes(rel.type)
         ? `${target}[]`
         : target;
-
       const decorators = [];
 
-      // Chỉ tạo index nếu là many-to-one (hoặc one-to-one một chiều)
       const shouldAddIndex =
         rel.isIndex &&
         (rel.type === 'many-to-one' ||
           (rel.type === 'one-to-one' && !isInverse));
-
       if (shouldAddIndex) {
         decorators.push({ name: 'Index', arguments: [] });
+        usedImports.add('Index');
       }
 
       const options = [];
@@ -190,28 +214,27 @@ export class AutoService {
       if (rel.isNullable !== undefined && rel.type !== 'one-to-many')
         options.push(`nullable: ${rel.isNullable}`);
       if (
-        (rel.type === 'many-to-many' && isInverse === false) ||
+        (rel.type === 'many-to-many' && !isInverse) ||
         rel.type === 'one-to-many'
       ) {
         options.push('cascade: true');
       }
-
       options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
 
       let args = [`() => ${target}`];
       if (rel.inversePropertyName) {
         args.push(`(rel) => rel.${rel.inversePropertyName}`);
       }
-      if (options.length) {
-        args.push(`{ ${options.join(', ')} }`);
-      }
+      if (options.length) args.push(`{ ${options.join(', ')} }`);
 
       decorators.push({ name: relationType, arguments: args });
 
       if (rel.type === 'many-to-many' && !isInverse) {
         decorators.push({ name: 'JoinTable', arguments: [] });
+        usedImports.add('JoinTable');
       } else if (['many-to-one', 'one-to-one'].includes(rel.type)) {
         decorators.push({ name: 'JoinColumn', arguments: [] });
+        usedImports.add('JoinColumn');
       }
 
       classDeclaration.addProperty({
@@ -221,29 +244,48 @@ export class AutoService {
       });
     };
 
-    for (const rel of payload.relations || []) {
-      generateRelation(rel, false);
-    }
-
+    for (const rel of payload.relations || []) generateRelation(rel, false);
     if (inverseRelationMap?.has(payload.name)) {
-      for (const rel of inverseRelationMap.get(payload.name)!) {
+      for (const rel of inverseRelationMap.get(payload.name)!)
         generateRelation(rel, true);
-      }
       inverseRelationMap.delete(payload.name);
     }
 
-    // createdAt / updatedAt
     classDeclaration.addProperty({
       name: 'createdAt',
       type: 'Date',
       decorators: [{ name: 'CreateDateColumn', arguments: [] }],
     });
+    usedImports.add('CreateDateColumn');
 
     classDeclaration.addProperty({
       name: 'updatedAt',
       type: 'Date',
       decorators: [{ name: 'UpdateDateColumn', arguments: [] }],
     });
+    usedImports.add('UpdateDateColumn');
+
+    // Add imports
+    const groupedImports: Record<string, string[]> = {};
+    for (const name of usedImports) {
+      const path = importMap[name];
+      if (!path) continue;
+      if (!groupedImports[path]) groupedImports[path] = [];
+      groupedImports[path].push(name);
+    }
+
+    for (const [moduleSpecifier, namedImports] of Object.entries(
+      groupedImports,
+    )) {
+      sourceFile.addImportDeclaration({ namedImports, moduleSpecifier });
+    }
+
+    for (const entityName of usedEntityImports) {
+      sourceFile.addImportDeclaration({
+        namedImports: [entityName],
+        moduleSpecifier: `./${entityName.toLowerCase()}.entity`,
+      });
+    }
 
     await sourceFile.save();
     console.log(`✅ Entity written: ${entityPath}`);
@@ -479,12 +521,12 @@ export class AutoService {
       ),
     );
 
-    this.logger.log(`Chuẩn bị fix import`);
-    await this.autoFixMissingImports(
-      [path.resolve('src', 'entities')],
-      [path.resolve('src', 'entities'), path.resolve('src', 'decorators')],
-    );
-    this.logger.debug(`Đã fix import xong`);
+    // this.logger.log(`Chuẩn bị fix import`);
+    // await this.autoFixMissingImports(
+    //   [path.resolve('src', 'entities')],
+    //   [path.resolve('src', 'entities'), path.resolve('src', 'decorators')],
+    // );
+    // this.logger.debug(`Đã fix import xong`);
 
     await this.buildToJs({
       targetDir: path.resolve('src/entities'),

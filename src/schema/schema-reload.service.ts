@@ -121,6 +121,7 @@ export class SchemaReloadService {
     const isLocked = await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
     if (isLocked) {
       await this.cache.del(SCHEMA_LOCK_EVENT_KEY);
+      this.logger.debug(`Đã mở khoá lock schema`);
     }
   }
 

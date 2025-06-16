@@ -1,9 +1,9 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, ManyToMany, JoinTable, OneToMany, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { Table_definition } from "./table_definition.entity";
-import { Route_permission_definition } from "./route_permission_definition.entity";
-import { Route_handler_definition } from "./route_handler_definition.entity";
-import { Middleware_definition } from "./middleware_definition.entity";
-import { Hook_definition } from "./hook_definition.entity";
+import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, ManyToMany, JoinTable, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Table_definition } from './table_definition.entity';
+import { Route_permission_definition } from './route_permission_definition.entity';
+import { Route_handler_definition } from './route_handler_definition.entity';
+import { Middleware_definition } from './middleware_definition.entity';
+import { Hook_definition } from './hook_definition.entity';
 
 @Entity('route_definition')
 @Unique(['path', 'mainTable'])

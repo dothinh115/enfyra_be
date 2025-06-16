@@ -1,5 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { Route_definition } from "./route_definition.entity";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Route_definition } from './route_definition.entity';
 
 @Entity('middleware_definition')
 export class Middleware_definition {

@@ -1,6 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { User_definition } from "./user_definition.entity";
-import { Route_permission_definition } from "./route_permission_definition.entity";
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { User_definition } from './user_definition.entity';
+import { Route_permission_definition } from './route_permission_definition.entity';
 
 @Entity('role_definition')
 export class Role_definition {

@@ -1,6 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { HiddenField } from "../decorators/hidden-field.decorator";
-import { Role_definition } from "./role_definition.entity";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { HiddenField } from '../decorators/hidden-field.decorator';
+import { Role_definition } from './role_definition.entity';
 
 @Entity('user_definition')
 export class User_definition {
