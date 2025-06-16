@@ -441,30 +441,6 @@ export class AutoService {
 
     const inverseRelationMap = this.buildInverseRelationMap(tables);
 
-    await Promise.all(
-      tables.map(
-        async (table) => await this.entityGenerate(table, inverseRelationMap),
-      ),
-    );
-
-    this.logger.log(`Chuẩn bị fix import`);
-    await this.autoFixMissingImports(
-      [path.resolve('src', 'entities')],
-      [path.resolve('src', 'entities'), path.resolve('src', 'decorators')],
-    );
-    this.logger.debug(`Đã fix import xong`);
-
-    // this.logger.log(`Test logic file vừa generate`);
-    // this.commonService.checkTsErrors(path.resolve('src', 'entities'));
-    // this.logger.debug(`Ko có lỗi ts, file dc giữ nguyên...`);
-    await this.buildToJs({
-      targetDir: path.resolve('src/entities'),
-      outDir: path.resolve('dist/entities'),
-    });
-    await this.dataSourceService.reloadDataSource();
-    await this.generateMigrationFile();
-    await this.runMigration();
-
     const entityDir = path.resolve('src', 'entities');
     const distEntityDir = path.resolve('dist', 'entities');
 
@@ -496,6 +472,27 @@ export class AutoService {
         }
       }
     }
+
+    await Promise.all(
+      tables.map(
+        async (table) => await this.entityGenerate(table, inverseRelationMap),
+      ),
+    );
+
+    this.logger.log(`Chuẩn bị fix import`);
+    await this.autoFixMissingImports(
+      [path.resolve('src', 'entities')],
+      [path.resolve('src', 'entities'), path.resolve('src', 'decorators')],
+    );
+    this.logger.debug(`Đã fix import xong`);
+
+    await this.buildToJs({
+      targetDir: path.resolve('src/entities'),
+      outDir: path.resolve('dist/entities'),
+    });
+    await this.dataSourceService.reloadDataSource();
+    await this.generateMigrationFile();
+    await this.runMigration();
   }
 
   async autoFixMissingImports(targetDirs: string[], scanDirs: string[]) {
