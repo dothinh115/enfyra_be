@@ -229,10 +229,18 @@ export class QueryBuilderService {
           select.add(`${rootAlias}.${col.propertyName}`);
         }
       }
+
       for (const rel of rootMeta.relations) {
         const relPath = [rel.propertyName];
         resolveRelationPath(relPath, rootMeta);
-        selectAllFieldsForEntity(rel.inverseEntityMetadata, relPath, 0);
+
+        const relAlias = aliasMap.get(relPath.join('.'));
+        const relMeta = rel.inverseEntityMetadata;
+        const idCol = relMeta.primaryColumns[0]?.propertyName || 'id';
+
+        if (relAlias) {
+          select.add(`${relAlias}.${idCol}`);
+        }
       }
     } else {
       for (const rawField of fields) {
@@ -685,7 +693,9 @@ export class QueryBuilderService {
     }
 
     qb.skip((page - 1) * limit);
-    qb.take(limit);
+    if (limit !== 0) {
+      qb.take(limit);
+    }
 
     const result = await qb.getMany();
     const obj: any = {
