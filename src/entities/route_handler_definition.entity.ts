@@ -12,9 +12,9 @@ export class Route_handler_definition {
     @Column({ type: "varchar", nullable: true })
     method: string;
     @Index()
-    @ManyToOne(() => Route_definition, (rel) => rel.handlers, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Route_definition', (rel: any) => rel.handlers, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
-    route: Route_definition;
+    route: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

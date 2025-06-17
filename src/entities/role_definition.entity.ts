@@ -10,10 +10,10 @@ export class Role_definition {
     description: string;
     @Column({ type: "varchar", nullable: false, unique: true })
     name: string;
-    @OneToMany(() => User_definition, (rel) => rel.role, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-    users: User_definition[];
-    @OneToMany(() => Route_permission_definition, (rel) => rel.role, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-    routePermissions: Route_permission_definition[];
+    @OneToMany('User_definition', (rel: any) => rel.role, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    users: any;
+    @OneToMany('Route_permission_definition', (rel: any) => rel.role, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    routePermissions: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

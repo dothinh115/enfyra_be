@@ -18,10 +18,10 @@ export class Table_definition {
     name: string;
     @Column({ type: "simple-json", nullable: true })
     uniques: any;
-    @OneToMany(() => Column_definition, (rel) => rel.table, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-    columns: Column_definition[];
-    @OneToMany(() => Relation_definition, (rel) => rel.sourceTable, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-    relations: Relation_definition[];
+    @OneToMany('Column_definition', (rel: any) => rel.table, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    columns: any;
+    @OneToMany('Relation_definition', (rel: any) => rel.sourceTable, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    relations: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

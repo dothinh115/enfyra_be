@@ -5,9 +5,9 @@ import { Route_definition } from './route_definition.entity';
 export class Test {
     @PrimaryGeneratedColumn('increment')
     id: number;
-    @ManyToOne(() => Route_definition, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Route_definition', { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
-    route: Route_definition;
+    route: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()
