@@ -17,7 +17,7 @@ export class User_definition {
     @Column({ type: "varchar", nullable: false })
     @HiddenField()
     password: string;
-    @ManyToOne('Role_definition', (rel:any) => rel.users, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne(() => Role_definition, (rel) => rel.users, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     role: Role_definition;
     @CreateDateColumn()

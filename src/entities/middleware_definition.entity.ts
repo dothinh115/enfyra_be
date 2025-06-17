@@ -16,7 +16,7 @@ export class Middleware_definition {
     @Column({ type: "int", nullable: true, default: 0 })
     priority: number;
     @Index()
-    @ManyToOne('Route_definition', (rel:any) => rel.middlewares, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne(() => Route_definition, (rel) => rel.middlewares, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     route: Route_definition;
     @CreateDateColumn()

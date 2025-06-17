@@ -81,21 +81,31 @@ export class CommonService {
   async loadDynamicEntities(entityDir: string) {
     const entities = [];
     if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
-    const files = fs.readdirSync(entityDir);
-    for (const file of files) {
-      if (file.endsWith('.js')) {
-        const fullPath = path.join(entityDir, file);
-        const resolved = require.resolve(fullPath);
 
-        const module = require(fullPath);
-        for (const exported in module) {
-          entities.push(module[exported]);
-        }
-        if (require.cache[resolved]) {
-          delete require.cache[resolved];
-        }
+    const files = fs.readdirSync(entityDir).filter((f) => f.endsWith('.js'));
+
+    // 1️⃣ Xoá cache tất cả trước
+    for (const file of files) {
+      const fullPath = path.join(entityDir, file);
+      const resolved = require.resolve(fullPath);
+      if (require.cache[resolved]) delete require.cache[resolved];
+    }
+
+    // 2️⃣ Require tất cả để populate lại cache đúng thứ tự
+    for (const file of files) {
+      const fullPath = path.join(entityDir, file);
+      require(fullPath);
+    }
+
+    // 3️⃣ Extract export từ cache
+    for (const file of files) {
+      const fullPath = path.join(entityDir, file);
+      const module = require(fullPath);
+      for (const exported of Object.values(module)) {
+        entities.push(exported);
       }
     }
+
     return entities;
   }
 

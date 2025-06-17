@@ -16,6 +16,8 @@ export class Setting_definition {
     projectName: string;
     @Column({ type: "varchar", nullable: true })
     projectUrl: string;
+    @Column({ type: "varchar", nullable: true })
+    test: string;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()
