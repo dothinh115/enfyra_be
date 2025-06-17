@@ -10,6 +10,7 @@ const entityDir = path.resolve('dist', 'entities');
 export class DataSourceService implements OnModuleInit {
   private dataSource: DataSource;
   private logger = new Logger(DataSourceService.name);
+  entityClassMap: Map<string, Function> = new Map();
 
   constructor(private commonService: CommonService) {}
 
@@ -32,6 +33,10 @@ export class DataSourceService implements OnModuleInit {
       this.dataSource = createDataSource(entities);
       await this.dataSource.initialize();
       this.logger.debug('✅ ReInit DataSource thành công!');
+      entities.forEach((entityClass) => {
+        const name = this.getTableNameFromEntity(entityClass);
+        this.entityClassMap.set(name, entityClass);
+      });
       return this.dataSource;
     } catch (error: any) {
       this.logger.error('❌ Lỗi khi reInit DataSource:', error.message);
@@ -76,7 +81,8 @@ export class DataSourceService implements OnModuleInit {
   getEntityClassByTableName(tableName: string): Function | undefined {
     const entityMetadata = this.dataSource.entityMetadatas.find(
       (meta) =>
-        meta.tableName === tableName || meta.givenTableName === tableName,
+        meta.tableName.toLowerCase() === tableName.toLowerCase() ||
+        meta.givenTableName?.toLowerCase() === tableName.toLowerCase(),
     );
 
     return entityMetadata?.target as Function | undefined;

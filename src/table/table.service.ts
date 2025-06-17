@@ -1,35 +1,27 @@
-import { AutoService } from '../auto/auto.service';
-import { Table_definition } from '../entities/table_definition.entity';
 import { CreateColumnDto, CreateTableDto } from '../table/dto/create-table.dto';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
-import { SchemaReloadService } from '../schema/schema-reload.service';
-import { SchemaStateService } from '../schema/schema-state.service';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
-import { SchemaHistoryService } from '../metadata/schema-history.service';
 
 @Injectable()
 export class TableHandlerService {
   constructor(
-    private dataSouceService: DataSourceService,
-    private autoService: AutoService,
-    private schemaReloadService: SchemaReloadService,
-    private schemaStateService: SchemaStateService,
-    @InjectDataSource() private dataSource: DataSource,
+    private dataSourceService: DataSourceService,
     private metadataSyncService: MetadataSyncService,
-    private schemaHistoryService: SchemaHistoryService,
   ) {}
 
   async createTable(body: CreateTableDto) {
-    const queryRunner = this.dataSource.createQueryRunner();
+    const dataSource = this.dataSourceService.getDataSource();
+    const tableEntity =
+      this.dataSourceService.entityClassMap.get('table_definition');
+
+    const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     const manager = queryRunner.manager;
     try {
       const hasTable = await queryRunner.hasTable(body.name);
-      let result = await manager.findOne(Table_definition, {
+      let result: any = await manager.findOne(tableEntity, {
         where: {
           name: body.name,
         },
@@ -39,16 +31,16 @@ export class TableHandlerService {
       }
 
       // Tạo entity từ dữ liệu đã được xử lý
-      const tableEntity = manager.create(Table_definition, {
+      const createTableEntity = manager.create(tableEntity, {
         columns: this.normalizeColumnsWithAutoId(body.columns),
         ...body,
       } as any);
 
-      result = await manager.save(Table_definition, tableEntity);
+      result = await manager.save(tableEntity, createTableEntity);
       await queryRunner.commitTransaction();
       await this.metadataSyncService.syncAll();
       const routeDefRepo =
-        this.dataSouceService.getRepository('route_definition');
+        this.dataSourceService.getRepository('route_definition');
       await routeDefRepo.save({
         path: `/${result.name}`,
         mainTable: result.id,
@@ -66,13 +58,15 @@ export class TableHandlerService {
   }
 
   async updateTable(id: number, body: CreateTableDto) {
-    const queryRunner = this.dataSource.createQueryRunner();
+    const dataSource = this.dataSourceService.getDataSource();
+    const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     const manager = queryRunner.manager;
-
+    const tableEntity =
+      this.dataSourceService.entityClassMap.get('table_definition');
     try {
-      const exists = await manager.findOne(Table_definition, {
+      const exists = await manager.findOne(tableEntity, {
         where: { id },
         relations: ['columns', 'relations'],
       });
@@ -80,7 +74,7 @@ export class TableHandlerService {
       if (!exists) {
         throw new BadRequestException(`Table ${body.name} không tồn tại.`);
       }
-      const result = await manager.save(Table_definition, body as any);
+      const result = await manager.save(tableEntity, body as any);
       await queryRunner.commitTransaction();
       await this.metadataSyncService.syncAll();
       return result;
@@ -130,7 +124,7 @@ export class TableHandlerService {
 
   async delete(id: number) {
     const tableDefRepo: any =
-      this.dataSouceService.getRepository('table_definition');
+      this.dataSourceService.getRepository('table_definition');
     try {
       const exists = await tableDefRepo.findOne({
         where: { id },

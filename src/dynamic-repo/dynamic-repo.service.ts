@@ -69,7 +69,7 @@ export class DynamicRepoService {
 
   async create(body: any) {
     if (this.tableName === 'table_definition') {
-      const table = await this.tableHandlerService.createTable(body);
+      const table: any = await this.tableHandlerService.createTable(body);
       return await this.find(table.id);
     }
     const result: any = await this.repo.save(body);

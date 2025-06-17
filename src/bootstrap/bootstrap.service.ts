@@ -1,8 +1,4 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Setting_definition } from '../entities/setting_definition.entity';
-import { Schema_history } from '../entities/schema_history.entity';
 import { CommonService } from '../common/common.service';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
 import { SchemaStateService } from '../schema/schema-state.service';
@@ -20,19 +16,19 @@ export class BootstrapService implements OnApplicationBootstrap {
     private readonly schemaStateService: SchemaStateService,
     private readonly defaultDataService: DefaultDataService,
     private readonly coreInitService: CoreInitService,
-    @InjectRepository(Setting_definition)
-    private readonly settingRepo: Repository<Setting_definition>,
-    @InjectRepository(Schema_history)
-    private readonly schemaHistoryRepo: Repository<Schema_history>,
+    private dataSourceService: DataSourceService,
   ) {}
 
   private async waitForDatabaseConnection(
     maxRetries = 10,
     delayMs = 1000,
   ): Promise<void> {
+    const settingRepo =
+      this.dataSourceService.getRepository('setting_definition');
+
     for (let i = 0; i < maxRetries; i++) {
       try {
-        await this.settingRepo.query('SELECT 1');
+        await settingRepo.query('SELECT 1');
         this.logger.log('Kết nối tới DB thành công.');
         return;
       } catch (error) {
@@ -45,7 +41,12 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     await this.waitForDatabaseConnection();
-    let setting = await this.settingRepo.findOne({ where: { id: 1 } });
+    let settingRepo =
+      this.dataSourceService.getRepository('setting_definition');
+    let schemaHistoryRepo =
+      this.dataSourceService.getRepository('schema_history');
+    console.log('settingRepo', settingRepo);
+    let setting: any = await settingRepo.findOne({ where: { id: 1 } });
 
     if (!setting || !setting.isInit) {
       await this.coreInitService.createInitMetadata();
@@ -57,12 +58,14 @@ export class BootstrapService implements OnApplicationBootstrap {
       await this.metadataSyncService.syncAll();
       await this.defaultDataService.createDefaultRoutes();
 
-      setting = await this.settingRepo.findOne({ where: { id: 1 } });
-      await this.settingRepo.update(setting.id, { isInit: true });
-
+      settingRepo = this.dataSourceService.getRepository('setting_definition');
+      setting = await settingRepo.findOne({ where: { id: 1 } });
+      await settingRepo.update(setting.id, { isInit: true });
+      schemaHistoryRepo =
+        this.dataSourceService.getRepository('schema_history');
       this.logger.debug('Init thành công');
 
-      const lastVersion = await this.schemaHistoryRepo.findOne({
+      const lastVersion: any = await schemaHistoryRepo.findOne({
         where: {},
         order: { createdAt: 'DESC' },
       });
@@ -72,7 +75,9 @@ export class BootstrapService implements OnApplicationBootstrap {
       }
     } else {
       await this.metadataSyncService.syncAll();
-      const lastVersion = await this.schemaHistoryRepo.findOne({
+      schemaHistoryRepo =
+        this.dataSourceService.getRepository('schema_history');
+      const lastVersion: any = await schemaHistoryRepo.findOne({
         where: {},
         order: { createdAt: 'DESC' },
       });

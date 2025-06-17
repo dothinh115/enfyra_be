@@ -7,8 +7,6 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import * as vm from 'vm';
-import { Route_definition } from '../entities/route_definition.entity';
-import { User_definition } from '../entities/user_definition.entity';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
 
 @Injectable()
@@ -17,12 +15,12 @@ export class DynamicService {
 
   async dynamicService(
     req: Request & {
-      routeData: Route_definition & {
+      routeData: any & {
         params: any;
         handler: string;
         context: TDynamicContext;
       };
-      user: User_definition;
+      user: any;
     },
   ) {
     const logs: any[] = [];

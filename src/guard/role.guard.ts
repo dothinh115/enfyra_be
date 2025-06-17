@@ -7,19 +7,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Setting_definition } from '../entities/setting_definition.entity';
-import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { IS_PUBLIC_KEY, GLOBAL_SETTINGS_KEY } from '../utils/constant';
+import { DataSourceService } from '../data-source/data-source.service';
 
 @Injectable()
 export class RoleGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    @InjectRepository(Setting_definition)
-    private settingDefRepo: Repository<Setting_definition>,
+    private dataSourceService: DataSourceService,
     @Inject(CACHE_MANAGER) private cache: Cache,
   ) {}
 
@@ -55,7 +52,9 @@ export class RoleGuard implements CanActivate {
   }
 
   async getPermissionMap() {
-    const settings = await this.settingDefRepo.findOneBy({});
+    const settingDefRepo =
+      this.dataSourceService.getRepository('setting_definition');
+    const settings: any = await settingDefRepo.findOneBy({});
     return settings?.actionPermissionValue || {};
   }
 }

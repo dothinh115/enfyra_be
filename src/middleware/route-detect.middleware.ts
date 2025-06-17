@@ -5,7 +5,6 @@ import {
   NestMiddleware,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Route_definition } from '../entities/route_definition.entity';
 import { Repository } from 'typeorm';
 import { CommonService } from '../common/common.service';
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
@@ -30,7 +29,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
 
   async use(req: any, res: any, next: (error?: any) => void) {
     const method = req.method;
-    let routes: Route_definition[] =
+    let routes: any[] =
       (await this.cache.get(GLOBAL_ROUTES_KEY)) ||
       (await this.loadAndCacheRoutes(method));
 
@@ -105,7 +104,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
   }
 
   private async loadAndCacheRoutes(method: string) {
-    const routeDefRepo: Repository<Route_definition> =
+    const routeDefRepo: Repository<any> =
       this.dataSourceService.getRepository('route_definition');
 
     const middlewareRepo = this.dataSourceService.getRepository(
@@ -165,11 +164,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
     return routes;
   }
 
-  private findMatchedRoute(
-    routes: Route_definition[],
-    reqPath: string,
-    method: string,
-  ) {
+  private findMatchedRoute(routes: any[], reqPath: string, method: string) {
     const matchers = ['DELETE', 'PATCH'].includes(method)
       ? [(r) => r.path + '/:id', (r) => r.path]
       : [(r) => r.path];

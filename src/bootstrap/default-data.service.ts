@@ -1,13 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
-import { Role_definition } from '../entities/role_definition.entity';
-import { User_definition } from '../entities/user_definition.entity';
 import { BcryptService } from '../auth/bcrypt.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Setting_definition } from '../entities/setting_definition.entity';
-import { Table_definition } from '../entities/table_definition.entity';
-import { Route_definition } from '../entities/route_definition.entity';
-import { Repository } from 'typeorm';
 const initJson = require('../bootstrap/init.json');
 
 @Injectable()
@@ -17,27 +10,19 @@ export class DefaultDataService {
   constructor(
     private readonly dataSourceService: DataSourceService,
     private readonly bcryptService: BcryptService,
-    @InjectRepository(Setting_definition)
-    private settingDefRepo: Repository<Setting_definition>,
-    @InjectRepository(Role_definition)
-    private roleDefRepo: Repository<Role_definition>,
-    @InjectRepository(User_definition)
-    private userDefRepo: Repository<User_definition>,
-    @InjectRepository(Table_definition)
-    private tableDefRepo: Repository<Table_definition>,
-    @InjectRepository(Route_definition)
-    private routeDefRepo: Repository<Route_definition>,
   ) {}
 
   async insertDefaultSettingIfEmpty(): Promise<void> {
-    const count = await this.settingDefRepo.count();
+    const settingDefRepo =
+      this.dataSourceService.getRepository('setting_definition');
+    const count = await settingDefRepo.count();
 
     if (count === 0) {
       this.logger.log(
         `Bảng 'setting_definition' chưa có dữ liệu, tiến hành tạo mặc định.`,
       );
-      const setting = this.settingDefRepo.create(initJson.defaultSetting);
-      await this.settingDefRepo.save(setting);
+      const setting = settingDefRepo.create(initJson.defaultSetting);
+      await settingDefRepo.save(setting);
       this.logger.log(`Tạo setting mặc định thành công.`);
     } else {
       this.logger.debug(`Bảng 'setting_definition' đã có dữ liệu.`);
@@ -45,14 +30,16 @@ export class DefaultDataService {
   }
 
   async createDefaultRole(): Promise<void> {
-    const exists = await this.roleDefRepo.findOne({
+    const roleDefRepo = this.dataSourceService.getRepository('role_definition');
+
+    const exists = await roleDefRepo.findOne({
       where: { name: initJson.defaultRole.name },
     });
 
     if (!exists) {
       this.logger.log(`Tạo vai trò mặc định: ${initJson.defaultRole.name}`);
-      const role = this.roleDefRepo.create(initJson.defaultRole);
-      await this.roleDefRepo.save(role);
+      const role = roleDefRepo.create(initJson.defaultRole);
+      await roleDefRepo.save(role);
       this.logger.log(`Vai trò mặc định đã được tạo.`);
     } else {
       this.logger.debug(
@@ -62,17 +49,19 @@ export class DefaultDataService {
   }
 
   async insertDefaultUserIfEmpty(): Promise<void> {
-    const count = await this.userDefRepo.count();
+    const userDefRepo = this.dataSourceService.getRepository('user_definition');
+
+    const count = await userDefRepo.count();
 
     if (count === 0) {
       this.logger.log(`Tạo user mặc định: ${initJson.defaultUser.email}`);
 
-      const user = this.userDefRepo.create({
+      const user = userDefRepo.create({
         ...initJson.defaultUser,
         password: await this.bcryptService.hash(initJson.defaultUser.password),
       });
 
-      await this.userDefRepo.save(user);
+      await userDefRepo.save(user);
       this.logger.log(`User mặc định đã được tạo.`);
     } else {
       this.logger.debug(
@@ -82,16 +71,21 @@ export class DefaultDataService {
   }
 
   async createDefaultRoutes(): Promise<void> {
+    const routeDefRepo =
+      this.dataSourceService.getRepository('route_definition');
+    const tableDefRepo =
+      this.dataSourceService.getRepository('table_definition');
+
     for (const route of initJson.defaultRoute || []) {
       const { path, mainTable, isEnabled = true } = route;
 
-      const existed = await this.routeDefRepo.findOne({ where: { path } });
+      const existed = await routeDefRepo.findOne({ where: { path } });
       if (existed) {
         this.logger.log(`⏩ Route ${path} đã tồn tại, bỏ qua.`);
         continue;
       }
 
-      const table = await this.tableDefRepo.findOne({
+      const table = await tableDefRepo.findOne({
         where: { name: mainTable },
       });
       if (!table) {
@@ -101,12 +95,12 @@ export class DefaultDataService {
         continue;
       }
 
-      const newRoute = this.routeDefRepo.create({
+      const newRoute = routeDefRepo.create({
         ...route,
         mainTable: table,
       });
 
-      await this.routeDefRepo.save(newRoute);
+      await routeDefRepo.save(newRoute);
       this.logger.log(`✅ Tạo route mặc định: ${path} → ${mainTable}`);
     }
   }

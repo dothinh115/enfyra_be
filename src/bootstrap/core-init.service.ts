@@ -1,22 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
-import { Column_definition } from '../entities/column_definition.entity';
-import { Relation_definition } from '../entities/relation_definition.entity';
 import * as path from 'path';
-import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { Table_definition } from '../entities/table_definition.entity';
-import { DataSource, Repository } from 'typeorm';
 
 @Injectable()
 export class CoreInitService {
   private readonly logger = new Logger(CoreInitService.name);
 
-  constructor(
-    private readonly dataSourceService: DataSourceService,
-    @InjectRepository(Table_definition)
-    private tableDefRepo: Repository<Table_definition>,
-    @InjectDataSource() private dataSource: DataSource,
-  ) {}
+  constructor(private readonly dataSourceService: DataSourceService) {}
 
   async waitForDatabaseConnection(
     maxRetries = 10,
@@ -40,20 +30,22 @@ export class CoreInitService {
 
   async createInitMetadata(): Promise<void> {
     const snapshot = await import(path.resolve('snapshot.json'));
-    const queryRunner = this.dataSource.createQueryRunner();
+    const dataSource = this.dataSourceService.getDataSource();
+    const queryRunner = dataSource.createQueryRunner();
 
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
       const tableNameToId: Record<string, number> = {};
-
+      const tableDefRepo =
+        this.dataSourceService.getRepository('table_definition');
       // Phase 1: Insert bảng trắng
       for (const [name, defRaw] of Object.entries(snapshot)) {
         const def = defRaw as any;
 
-        const exist = await queryRunner.manager.findOne(
-          this.tableDefRepo.target,
+        const exist: any = await queryRunner.manager.findOne(
+          tableDefRepo.target,
           {
             where: { name: def.name },
           },
@@ -65,7 +57,7 @@ export class CoreInitService {
         } else {
           const { columns, relations, ...rest } = def;
           const created = await queryRunner.manager.save(
-            this.tableDefRepo.target,
+            tableDefRepo.target,
             rest,
           );
           tableNameToId[name] = created.id;
@@ -79,8 +71,11 @@ export class CoreInitService {
         const tableId = tableNameToId[name];
         if (!tableId) continue;
 
+        const columnEntity =
+          this.dataSourceService.entityClassMap.get('column_definition');
+
         const existingColumns = await queryRunner.manager
-          .getRepository(Column_definition)
+          .getRepository(columnEntity)
           .createQueryBuilder('c')
           .leftJoin('c.table', 't')
           .where('t.id = :tableId', { tableId })
@@ -98,7 +93,7 @@ export class CoreInitService {
             ...col,
             table: { id: tableId },
           }));
-          await queryRunner.manager.save(Column_definition, toInsert);
+          await queryRunner.manager.save(columnEntity, toInsert);
           this.logger.log(
             `📌 Thêm ${newColumns.length} column mới cho ${name}`,
           );
@@ -113,8 +108,12 @@ export class CoreInitService {
         const tableId = tableNameToId[name];
         if (!tableId) continue;
 
+        const relationEntity = this.dataSourceService.entityClassMap.get(
+          'relation_definition',
+        );
+
         const existingRelations = await queryRunner.manager
-          .getRepository(Relation_definition)
+          .getRepository(relationEntity)
           .createQueryBuilder('r')
           .leftJoin('r.sourceTable', 'source')
           .leftJoin('r.targetTable', 'target')
@@ -162,7 +161,7 @@ export class CoreInitService {
         }
 
         if (newRelations.length) {
-          await queryRunner.manager.save(Relation_definition, newRelations);
+          await queryRunner.manager.save(relationEntity, newRelations);
           this.logger.log(
             `📌 Thêm ${newRelations.length} relation mới cho ${name}`,
           );

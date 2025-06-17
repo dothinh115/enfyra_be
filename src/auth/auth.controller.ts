@@ -3,9 +3,9 @@ import { AuthService } from './auth.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { LogoutAuthDto } from './dto/logout-auth.dto';
 import { Request } from 'express';
-import { User_definition } from '../entities/user_definition.entity';
 import { RefreshTokenAuthDto } from './dto/refresh-token-auth.dto';
 import { Public } from '../decorators/public-route.decorator';
+import { DataSourceService } from '../data-source/data-source.service';
 
 @Controller('auth')
 export class AuthController {
@@ -19,10 +19,7 @@ export class AuthController {
 
   @Public()
   @Post('logout')
-  logout(
-    @Body() body: LogoutAuthDto,
-    @Req() req: Request & { user: User_definition },
-  ) {
+  logout(@Body() body: LogoutAuthDto, @Req() req: Request & { user: any }) {
     return this.authService.logout(body, req);
   }
 

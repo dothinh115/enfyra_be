@@ -12,9 +12,6 @@ import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { SCHEMA_LOCK_EVENT_KEY } from '../utils/constant';
 import { DataSourceService } from '../data-source/data-source.service';
 import { clearOldEntitiesJs } from './utils/clear-old-entities';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Table_definition } from '../entities/table_definition.entity';
-import { Repository, Table } from 'typeorm';
 
 @Injectable()
 export class MetadataSyncService {
@@ -26,15 +23,15 @@ export class MetadataSyncService {
     private schemaHistoryService: SchemaHistoryService,
     @Inject(CACHE_MANAGER) private cache: Cache,
     private dataSourceService: DataSourceService,
-    @InjectRepository(Table_definition)
-    private tableDefRepo: Repository<Table_definition>,
   ) {}
 
   async pullMetadataFromDb() {
-    if (!this.tableDefRepo)
+    const tableDefRepo =
+      this.dataSourceService.getRepository('table_definition');
+    if (!tableDefRepo)
       throw new Error('Không tìm thấy repo cho table_definition');
 
-    const tables: any = await this.tableDefRepo
+    const tables: any = await tableDefRepo
       .createQueryBuilder('table')
       .leftJoinAndSelect('table.columns', 'columns')
       .leftJoinAndSelect('table.relations', 'relations')

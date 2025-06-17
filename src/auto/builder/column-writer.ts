@@ -1,9 +1,8 @@
-import { Column_definition } from '../../entities/column_definition.entity';
 import { ClassDeclaration } from 'ts-morph';
 
 interface ColumnWriterContext {
   classDeclaration: ClassDeclaration;
-  col: Partial<Column_definition>;
+  col: Partial<any>;
   usedImports: Set<string>;
   helpers: {
     capitalize: (s: string) => string;
@@ -25,7 +24,13 @@ export function addColumnToClass({
     usedImports.add('PrimaryGeneratedColumn');
   } else {
     const type = col.type === 'date' ? 'timestamp' : col.type;
-    const opts = [`type: "${type}"`, `nullable: ${col.isNullable}`];
+    const opts = [`type: "${type}"`];
+
+    if (col.isNullable === false) {
+      opts.push('nullable: false');
+    } else {
+      opts.push('nullable: true');
+    }
 
     if (col.default !== undefined && col.default !== null) {
       if (col.default === 'now') {

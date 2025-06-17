@@ -113,24 +113,23 @@ async function ensureDatabaseExists() {
   await tempDataSource.destroy();
 }
 
-async function writeEntitiesWithTsMorph() {
+async function writeEntitiesFromSnapshot() {
   const inverseMap = buildInverseRelationMap();
   const project = new Project({
-    manipulationSettings: {
-      quoteKind: QuoteKind.Single,
-    },
+    manipulationSettings: { quoteKind: QuoteKind.Single },
   });
 
   const entitiesDir = path.resolve('src/entities');
   if (!fs.existsSync(entitiesDir))
     fs.mkdirSync(entitiesDir, { recursive: true });
 
-  for (const [name, def] of Object.entries(metadata)) {
-    const className = capitalize(name);
-    const entityPath = path.resolve(entitiesDir, `${name}.entity.ts`);
-    const sourceFile = project.createSourceFile(entityPath, '', {
-      overwrite: true,
-    });
+  for (const [tableName, def] of Object.entries(metadata)) {
+    const className = capitalize(tableName);
+    const sourceFile = project.createSourceFile(
+      path.join(entitiesDir, `${tableName}.entity.ts`),
+      '',
+      { overwrite: true },
+    );
 
     const usedImports = new Set([
       'Entity',
@@ -139,15 +138,14 @@ async function writeEntitiesWithTsMorph() {
       'UpdateDateColumn',
     ]);
 
-    const classDecorators = [{ name: 'Entity', arguments: [`'${name}'`] }];
     const classDeclaration = sourceFile.addClass({
       name: className,
       isExported: true,
-      decorators: classDecorators,
+      decorators: [{ name: 'Entity', arguments: [`'${tableName}'`] }],
     });
 
     for (const uniqueGroup of (def as any).uniques || []) {
-      if (Array.isArray(uniqueGroup) && uniqueGroup.length > 0) {
+      if (Array.isArray(uniqueGroup) && uniqueGroup.length) {
         classDeclaration.addDecorator({
           name: 'Unique',
           arguments: [
@@ -159,16 +157,14 @@ async function writeEntitiesWithTsMorph() {
     }
 
     for (const indexGroup of (def as any).indexes || []) {
-      if (Array.isArray(indexGroup) && indexGroup.length > 0) {
-        if (indexGroup.length > 1) {
-          classDeclaration.addDecorator({
-            name: 'Index',
-            arguments: [
-              `[${indexGroup.map((f: string) => `'${f}'`).join(', ')}]`,
-            ],
-          });
-          usedImports.add('Index');
-        }
+      if (Array.isArray(indexGroup) && indexGroup.length > 1) {
+        classDeclaration.addDecorator({
+          name: 'Index',
+          arguments: [
+            `[${indexGroup.map((f: string) => `'${f}'`).join(', ')}]`,
+          ],
+        });
+        usedImports.add('Index');
       }
     }
 
@@ -178,58 +174,55 @@ async function writeEntitiesWithTsMorph() {
       if (col.isPrimary && col.isGenerated) {
         decorators.push({
           name: 'PrimaryGeneratedColumn',
-          arguments: [col.type === 'uuid' ? "'uuid'" : "'increment'"],
+          arguments: [col.type === 'uuid' ? `'uuid'` : `'increment'`],
         });
         usedImports.add('PrimaryGeneratedColumn');
       } else {
-        const options = [
+        const opts = [
           `type: '${col.type === 'date' ? 'datetime' : col.type}'`,
+          `nullable: ${col.isNullable === false ? 'false' : 'true'}`,
         ];
-        if (col.isNullable !== undefined)
-          options.push(`nullable: ${col.isNullable}`);
-        if (col.isUnique) options.push(`unique: true`);
-        let defaultValue = col.default;
 
-        if (
-          typeof defaultValue === 'string' &&
-          defaultValue.toLowerCase() === 'now'
-        ) {
-          defaultValue = () => 'CURRENT_TIMESTAMP';
-        }
+        if (col.isUnique) opts.push('unique: true');
 
-        if (defaultValue !== undefined && defaultValue !== null) {
-          if (typeof defaultValue === 'function') {
-            options.push(`default: ${defaultValue.toString()}`);
-          } else if (typeof defaultValue === 'string') {
-            options.push(`default: '${defaultValue}'`);
+        if (col.default !== undefined && col.default !== null) {
+          if (
+            typeof col.default === 'string' &&
+            col.default.toLowerCase() === 'now'
+          ) {
+            opts.push(`default: () => 'CURRENT_TIMESTAMP'`);
+          } else if (typeof col.default === 'string') {
+            opts.push(`default: '${col.default}'`);
           } else {
-            options.push(`default: ${defaultValue}`);
+            opts.push(`default: ${col.default}`);
           }
         }
 
         if (col.type === 'enum' && Array.isArray(col.enumValues)) {
-          options.push(
+          opts.push(
             `enum: [${col.enumValues.map((v: string) => `'${v}'`).join(', ')}]`,
           );
         }
-        if (col.isUpdatable === false) options.push(`update: false`);
+
+        if (col.isUpdatable === false) opts.push('update: false');
+
         decorators.push({
           name: 'Column',
-          arguments: [`{ ${options.join(', ')} }`],
+          arguments: [`{ ${opts.join(', ')} }`],
         });
         usedImports.add('Column');
       }
 
       classDeclaration.addProperty({
         name: col.name,
-        type: 'Date', // luôn 'Date' cho kiểu ngày giờ
+        type: col.type === 'date' ? 'Date' : dbTypeToTSType(col.type),
         decorators,
       });
     }
 
     const allRelations = [
       ...((def as any).relations || []),
-      ...(inverseMap.get(name) || []),
+      ...(inverseMap.get(tableName) || []),
     ];
 
     for (const rel of allRelations) {
@@ -246,29 +239,24 @@ async function writeEntitiesWithTsMorph() {
       usedImports.add(relType);
 
       const cascadeOpts = ['onDelete: "CASCADE"', 'onUpdate: "CASCADE"'];
+
       const isInverse = !!rel.targetClass;
 
-      // Chỉ cascade bên nhiều (many-to-one) hoặc bên sở hữu @JoinTable (many-to-many non-inverse)
-      if (
-        !isInverse &&
-        (rel.type === 'many-to-one' || rel.type === 'many-to-many')
-      ) {
+      if (!isInverse && ['many-to-many'].includes(rel.type)) {
         cascadeOpts.unshift('cascade: true');
       }
-
-      const opts = `{ ${cascadeOpts.join(', ')} }`;
 
       const args = [`'${target}'`];
       if (rel.inversePropertyName) {
         args.push(`(rel: any) => rel.${rel.inversePropertyName}`);
       }
-      args.push(opts);
+      args.push(`{ ${cascadeOpts.join(', ')} }`);
 
       const decorators: any[] = [];
 
       if (
         rel.isIndex &&
-        (rel.type === 'many-to-one' || rel.type === 'one-to-one') &&
+        ['many-to-one', 'one-to-one'].includes(rel.type) &&
         !isInverse
       ) {
         decorators.push({ name: 'Index', arguments: [] });
@@ -317,7 +305,7 @@ async function writeEntitiesWithTsMorph() {
 }
 
 async function main() {
-  await writeEntitiesWithTsMorph();
+  await writeEntitiesFromSnapshot();
   await ensureDatabaseExists();
 
   const dataSource = new DataSource({

@@ -1,59 +1,28 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import * as cors from 'cors';
 import * as express from 'express';
 import * as qs from 'qs';
 import { ConfigService } from '@nestjs/config';
-async function ensureDatabaseExists() {
-  const DB_TYPE = (process.env.DB_TYPE || 'mysql') as 'mysql' | 'postgres';
-  const DB_HOST = process.env.DB_HOST || 'localhost';
-  const DB_PORT =
-    Number(process.env.DB_PORT) || (DB_TYPE === 'postgres' ? 5432 : 3306);
-  const DB_USERNAME = process.env.DB_USERNAME || 'root';
-  const DB_PASSWORD = process.env.DB_PASSWORD || '';
-  const DB_NAME = process.env.DB_NAME || 'dynamiq';
-
-  if (DB_TYPE !== 'mysql') {
-    console.log(
-      `⚠️ Đang dùng ${DB_TYPE}, bạn phải tạo database '${DB_NAME}' thủ công.`,
-    );
-    return;
-  }
-
-  // Kết nối tạm tới MySQL để kiểm tra/tạo DB
-  const tempDataSource = new DataSource({
-    type: 'mysql',
-    host: DB_HOST,
-    port: DB_PORT,
-    username: DB_USERNAME,
-    password: DB_PASSWORD,
-  });
-
-  await tempDataSource.initialize();
-  const queryRunner = tempDataSource.createQueryRunner();
-
-  const result = await queryRunner.query(
-    `SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?`,
-    [DB_NAME],
-  );
-  const dbExists = result.length > 0;
-
-  if (!dbExists) {
-    await queryRunner.query(`CREATE DATABASE \`${DB_NAME}\``);
-    console.log(`✅ Đã tạo database '${DB_NAME}' (MySQL).`);
-  } else {
-    console.log(`✅ Database '${DB_NAME}' đã tồn tại (MySQL).`);
-  }
-
-  await queryRunner.release();
-  await tempDataSource.destroy();
-}
+import * as path from 'path';
+import { execSync } from 'child_process';
+import { buildToJs } from './auto/utils/build-helper';
 
 async function bootstrap() {
-  await ensureDatabaseExists();
+  const logger = new Logger('Main');
 
+  const script = `ts-node ${path.resolve(__dirname, '../', 'init-db.ts')}`;
+  try {
+    execSync(script, { stdio: 'inherit' });
+    logger.debug('Build file js thành công');
+    buildToJs({
+      targetDir: path.resolve('src/entities'),
+      outDir: path.resolve('dist/entities'),
+    });
+  } catch (err) {
+    logger.error('Lỗi khi chạy shell script:', err);
+  }
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 

@@ -1,6 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
-import { User_definition } from '../entities/user_definition.entity';
 import { DataSourceService } from '../data-source/data-source.service';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TableHandlerService } from '../table/table.service';
@@ -9,13 +8,12 @@ import { QueryBuilderService } from '../query-builder/query-builder.service';
 @Injectable()
 export class MeService {
   constructor(
-    private dsService: DataSourceService,
-    private tableHandlerService: TableHandlerService,
     private dataSourceService: DataSourceService,
+    private tableHandlerService: TableHandlerService,
     private queryBuilderService: QueryBuilderService,
   ) {}
 
-  async find(req: Request & { user: User_definition }) {
+  async find(req: Request & { user: any }) {
     if (!req.user) throw new UnauthorizedException();
     const repo = new DynamicRepoService({
       fields: req.query.fields as string,
@@ -37,7 +35,7 @@ export class MeService {
     return repo.find(req.user.id);
   }
 
-  async update(body: any, req: Request & { user: User_definition }) {
+  async update(body: any, req: Request & { user: any }) {
     if (!req.user) throw new UnauthorizedException();
     const repo = new DynamicRepoService({
       fields: req.query.fields as string,
