@@ -3,9 +3,9 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { Column_definition } from '../entities/column_definition.entity';
 import { Relation_definition } from '../entities/relation_definition.entity';
 import * as path from 'path';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { Table_definition } from '../entities/table_definition.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 @Injectable()
 export class CoreInitService {
@@ -15,6 +15,7 @@ export class CoreInitService {
     private readonly dataSourceService: DataSourceService,
     @InjectRepository(Table_definition)
     private tableDefRepo: Repository<Table_definition>,
+    @InjectDataSource() private dataSource: DataSource,
   ) {}
 
   async waitForDatabaseConnection(
@@ -39,8 +40,7 @@ export class CoreInitService {
 
   async createInitMetadata(): Promise<void> {
     const snapshot = await import(path.resolve('snapshot.json'));
-    const dataSource = this.dataSourceService.getDataSource();
-    const queryRunner = dataSource.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
 
     await queryRunner.connect();
     await queryRunner.startTransaction();

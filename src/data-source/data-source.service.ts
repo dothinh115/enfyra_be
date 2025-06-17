@@ -15,7 +15,6 @@ export class DataSourceService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Chuẩn bị gán và init DataSource.');
-
     await this.reloadDataSource();
     this.logger.debug('Gán và init DataSource thành công!');
   }
