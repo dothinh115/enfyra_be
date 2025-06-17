@@ -10,13 +10,9 @@ const metadata = JSON.parse(
   fs.readFileSync(path.resolve('./snapshot.json'), 'utf8'),
 );
 
-const capitalize = (str: string) =>
-  str
-    ? str
-        .split('_')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join('')
-    : '';
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
 const dbTypeToTSType = (dbType: string): string => {
   const map: Record<string, string> = {

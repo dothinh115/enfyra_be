@@ -23,6 +23,7 @@ async function bootstrap() {
   } catch (err) {
     logger.error('Lỗi khi chạy shell script:', err);
   }
+
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 

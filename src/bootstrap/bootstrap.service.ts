@@ -45,7 +45,6 @@ export class BootstrapService implements OnApplicationBootstrap {
       this.dataSourceService.getRepository('setting_definition');
     let schemaHistoryRepo =
       this.dataSourceService.getRepository('schema_history');
-    console.log('settingRepo', settingRepo);
     let setting: any = await settingRepo.findOne({ where: { id: 1 } });
 
     if (!setting || !setting.isInit) {
