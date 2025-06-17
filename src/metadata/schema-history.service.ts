@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Table_definition } from '../entities/table_definition.entity';
 import { Schema_history } from '../entities/schema_history.entity';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
+import { clearOldEntitiesJs } from './utils/clear-old-entities';
 
 @Injectable()
 export class SchemaHistoryService {

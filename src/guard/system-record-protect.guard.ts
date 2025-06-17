@@ -33,7 +33,6 @@ export class SystemRecordProtectGuard implements CanActivate {
     if (method === 'DELETE') {
       const record: any = await repo.findOne({
         where: { id },
-        select: ['id', 'isSystem'],
       });
 
       if (record?.isSystem) {
@@ -123,7 +122,6 @@ export class SystemRecordProtectGuard implements CanActivate {
 
           const relRecord: any = await relRepo.findOne({
             where: { id: incomingId },
-            select: ['id', 'isSystem'],
           });
 
           if (relRecord?.isSystem) {
@@ -137,7 +135,6 @@ export class SystemRecordProtectGuard implements CanActivate {
           if (!incomingIds.includes(currentId)) {
             const relRecord: any = await relRepo.findOne({
               where: { id: currentId },
-              select: ['id', 'isSystem'],
             });
 
             if (!relRecord) {
@@ -159,7 +156,6 @@ export class SystemRecordProtectGuard implements CanActivate {
 
           const relRecord: any = await relRepo.findOne({
             where: { id: item.id },
-            select: ['id', 'isSystem'],
           });
 
           if (relRecord?.isSystem) {

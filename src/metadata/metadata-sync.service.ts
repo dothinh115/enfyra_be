@@ -67,7 +67,6 @@ export class MetadataSyncService {
         this.logger.warn(`🗑️ Đã xoá entity không hợp lệ: ${file}`);
       }
     }
-
     clearOldEntitiesJs();
 
     await Promise.all(
@@ -88,10 +87,12 @@ export class MetadataSyncService {
         targetDir: path.resolve('src/entities'),
         outDir: path.resolve('dist/entities'),
       });
+
       await this.autoService.clearMigrationsTable();
       generateMigrationFile();
       runMigration();
       await this.dataSourceService.reloadDataSource();
+
       await this.schemaHistoryService.backup();
     } catch (err) {
       this.logger.error(

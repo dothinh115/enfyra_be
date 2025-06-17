@@ -23,19 +23,19 @@ export class Route_definition {
     @Column({ type: "simple-json", nullable: true })
     publishedMethods: any;
     @Index()
-    @ManyToOne(() => Table_definition, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Table_definition', { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     mainTable: Table_definition;
-    @ManyToMany(() => Table_definition, { eager: true, nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToMany('Table_definition', { eager: true, nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinTable()
     targetTables: Table_definition[];
-    @OneToMany(() => Route_permission_definition, (rel) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Route_permission_definition', (rel:any) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     routePermissions: Route_permission_definition[];
-    @OneToMany(() => Route_handler_definition, (rel) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Route_handler_definition', (rel:any) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     handlers: Route_handler_definition[];
-    @OneToMany(() => Middleware_definition, (rel) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Middleware_definition', (rel:any) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     middlewares: Middleware_definition[];
-    @OneToMany(() => Hook_definition, (rel) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Hook_definition', (rel:any) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     hooks: Hook_definition[];
     @CreateDateColumn()
     createdAt: Date;

@@ -16,7 +16,7 @@ export class Hook_definition {
     @Column({ type: "int", nullable: true, default: 0 })
     priority: number;
     @Index()
-    @ManyToOne(() => Route_definition, (rel) => rel.hooks, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Route_definition', (rel:any) => rel.hooks, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     route: Route_definition;
     @CreateDateColumn()

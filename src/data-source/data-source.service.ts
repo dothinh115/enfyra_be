@@ -30,6 +30,7 @@ export class DataSourceService implements OnModuleInit {
 
     try {
       const entities = await this.commonService.loadDynamicEntities(entityDir);
+      console.log(entities);
       this.dataSource = createDataSource(entities);
       await this.dataSource.initialize();
       this.logger.debug('✅ ReInit DataSource thành công!');

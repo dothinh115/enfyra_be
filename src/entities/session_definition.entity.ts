@@ -10,7 +10,7 @@ export class Session_definition {
     @Column({ type: "boolean", nullable: true, default: false })
     remember: boolean;
     @Index()
-    @ManyToOne(() => User_definition, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('User_definition', { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     user: User_definition;
     @CreateDateColumn()

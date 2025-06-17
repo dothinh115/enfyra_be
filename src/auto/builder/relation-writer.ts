@@ -62,9 +62,9 @@ export function addRelationToClass({
   }
   options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
 
-  const args = [`() => ${target}`];
+  const args = [`'${target}'`];
   if (rel.inversePropertyName) {
-    args.push(`(rel) => rel.${rel.inversePropertyName}`);
+    args.push(`(rel:any) => rel.${rel.inversePropertyName}`);
   }
   if (options.length) {
     args.push(`{ ${options.join(', ')} }`);

@@ -8,6 +8,7 @@ import { MetadataSyncService } from '../metadata/metadata-sync.service';
 import { SchemaStateService } from '../schema/schema-state.service';
 import { DefaultDataService } from './default-data.service';
 import { CoreInitService } from './core-init.service';
+import { DataSourceService } from '../data-source/data-source.service';
 
 @Injectable()
 export class BootstrapService implements OnApplicationBootstrap {
@@ -44,7 +45,6 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     await this.waitForDatabaseConnection();
-
     let setting = await this.settingRepo.findOne({ where: { id: 1 } });
 
     if (!setting || !setting.isInit) {
