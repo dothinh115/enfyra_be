@@ -10,6 +10,8 @@ import {
 import { SchemaHistoryService } from './schema-history.service';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { SCHEMA_LOCK_EVENT_KEY } from '../utils/constant';
+import { DataSourceService } from '../data-source/data-source.service';
+import { clearOldEntitiesJs } from './utils/clear-old-entities';
 
 @Injectable()
 export class MetadataSyncService {
@@ -20,6 +22,7 @@ export class MetadataSyncService {
     private autoService: AutoService,
     private schemaHistoryService: SchemaHistoryService,
     @Inject(CACHE_MANAGER) private cache: Cache,
+    private dataSourceService: DataSourceService,
   ) {}
 
   async pullMetadataFromDb() {
@@ -51,7 +54,6 @@ export class MetadataSyncService {
     const inverseRelationMap = this.autoService.buildInverseRelationMap(tables);
 
     const entityDir = path.resolve('src', 'entities');
-    const distEntityDir = path.resolve('dist', 'entities');
     const validFileNames = tables.map(
       (table) => `${table.name.toLowerCase()}.entity.ts`,
     );
@@ -66,18 +68,7 @@ export class MetadataSyncService {
       }
     }
 
-    if (fs.existsSync(distEntityDir)) {
-      const distFiles = fs.readdirSync(distEntityDir);
-      for (const file of distFiles) {
-        if (!file.endsWith('.entity.js')) continue;
-        const correspondingTsFile = file.replace(/\.js$/, '.ts');
-        if (!validFileNames.includes(correspondingTsFile)) {
-          const fullPath = path.join(distEntityDir, file);
-          fs.unlinkSync(fullPath);
-          this.logger.warn(`🗑️ Đã xoá JS không hợp lệ: ${file}`);
-        }
-      }
-    }
+    clearOldEntitiesJs();
 
     await Promise.all(
       tables.map(
@@ -92,6 +83,7 @@ export class MetadataSyncService {
     await this.cache.set(SCHEMA_LOCK_EVENT_KEY, true, 10000);
     try {
       await this.pullMetadataFromDb();
+
       buildToJs({
         targetDir: path.resolve('src/entities'),
         outDir: path.resolve('dist/entities'),
@@ -99,6 +91,7 @@ export class MetadataSyncService {
       await this.autoService.clearMigrationsTable();
       generateMigrationFile();
       runMigration();
+      await this.dataSourceService.reloadDataSource();
       await this.schemaHistoryService.backup();
     } catch (err) {
       this.logger.error(

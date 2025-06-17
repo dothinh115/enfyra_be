@@ -17,7 +17,8 @@
             { "name": "isUpdatable", "type": "boolean", "isNullable": false, "isSystem": true, "default": true },
             { "name": "isHidden", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
             { "name": "isIndex", "type": "boolean", "isNullable": false, "isSystem": true, "default": false },
-            { "name": "description", "type": "text", "isSystem": true }
+            { "name": "description", "type": "text", "isSystem": true },
+            { "name": "placeholder", "type": "text", "isSystem": true }
         ],
         "relations": [
             { "propertyName": "table", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "inversePropertyName": "columns", "isInverseEager": true }

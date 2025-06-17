@@ -89,9 +89,7 @@ export class DynamicRepoService {
     if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
     await this.repo.save(body);
 
-    const res = await this.find(id);
-    console.log(res);
-    return res;
+    return await this.find(id);
   }
 
   async delete(id: string | number) {

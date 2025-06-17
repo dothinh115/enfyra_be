@@ -30,6 +30,8 @@ export class Column_definition {
     isUpdatable: boolean;
     @Column({ type: "varchar", nullable: false })
     name: string;
+    @Column({ type: "text", nullable: true })
+    placeholder: string;
     @Column({ type: "varchar", nullable: false })
     type: string;
     @ManyToOne(() => Table_definition, (rel) => rel.columns, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })

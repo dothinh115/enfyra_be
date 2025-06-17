@@ -10,12 +10,16 @@ export class Setting_definition {
     isInit: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
     isSystem: boolean;
-    @Column({ type: "varchar", nullable: true })
+    @Column({ type: "text", nullable: true })
     projectDescription: string;
     @Column({ type: "varchar", nullable: true })
     projectName: string;
     @Column({ type: "varchar", nullable: true })
     projectUrl: string;
+    @Column({ type: "varchar", nullable: true })
+    test: string;
+    @Column({ type: "varchar", nullable: true, default: "ok " })
+    test2: string;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()
