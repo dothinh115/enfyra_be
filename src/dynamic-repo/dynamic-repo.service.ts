@@ -52,7 +52,7 @@ export class DynamicRepoService {
   }
 
   async init() {
-    this.repo = await this.dataSourceService.getRepository(this.tableName);
+    this.repo = this.dataSourceService.getRepository(this.tableName);
   }
 
   async find(id?: string | number) {
