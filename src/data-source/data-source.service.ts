@@ -3,6 +3,7 @@ import { CommonService } from '../common/common.service';
 import { createDataSource } from '../data-source/data-source';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntitySchema, EntityTarget, Repository } from 'typeorm';
+import { buildToJs } from '../auto/utils/build-helper';
 
 const entityDir = path.resolve('dist', 'entities');
 
@@ -16,6 +17,10 @@ export class DataSourceService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Chuẩn bị gán và init DataSource.');
+    buildToJs({
+      targetDir: path.resolve('dist/generated-entities'),
+      outDir: path.resolve('dist/entities'),
+    });
     await this.reloadDataSource();
     this.logger.debug('Gán và init DataSource thành công!');
   }

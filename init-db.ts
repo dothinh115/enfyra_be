@@ -115,7 +115,8 @@ async function writeEntitiesFromSnapshot() {
     manipulationSettings: { quoteKind: QuoteKind.Single },
   });
 
-  const entitiesDir = path.resolve('src/entities');
+  const entitiesDir = path.resolve('dist/generated-entities');
+
   if (!fs.existsSync(entitiesDir))
     fs.mkdirSync(entitiesDir, { recursive: true });
 
@@ -175,7 +176,7 @@ async function writeEntitiesFromSnapshot() {
         usedImports.add('PrimaryGeneratedColumn');
       } else {
         const opts = [
-          `type: '${col.type === 'date' ? 'datetime' : col.type}'`,
+          `type: '${col.type === 'date' ? 'timestamp' : col.type}'`,
           `nullable: ${col.isNullable === false ? 'false' : 'true'}`,
         ];
 
@@ -186,7 +187,7 @@ async function writeEntitiesFromSnapshot() {
             typeof col.default === 'string' &&
             col.default.toLowerCase() === 'now'
           ) {
-            opts.push(`default: () => 'CURRENT_TIMESTAMP'`);
+            opts.push(`default: () => 'now()'`);
           } else if (typeof col.default === 'string') {
             opts.push(`default: '${col.default}'`);
           } else {
@@ -234,19 +235,23 @@ async function writeEntitiesFromSnapshot() {
 
       usedImports.add(relType);
 
-      const cascadeOpts = ['onDelete: "CASCADE"', 'onUpdate: "CASCADE"'];
+      const relationOpts = [
+        `onDelete: "${rel.onDelete || 'CASCADE'}"`,
+        `onUpdate: "${rel.onUpdate || 'CASCADE'}"`,
+        `nullable: ${rel.isNullable === false ? 'false' : 'true'}`,
+      ];
 
       const isInverse = !!rel.targetClass;
 
       if (!isInverse && ['many-to-many'].includes(rel.type)) {
-        cascadeOpts.unshift('cascade: true');
+        relationOpts.unshift('cascade: true');
       }
 
       const args = [`'${target}'`];
       if (rel.inversePropertyName) {
         args.push(`(rel: any) => rel.${rel.inversePropertyName}`);
       }
-      args.push(`{ ${cascadeOpts.join(', ')} }`);
+      args.push(`{ ${relationOpts.join(', ')} }`);
 
       const decorators: any[] = [];
 
@@ -309,40 +314,6 @@ async function main() {
   const DB_NAME = process.env.DB_NAME || 'dynamiq';
 
   await ensureDatabaseExists();
-
-  const checkDS = new DataSource({
-    type: DB_TYPE,
-    host: DB_HOST,
-    port: DB_PORT,
-    username: DB_USERNAME,
-    password: DB_PASSWORD,
-    database: DB_NAME,
-  });
-
-  await checkDS.initialize();
-
-  const queryRunner = checkDS.createQueryRunner();
-  try {
-    const [result] = await queryRunner.query(
-      `SELECT isInit FROM setting_definition LIMIT 1`,
-    );
-
-    if (result?.isInit === true || result?.isInit === 1) {
-      console.log('⚠️ Đã init trước đó, bỏ qua bước init.');
-      await queryRunner.release();
-      await checkDS.destroy();
-      return;
-    }
-  } catch (err) {
-    // Nếu bảng chưa tồn tại thì cứ tiếp tục init
-    console.log(
-      '🔄 Bảng setting_definition chưa tồn tại hoặc chưa có dữ liệu.',
-    );
-  }
-
-  await queryRunner.release();
-  await checkDS.destroy();
-
   await writeEntitiesFromSnapshot();
   await ensureDatabaseExists();
 
@@ -353,7 +324,7 @@ async function main() {
     username: DB_USERNAME,
     password: DB_PASSWORD,
     database: DB_NAME,
-    entities: [path.resolve('src/entities/*.entity.ts')],
+    entities: [path.resolve('dist/generated-entities/*.entity.ts')],
     synchronize: true,
     logging: false,
   });

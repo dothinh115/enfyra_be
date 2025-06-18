@@ -54,12 +54,16 @@ export class MetadataSyncService {
 
     const inverseRelationMap = this.autoService.buildInverseRelationMap(tables);
 
-    const entityDir = path.resolve('src', 'entities');
+    const entityDir = path.resolve('dist', 'generated-entities');
     const validFileNames = tables.map(
       (table) => `${table.name.toLowerCase()}.entity.ts`,
     );
 
+    if (!fs.existsSync(entityDir)) {
+      fs.mkdirSync(entityDir, { recursive: true });
+    }
     const existingFiles = fs.readdirSync(entityDir);
+
     for (const file of existingFiles) {
       if (!file.endsWith('.entity.ts')) continue;
       if (!validFileNames.includes(file)) {
@@ -85,7 +89,7 @@ export class MetadataSyncService {
       await this.pullMetadataFromDb();
 
       buildToJs({
-        targetDir: path.resolve('src/entities'),
+        targetDir: path.resolve('dist/generated-entities'),
         outDir: path.resolve('dist/entities'),
       });
 
@@ -98,6 +102,7 @@ export class MetadataSyncService {
     } catch (err) {
       this.logger.error(
         '❌ Lỗi khi đồng bộ metadata, đang khôi phục schema trước đó...',
+        err,
       );
       await this.schemaHistoryService.restore();
     } finally {
