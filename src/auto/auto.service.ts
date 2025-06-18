@@ -35,7 +35,7 @@ export class AutoService {
     );
 
     const className = capitalize(payload.name);
-    const entityDir = path.resolve('dist', 'generated-entities');
+    const entityDir = path.resolve('src', 'entities');
     const entityPath = path.resolve(
       entityDir,
       `${payload.name.toLowerCase()}.entity.ts`,

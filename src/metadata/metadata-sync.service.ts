@@ -54,7 +54,7 @@ export class MetadataSyncService {
 
     const inverseRelationMap = this.autoService.buildInverseRelationMap(tables);
 
-    const entityDir = path.resolve('dist', 'generated-entities');
+    const entityDir = path.resolve('src', 'entities');
     const validFileNames = tables.map(
       (table) => `${table.name.toLowerCase()}.entity.ts`,
     );
@@ -89,7 +89,7 @@ export class MetadataSyncService {
       await this.pullMetadataFromDb();
 
       buildToJs({
-        targetDir: path.resolve('dist/generated-entities'),
+        targetDir: path.resolve('src/entities'),
         outDir: path.resolve('dist/entities'),
       });
 

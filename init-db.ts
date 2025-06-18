@@ -115,7 +115,7 @@ async function writeEntitiesFromSnapshot() {
     manipulationSettings: { quoteKind: QuoteKind.Single },
   });
 
-  const entitiesDir = path.resolve('dist/generated-entities');
+  const entitiesDir = path.resolve('src/entities');
 
   if (!fs.existsSync(entitiesDir))
     fs.mkdirSync(entitiesDir, { recursive: true });
@@ -314,6 +314,40 @@ async function main() {
   const DB_NAME = process.env.DB_NAME || 'dynamiq';
 
   await ensureDatabaseExists();
+
+  const checkDS = new DataSource({
+    type: DB_TYPE,
+    host: DB_HOST,
+    port: DB_PORT,
+    username: DB_USERNAME,
+    password: DB_PASSWORD,
+    database: DB_NAME,
+  });
+
+  await checkDS.initialize();
+
+  const queryRunner = checkDS.createQueryRunner();
+  try {
+    const [result] = await queryRunner.query(
+      `SELECT isInit FROM setting_definition LIMIT 1`,
+    );
+
+    if (result?.isInit === true || result?.isInit === 1) {
+      console.log('⚠️ Đã init trước đó, bỏ qua bước init.');
+      await queryRunner.release();
+      await checkDS.destroy();
+      return;
+    }
+  } catch (err) {
+    // Nếu bảng chưa tồn tại thì cứ tiếp tục init
+    console.log(
+      '🔄 Bảng setting_definition chưa tồn tại hoặc chưa có dữ liệu.',
+    );
+  }
+
+  await queryRunner.release();
+  await checkDS.destroy();
+
   await writeEntitiesFromSnapshot();
   await ensureDatabaseExists();
 
@@ -324,7 +358,7 @@ async function main() {
     username: DB_USERNAME,
     password: DB_PASSWORD,
     database: DB_NAME,
-    entities: [path.resolve('dist/generated-entities/*.entity.ts')],
+    entities: [path.resolve('src/entities/*.entity.ts')],
     synchronize: true,
     logging: false,
   });
