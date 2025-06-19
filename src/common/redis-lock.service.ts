@@ -54,7 +54,6 @@ export class RedisLockService {
   async get<T = any>(key: string): Promise<T | null> {
     const current = await this.redis.get(key);
     const parsed = this.deserialize(current);
-    console.log(`[RedisLockService] GET ${key} =>`, parsed);
     return parsed;
   }
 
