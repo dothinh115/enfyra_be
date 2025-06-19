@@ -163,11 +163,11 @@ export class TableHandlerService {
 
   async afterEffect() {
     this.logger.warn('⏳ Locking schema for sync...');
-    await this.redisLockService.acquire(SCHEMA_LOCK_EVENT_KEY, true, 10000);
+    await this.schemaReloadService.lockSchema();
     const version = await this.metadataSyncService.syncAll();
     await this.schemaReloadService.publishSchemaUpdated(version);
     await this.commonService.delay(1000);
     this.logger.log('✅ Unlocking schema');
-    await this.redisLockService.release(SCHEMA_LOCK_EVENT_KEY, true);
+    await this.schemaReloadService.unlockSchema();
   }
 }

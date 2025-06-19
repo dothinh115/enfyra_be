@@ -113,7 +113,7 @@ export class SchemaReloadService {
     this.logger.log(`Đã reload xong, set version = ${newestSchema['id']}`);
   }
 
-  async lockChangeSchema() {
+  async lockSchema() {
     const isLocked = await this.redisLockService.get(SCHEMA_LOCK_EVENT_KEY);
     if (!isLocked) {
       await this.redisLockService.acquire(
@@ -127,11 +127,27 @@ export class SchemaReloadService {
     }
   }
 
-  async deleteLockSchema() {
+  async unlockSchema() {
+    const maxWaitTimeMs = 10000;
+    const intervalMs = 500;
+    let waited = 0;
+
+    while (await this.redisLockService.get(SCHEMA_PULLING_EVENT_KEY)) {
+      if (waited >= maxWaitTimeMs) {
+        this.logger.warn('⏳ Đợi quá lâu, force unlock schema!');
+        break;
+      }
+
+      this.logger.log('🔁 Reloading schema, waiting...');
+      await this.commonService.delay(intervalMs);
+      waited += intervalMs;
+    }
+
     await this.redisLockService.release(
       SCHEMA_LOCK_EVENT_KEY,
       this.sourceInstanceId,
     );
+    this.logger.log('🔓 Schema lock đã được release');
   }
 
   async publishSchemaUpdated(version: number) {
