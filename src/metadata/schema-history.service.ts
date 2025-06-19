@@ -35,6 +35,7 @@ export class SchemaHistoryService {
       .digest('hex');
     if (hash === oldestSchema?.hash) {
       this.logger.debug(`Trùng hash, bỏ qua!!`);
+      return;
     }
     const historyCount = await schemaHistoryRepo.count();
     if (historyCount > 20) {
