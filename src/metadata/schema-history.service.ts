@@ -33,7 +33,7 @@ export class SchemaHistoryService {
       .createHash('sha256')
       .update(JSON.stringify(tables))
       .digest('hex');
-    if (hash === oldestSchema.hash) {
+    if (hash === oldestSchema?.hash) {
       this.logger.debug(`Trùng hash, bỏ qua!!`);
     }
     const historyCount = await schemaHistoryRepo.count();
@@ -43,7 +43,7 @@ export class SchemaHistoryService {
       }
     }
 
-    const result: any = await schemaHistoryRepo.save({ schema: tables });
+    const result: any = await schemaHistoryRepo.save({ schema: tables, hash });
     this.logger.log('✅ Đã backup metadata hiện tại vào schema_history');
     return result.id;
   }
