@@ -74,15 +74,8 @@ async function ensureDatabaseExists() {
   const DB_PASSWORD = process.env.DB_PASSWORD || '';
   const DB_NAME = process.env.DB_NAME || 'dynamiq';
 
-  if (DB_TYPE !== 'mysql') {
-    console.log(
-      `⚠️ Đang dùng ${DB_TYPE}, bạn phải tạo database '${DB_NAME}' thủ công.`,
-    );
-    return;
-  }
-
   const tempDataSource = new DataSource({
-    type: 'mysql',
+    type: DB_TYPE as 'mysql',
     host: DB_HOST,
     port: DB_PORT,
     username: DB_USERNAME,
@@ -92,17 +85,32 @@ async function ensureDatabaseExists() {
   await tempDataSource.initialize();
   const queryRunner = tempDataSource.createQueryRunner();
 
-  const result = await queryRunner.query(
-    `SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?`,
-    [DB_NAME],
-  );
-  const dbExists = result.length > 0;
-
-  if (!dbExists) {
-    await queryRunner.query(`CREATE DATABASE \`${DB_NAME}\``);
-    console.log(`✅ Đã tạo database '${DB_NAME}' (MySQL).`);
+  if (DB_TYPE === 'mysql') {
+    const checkDb = await tempDataSource.query(`
+        SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '${DB_NAME}'
+    `);
+    if (checkDb.length === 0) {
+      await tempDataSource.query(
+        `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\``,
+      );
+      console.log(`✅ MySQL: Created database ${DB_NAME}`);
+    } else {
+      console.log(`✅ MySQL: Database ${DB_NAME} already exists`);
+    }
+  } else if (DB_TYPE === 'postgres') {
+    const checkDb = await tempDataSource.query(`
+        SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'
+    `);
+    if (checkDb.length === 0) {
+      await tempDataSource.query(
+        `CREATE DATABASE "${DB_NAME}" WITH ENCODING 'UTF8'`,
+      );
+      console.log(`✅ Postgres: Created database ${DB_NAME}`);
+    } else {
+      console.log(`✅ Postgres: Database ${DB_NAME} already exists`);
+    }
   } else {
-    console.log(`✅ Database '${DB_NAME}' đã tồn tại (MySQL).`);
+    throw new Error(`Unsupported DB_TYPE: ${DB_NAME}`);
   }
 
   await queryRunner.release();

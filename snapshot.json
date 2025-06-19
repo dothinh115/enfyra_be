@@ -21,7 +21,7 @@
             { "name": "placeholder", "type": "text", "isSystem": true }
         ],
         "relations": [
-            { "propertyName": "table", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "inversePropertyName": "columns", "isInverseEager": true }
+            { "propertyName": "table", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "inversePropertyName": "columns", "isInverseEager": true, "isIndex": true }
         ]
     },
     "relation_definition": 

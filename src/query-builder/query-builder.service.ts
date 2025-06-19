@@ -500,7 +500,6 @@ export class QueryBuilderService {
 
       obj.meta = metaObj;
     }
-
     return obj;
   }
 }

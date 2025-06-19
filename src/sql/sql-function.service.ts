@@ -6,12 +6,21 @@ export class SqlFunctionService implements OnModuleInit {
   constructor(private dataSource: DataSource) {}
 
   async onModuleInit() {
-    const exists = await this.functionExists('unaccent');
-    if (!exists) {
-      await this.createUnaccentFunction();
-      console.log('✅ Created MySQL function: unaccent()');
+    const dbType = this.dataSource.options.type;
+
+    if (dbType === 'mysql') {
+      const exists = await this.functionExists('unaccent');
+      if (!exists) {
+        await this.createUnaccentFunction();
+        console.log('✅ Created MySQL function: unaccent()');
+      } else {
+        console.log('ℹ️ MySQL function unaccent() already exists');
+      }
+    } else if (dbType === 'postgres') {
+      await this.dataSource.query(`CREATE EXTENSION IF NOT EXISTS unaccent;`);
+      console.log('✅ Postgres: unaccent extension ready');
     } else {
-      console.log('ℹ️ MySQL function unaccent() already exists');
+      console.warn(`⚠️ Unsupported DB_TYPE for unaccent: ${dbType}`);
     }
   }
 
