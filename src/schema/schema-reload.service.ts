@@ -91,6 +91,9 @@ export class SchemaReloadService {
       this.logger.log('Đã lấy được lock, tiến hành pull...');
       await this.metadataSyncService.syncAll();
       this.schemaStateService.setVersion(newestSchema['id']);
+      this.logger.log(
+        `Reload DataSource xong, set version = ${newestSchema['id']}`,
+      );
       await this.cache.del(SCHEMA_PULLING_EVENT_KEY);
       this.logger.log('Đã pull xong và xoá lock');
       return;
