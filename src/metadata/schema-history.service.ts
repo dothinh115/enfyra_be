@@ -27,7 +27,7 @@ export class SchemaHistoryService {
 
     const oldestSchema: any = await schemaHistoryRepo.findOne({
       where: {},
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'DESC' },
     });
     const hash = crypto
       .createHash('sha256')
