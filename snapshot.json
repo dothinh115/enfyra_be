@@ -197,7 +197,8 @@
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
             { "name": "schema", "type": "simple-json", "isNullable": false, "isSystem": true },
-            { "name": "description", "type": "text", "isSystem": true }
+            { "name": "description", "type": "text", "isSystem": true },
+            { "name": "hash", "type": "text", "isSystem": true }
         ]
     }
 }

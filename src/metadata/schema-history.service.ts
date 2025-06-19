@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
 import { DataSourceService } from '../data-source/data-source.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class SchemaHistoryService {
@@ -24,14 +25,21 @@ export class SchemaHistoryService {
       .leftJoinAndSelect('table.relations', 'relations')
       .getMany();
 
+    const oldestSchema: any = await schemaHistoryRepo.findOne({
+      where: {},
+      order: { createdAt: 'ASC' },
+    });
+    const hash = crypto
+      .createHash('sha256')
+      .update(JSON.stringify(tables))
+      .digest('hex');
+    if (hash === oldestSchema.hash) {
+      this.logger.debug(`Trùng hash, bỏ qua!!`);
+    }
     const historyCount = await schemaHistoryRepo.count();
     if (historyCount > 20) {
-      const oldest: any = await schemaHistoryRepo.findOne({
-        where: {},
-        order: { createdAt: 'ASC' },
-      });
-      if (oldest) {
-        await schemaHistoryRepo.delete(oldest.id);
+      if (oldestSchema) {
+        await schemaHistoryRepo.delete(oldestSchema.id);
       }
     }
 

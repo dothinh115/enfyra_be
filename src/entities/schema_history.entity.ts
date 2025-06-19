@@ -6,6 +6,8 @@ export class Schema_history {
     id: number;
     @Column({ type: "text", nullable: true })
     description: string;
+    @Column({ type: "text", nullable: true })
+    hash: string;
     @Column({ type: "simple-json", nullable: false })
     schema: any;
     @CreateDateColumn()
