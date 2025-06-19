@@ -83,11 +83,8 @@ export class MetadataSyncService {
   }
 
   async syncAll() {
-    this.logger.warn('⏳ Locking schema for sync...');
-    await this.redisLockService.acquire(SCHEMA_LOCK_EVENT_KEY, true, 10000);
     try {
       await this.pullMetadataFromDb();
-
       buildToJs({
         targetDir: path.resolve('src/entities'),
         outDir: path.resolve('dist/entities'),
@@ -97,7 +94,6 @@ export class MetadataSyncService {
       generateMigrationFile();
       runMigration();
       await this.dataSourceService.reloadDataSource();
-
       const version = await this.schemaHistoryService.backup();
       return version;
     } catch (err) {
@@ -106,9 +102,6 @@ export class MetadataSyncService {
         err,
       );
       await this.schemaHistoryService.restore();
-    } finally {
-      this.logger.log('✅ Unlocking schema');
-      await this.redisLockService.release(SCHEMA_LOCK_EVENT_KEY, true);
     }
   }
 }

@@ -1,15 +1,22 @@
 import { CreateColumnDto, CreateTableDto } from '../table/dto/create-table.dto';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
 import { SchemaReloadService } from '../schema/schema-reload.service';
+import { RedisLockService } from '../common/redis-lock.service';
+import { SCHEMA_LOCK_EVENT_KEY } from '../utils/constant';
+import { CommonService } from '../common/common.service';
 
 @Injectable()
 export class TableHandlerService {
+  private logger = new Logger(TableHandlerService.name);
+
   constructor(
     private dataSourceService: DataSourceService,
     private metadataSyncService: MetadataSyncService,
     private schemaReloadService: SchemaReloadService,
+    private redisLockService: RedisLockService,
+    private commonService: CommonService,
   ) {}
 
   async createTable(body: CreateTableDto) {
@@ -40,8 +47,7 @@ export class TableHandlerService {
 
       result = await manager.save(tableEntity, createTableEntity);
       await queryRunner.commitTransaction();
-      const version = await this.metadataSyncService.syncAll();
-      await this.schemaReloadService.publishSchemaUpdated(version);
+      await this.afterEffect();
       const routeDefRepo =
         this.dataSourceService.getRepository('route_definition');
       await routeDefRepo.save({
@@ -79,8 +85,7 @@ export class TableHandlerService {
       }
       const result = await manager.save(tableEntity, body as any);
       await queryRunner.commitTransaction();
-      const version = await this.metadataSyncService.syncAll();
-      await this.schemaReloadService.publishSchemaUpdated(version);
+      await this.afterEffect();
 
       return result;
     } catch (error) {
@@ -146,9 +151,7 @@ export class TableHandlerService {
       }
 
       const result = await tableDefRepo.remove(exists);
-      const version = await this.metadataSyncService.syncAll();
-      await this.schemaReloadService.publishSchemaUpdated(version);
-
+      await this.afterEffect();
       return result;
     } catch (error) {
       console.error(error.stack || error.message || error);
@@ -156,5 +159,15 @@ export class TableHandlerService {
         `Error: "${error.message}"` || 'Unknown error',
       );
     }
+  }
+
+  async afterEffect() {
+    this.logger.warn('⏳ Locking schema for sync...');
+    await this.redisLockService.acquire(SCHEMA_LOCK_EVENT_KEY, true, 10000);
+    const version = await this.metadataSyncService.syncAll();
+    await this.schemaReloadService.publishSchemaUpdated(version);
+    await this.commonService.delay(500);
+    this.logger.log('✅ Unlocking schema');
+    await this.redisLockService.release(SCHEMA_LOCK_EVENT_KEY, true);
   }
 }

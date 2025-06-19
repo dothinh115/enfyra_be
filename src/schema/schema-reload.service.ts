@@ -26,6 +26,7 @@ export class SchemaReloadService {
     @Inject(forwardRef(() => RedisPubSubService))
     private redisPubSubService: RedisPubSubService,
     private commonService: CommonService,
+    @Inject(forwardRef(() => MetadataSyncService))
     private metadataSyncService: MetadataSyncService,
     private redisLockService: RedisLockService,
   ) {
