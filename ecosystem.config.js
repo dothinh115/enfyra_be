@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'dynamiq-app',
       script: 'dist/main.js',
-      instances: '5',
+      instances: '7',
       exec_mode: 'cluster',
       watch: false,
     },

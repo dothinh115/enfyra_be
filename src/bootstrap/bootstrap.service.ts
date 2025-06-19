@@ -27,7 +27,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     maxRetries = 10,
     delayMs = 1000,
   ): Promise<void> {
-    const settingRepo =
+    let settingRepo =
       this.dataSourceService.getRepository('setting_definition');
 
     for (let i = 0; i < maxRetries; i++) {
@@ -38,13 +38,20 @@ export class BootstrapService implements OnApplicationBootstrap {
       } catch (error) {
         this.logger.warn(`Chưa kết nối được DB, thử lại sau ${delayMs}ms...`);
         await this.commonService.delay(delayMs);
+        await this.dataSourceService.reloadDataSource();
+        settingRepo =
+          this.dataSourceService.getRepository('setting_definition');
       }
     }
     throw new Error(`Không thể kết nối tới DB sau ${maxRetries} lần thử.`);
   }
 
   async onApplicationBootstrap() {
-    await this.waitForDatabaseConnection();
+    try {
+      await this.waitForDatabaseConnection();
+    } catch (err) {
+      this.logger.error('❌ Lỗi khi bootstrap ứng dụng:', err);
+    }
     let settingRepo =
       this.dataSourceService.getRepository('setting_definition');
     let schemaHistoryRepo =
@@ -82,7 +89,7 @@ export class BootstrapService implements OnApplicationBootstrap {
       const acquired = await this.redisLockService.acquire(
         'global:boot',
         this.schemaReloadService.sourceInstanceId,
-        10000,
+        15000,
       );
       if (acquired) {
         await this.metadataSyncService.syncAll();

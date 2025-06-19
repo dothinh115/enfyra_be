@@ -20,6 +20,6 @@ export class DynamicController {
       user: any;
     },
   ) {
-    return this.dynamicService.dynamicService(req);
+    return this.dynamicService.runHandler(req);
   }
 }

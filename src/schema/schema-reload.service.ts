@@ -83,7 +83,7 @@ export class SchemaReloadService {
     }
 
     const acquired = await this.redisLockService.acquire(
-      SCHEMA_PULLING_EVENT_KEY,
+      `${SCHEMA_PULLING_EVENT_KEY}:${this.configService.get('NODE_NAME')}`,
       this.sourceInstanceId,
       10000,
     );
@@ -103,7 +103,11 @@ export class SchemaReloadService {
     }
 
     this.logger.log('Có lock pulling, chờ...');
-    while (await this.redisLockService.get(SCHEMA_PULLING_EVENT_KEY)) {
+    while (
+      await this.redisLockService.get(
+        `${SCHEMA_PULLING_EVENT_KEY}:${this.configService.get('NODE_NAME')}`,
+      )
+    ) {
       await this.commonService.delay(Math.random() * 300 + 300);
     }
 

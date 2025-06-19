@@ -8,12 +8,11 @@ import {
 import { Request } from 'express';
 import * as vm from 'vm';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
-
 @Injectable()
 export class DynamicService {
   private logger = new Logger(DynamicService.name);
 
-  async dynamicService(
+  async runHandler(
     req: Request & {
       routeData: any & {
         params: any;
@@ -24,21 +23,42 @@ export class DynamicService {
     },
   ) {
     const logs: any[] = [];
+    const timeoutMs = 3000;
+
     req.routeData.context.$logs = (...args: any[]) => {
       logs.push(...args);
     };
 
+    const vmContext = vm.createContext({
+      ...req.routeData.context,
+      console: {
+        log: (...args: any[]) => logs.push(...args),
+      },
+    });
+
     try {
       const userHandler = req.routeData.handler?.trim();
       const defaultHandler = this.getDefaultHandler(req.method);
-      if (!userHandler && !defaultHandler)
-        throw new BadRequestException('Không có handler tương ứng');
 
-      const scriptCode = `(async () => { ${userHandler || defaultHandler} })()`;
+      if (!userHandler && !defaultHandler) {
+        throw new BadRequestException('Không có handler tương ứng');
+      }
+
+      const scriptCode = `
+        (async () => {
+          "use strict";
+          try {
+            ${userHandler || defaultHandler}
+          } catch (err) {
+            throw err;
+          }
+        })()
+      `;
 
       const script = new vm.Script(scriptCode);
-      const vmContext = vm.createContext(req.routeData.context);
-      const result = await script.runInContext(vmContext, { timeout: 3000 });
+      const result = await script.runInContext(vmContext, {
+        timeout: timeoutMs,
+      });
 
       return logs.length ? { result, logs } : result;
     } catch (error) {
@@ -53,10 +73,7 @@ export class DynamicService {
         throw error;
       }
 
-      throw new BadRequestException(
-        'Lỗi trong quá trình thực thi script hoặc xử lý dữ liệu.',
-        error.message,
-      );
+      throw new BadRequestException(`Script error: ${error.message}`);
     }
   }
 

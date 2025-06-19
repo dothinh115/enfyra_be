@@ -1,4 +1,4 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Table_definition } from './table_definition.entity';
 
 @Entity('column_definition')
@@ -34,6 +34,7 @@ export class Column_definition {
     placeholder: string;
     @Column({ type: "varchar", nullable: false })
     type: string;
+    @Index()
     @ManyToOne('Table_definition', (rel: any) => rel.columns, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     table: any;
