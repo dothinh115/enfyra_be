@@ -98,7 +98,8 @@ export class MetadataSyncService {
       runMigration();
       await this.dataSourceService.reloadDataSource();
 
-      await this.schemaHistoryService.backup();
+      const version = await this.schemaHistoryService.backup();
+      return version;
     } catch (err) {
       this.logger.error(
         '❌ Lỗi khi đồng bộ metadata, đang khôi phục schema trước đó...',

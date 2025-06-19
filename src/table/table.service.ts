@@ -2,12 +2,14 @@ import { CreateColumnDto, CreateTableDto } from '../table/dto/create-table.dto';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
+import { SchemaReloadService } from '../schema/schema-reload.service';
 
 @Injectable()
 export class TableHandlerService {
   constructor(
     private dataSourceService: DataSourceService,
     private metadataSyncService: MetadataSyncService,
+    private schemaReloadService: SchemaReloadService,
   ) {}
 
   async createTable(body: CreateTableDto) {
@@ -38,7 +40,8 @@ export class TableHandlerService {
 
       result = await manager.save(tableEntity, createTableEntity);
       await queryRunner.commitTransaction();
-      await this.metadataSyncService.syncAll();
+      const version = await this.metadataSyncService.syncAll();
+      await this.schemaReloadService.publishSchemaUpdated(version);
       const routeDefRepo =
         this.dataSourceService.getRepository('route_definition');
       await routeDefRepo.save({
@@ -76,7 +79,9 @@ export class TableHandlerService {
       }
       const result = await manager.save(tableEntity, body as any);
       await queryRunner.commitTransaction();
-      await this.metadataSyncService.syncAll();
+      const version = await this.metadataSyncService.syncAll();
+      await this.schemaReloadService.publishSchemaUpdated(version);
+
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -141,7 +146,8 @@ export class TableHandlerService {
       }
 
       const result = await tableDefRepo.remove(exists);
-      await this.metadataSyncService.syncAll();
+      const version = await this.metadataSyncService.syncAll();
+      await this.schemaReloadService.publishSchemaUpdated(version);
 
       return result;
     } catch (error) {

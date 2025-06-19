@@ -35,8 +35,9 @@ export class SchemaHistoryService {
       }
     }
 
-    await schemaHistoryRepo.save({ schema: tables });
+    const result: any = await schemaHistoryRepo.save({ schema: tables });
     this.logger.log('✅ Đã backup metadata hiện tại vào schema_history');
+    return result.id;
   }
 
   async restore() {
