@@ -166,7 +166,7 @@ export class TableHandlerService {
     await this.redisLockService.acquire(SCHEMA_LOCK_EVENT_KEY, true, 10000);
     const version = await this.metadataSyncService.syncAll();
     await this.schemaReloadService.publishSchemaUpdated(version);
-    await this.commonService.delay(500);
+    await this.commonService.delay(1000);
     this.logger.log('✅ Unlocking schema');
     await this.redisLockService.release(SCHEMA_LOCK_EVENT_KEY, true);
   }

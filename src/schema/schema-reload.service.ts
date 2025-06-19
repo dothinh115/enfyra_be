@@ -72,7 +72,6 @@ export class SchemaReloadService {
     }
 
     if (node_name === data.node_name) {
-      await this.commonService.delay(Math.random() * 300 + 300);
       this.logger.log('Cùng node, chỉ reload lại DataSource');
       await this.dataSourceService.reloadDataSource();
       this.schemaStateService.setVersion(newestSchema['id']);

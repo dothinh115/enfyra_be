@@ -1,7 +1,6 @@
 import {
   CanActivate,
   ExecutionContext,
-  Inject,
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
