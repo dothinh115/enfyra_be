@@ -103,12 +103,7 @@ export class SchemaReloadService {
     }
 
     this.logger.log('Có lock pulling, chờ...');
-    while (
-      await this.redisLockService.exists(
-        SCHEMA_PULLING_EVENT_KEY,
-        data.sourceInstanceId,
-      )
-    ) {
+    while (await this.redisLockService.get(SCHEMA_PULLING_EVENT_KEY)) {
       await this.commonService.delay(Math.random() * 300 + 300);
     }
 
