@@ -5,6 +5,8 @@ import { SchemaStateService } from '../schema/schema-state.service';
 import { DefaultDataService } from './default-data.service';
 import { CoreInitService } from './core-init.service';
 import { DataSourceService } from '../data-source/data-source.service';
+import { SchemaReloadService } from '../schema/schema-reload.service';
+import { RedisLockService } from '../common/redis-lock.service';
 
 @Injectable()
 export class BootstrapService implements OnApplicationBootstrap {
@@ -17,6 +19,8 @@ export class BootstrapService implements OnApplicationBootstrap {
     private readonly defaultDataService: DefaultDataService,
     private readonly coreInitService: CoreInitService,
     private dataSourceService: DataSourceService,
+    private schemaReloadService: SchemaReloadService,
+    private redisLockService: RedisLockService,
   ) {}
 
   private async waitForDatabaseConnection(
@@ -41,7 +45,6 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap() {
     await this.waitForDatabaseConnection();
-    // return;
     let settingRepo =
       this.dataSourceService.getRepository('setting_definition');
     let schemaHistoryRepo =
@@ -55,8 +58,8 @@ export class BootstrapService implements OnApplicationBootstrap {
       await this.defaultDataService.createDefaultRole();
       await this.defaultDataService.insertDefaultUserIfEmpty();
 
-      await this.metadataSyncService.syncAll();
       await this.defaultDataService.createDefaultRoutes();
+      await this.metadataSyncService.syncAll();
 
       settingRepo = this.dataSourceService.getRepository('setting_definition');
       setting = await settingRepo.findOne({ where: { id: 1 } });
@@ -74,16 +77,23 @@ export class BootstrapService implements OnApplicationBootstrap {
         this.schemaStateService.setVersion(lastVersion.id);
       }
     } else {
-      await this.metadataSyncService.syncAll();
-      schemaHistoryRepo =
-        this.dataSourceService.getRepository('schema_history');
-      const lastVersion: any = await schemaHistoryRepo.findOne({
-        where: {},
-        order: { createdAt: 'DESC' },
-      });
+      await this.commonService.delay(Math.random() * 500);
 
-      if (lastVersion) {
-        this.schemaStateService.setVersion(lastVersion.id);
+      const acquired = await this.redisLockService.acquire(
+        'global:boot',
+        this.schemaReloadService.sourceInstanceId,
+        10000,
+      );
+      if (acquired) {
+        await this.metadataSyncService.syncAll();
+        this.logger.warn('set aquired thanh cong', acquired);
+        schemaHistoryRepo =
+          this.dataSourceService.getRepository('schema_history');
+        const lastVersion: any = await schemaHistoryRepo.findOne({
+          where: {},
+          order: { createdAt: 'DESC' },
+        });
+        await this.schemaReloadService.publishSchemaUpdated(lastVersion?.id);
       }
     }
   }

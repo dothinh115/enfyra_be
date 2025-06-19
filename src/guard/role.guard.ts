@@ -7,17 +7,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 import { IS_PUBLIC_KEY, GLOBAL_SETTINGS_KEY } from '../utils/constant';
 import { DataSourceService } from '../data-source/data-source.service';
+import { RedisLockService } from '../common/redis-lock.service';
 
 @Injectable()
 export class RoleGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private dataSourceService: DataSourceService,
-    @Inject(CACHE_MANAGER) private cache: Cache,
+    private redisLockService: RedisLockService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -32,11 +31,14 @@ export class RoleGuard implements CanActivate {
     if (!req.user) throw new UnauthorizedException();
     if (req.user.isRootAdmin) return true;
 
-    let methodMap =
-      await this.cache.get<Record<string, string>>(GLOBAL_SETTINGS_KEY);
+    let methodMap = await this.redisLockService.get(GLOBAL_SETTINGS_KEY);
     if (!methodMap) {
       methodMap = await this.getPermissionMap();
-      await this.cache.set(GLOBAL_SETTINGS_KEY, methodMap, 60000);
+      await this.redisLockService.acquire(
+        GLOBAL_SETTINGS_KEY,
+        methodMap,
+        60000,
+      );
     }
 
     const action = methodMap[req.method];

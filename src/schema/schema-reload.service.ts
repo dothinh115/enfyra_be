@@ -1,11 +1,9 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { SchemaStateService } from './schema-state.service';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { v4 as uuidv4 } from 'uuid';
 import { TReloadSchema } from '../utils/types/common.type';
 import { ConfigService } from '@nestjs/config';
-import { Cache } from 'cache-manager';
 import {
   SCHEMA_LOCK_EVENT_KEY,
   SCHEMA_PULLING_EVENT_KEY,
@@ -14,21 +12,22 @@ import {
 import { RedisPubSubService } from '../redis-pubsub/redis-pubsub.service';
 import { CommonService } from '../common/common.service';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
+import { RedisLockService } from '../common/redis-lock.service';
 
 @Injectable()
 export class SchemaReloadService {
   private readonly logger = new Logger(SchemaReloadService.name);
-  private sourceInstanceId: string;
+  sourceInstanceId: string;
 
   constructor(
     private dataSourceService: DataSourceService,
     private schemaStateService: SchemaStateService,
-    @Inject(CACHE_MANAGER) private cache: Cache,
     private configService: ConfigService,
     @Inject(forwardRef(() => RedisPubSubService))
     private redisPubSubService: RedisPubSubService,
     private commonService: CommonService,
     private metadataSyncService: MetadataSyncService,
+    private redisLockService: RedisLockService,
   ) {
     this.sourceInstanceId = uuidv4();
     this.logger.log(`Khởi tạo với sourceInstanceId: ${this.sourceInstanceId}`);
@@ -82,10 +81,10 @@ export class SchemaReloadService {
       return;
     }
 
-    const acquired = await this.commonService.tryAcquireLock(
+    const acquired = await this.redisLockService.acquire(
       SCHEMA_PULLING_EVENT_KEY,
       this.sourceInstanceId,
-      10,
+      10000,
     );
     if (acquired) {
       this.logger.log('Đã lấy được lock, tiến hành pull...');
@@ -94,13 +93,21 @@ export class SchemaReloadService {
       this.logger.log(
         `Reload DataSource xong, set version = ${newestSchema['id']}`,
       );
-      await this.cache.del(SCHEMA_PULLING_EVENT_KEY);
+      await this.redisLockService.release(
+        SCHEMA_PULLING_EVENT_KEY,
+        this.sourceInstanceId,
+      );
       this.logger.log('Đã pull xong và xoá lock');
       return;
     }
 
     this.logger.log('Có lock pulling, chờ...');
-    while (await this.cache.get(SCHEMA_PULLING_EVENT_KEY)) {
+    while (
+      await this.redisLockService.exists(
+        SCHEMA_PULLING_EVENT_KEY,
+        this.sourceInstanceId,
+      )
+    ) {
       await this.commonService.delay(Math.random() * 300 + 300);
     }
 
@@ -111,22 +118,24 @@ export class SchemaReloadService {
   }
 
   async lockChangeSchema() {
-    const isLocked = await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
+    const isLocked = await this.redisLockService.get(SCHEMA_LOCK_EVENT_KEY);
     if (!isLocked) {
-      await this.cache.set(SCHEMA_LOCK_EVENT_KEY, true, 10000);
-      const confirm = await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
-      this.logger.log(`🔐 Set schema lock: ${confirm}`);
+      await this.redisLockService.acquire(
+        SCHEMA_LOCK_EVENT_KEY,
+        this.sourceInstanceId,
+        10000,
+      );
+      this.logger.log(`🔐 Set schema lock: true`);
     } else {
       this.logger.warn('Schema đã bị khoá trước đó');
     }
   }
 
   async deleteLockSchema() {
-    const isLocked = await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
-    if (isLocked) {
-      await this.cache.del(SCHEMA_LOCK_EVENT_KEY);
-      this.logger.debug(`Đã mở khoá lock schema`);
-    }
+    await this.redisLockService.release(
+      SCHEMA_LOCK_EVENT_KEY,
+      this.sourceInstanceId,
+    );
   }
 
   async publishSchemaUpdated(version: number) {
@@ -146,7 +155,7 @@ export class SchemaReloadService {
   }
 
   async checkLockChangeSchema() {
-    const lock = await this.cache.get(SCHEMA_LOCK_EVENT_KEY);
+    const lock = await this.redisLockService.get(SCHEMA_LOCK_EVENT_KEY);
     return lock;
   }
 }

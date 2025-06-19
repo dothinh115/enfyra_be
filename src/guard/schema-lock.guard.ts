@@ -6,15 +6,14 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { CommonService } from '../common/common.service';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 import { SCHEMA_LOCK_EVENT_KEY } from '../utils/constant';
+import { RedisLockService } from '../common/redis-lock.service';
 
 @Injectable()
 export class SchemaLockGuard implements CanActivate {
   constructor(
     private commonService: CommonService,
-    @Inject(CACHE_MANAGER) private cache: Cache,
+    private redisLockService: RedisLockService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -22,7 +21,7 @@ export class SchemaLockGuard implements CanActivate {
     const intervalMs = 500;
     let waited = 0;
 
-    while (await this.cache.get(SCHEMA_LOCK_EVENT_KEY)) {
+    while (await this.redisLockService.get(SCHEMA_LOCK_EVENT_KEY)) {
       console.log('🔁 Reloading schema, waiting...');
       if (waited >= maxWaitTimeMs) {
         throw new ServiceUnavailableException(

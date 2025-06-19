@@ -8,10 +8,10 @@ import {
   runMigration,
 } from '../auto/utils/migration-helper';
 import { SchemaHistoryService } from './schema-history.service';
-import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { SCHEMA_LOCK_EVENT_KEY } from '../utils/constant';
 import { DataSourceService } from '../data-source/data-source.service';
 import { clearOldEntitiesJs } from './utils/clear-old-entities';
+import { RedisLockService } from '../common/redis-lock.service';
 
 @Injectable()
 export class MetadataSyncService {
@@ -21,8 +21,8 @@ export class MetadataSyncService {
     @Inject(forwardRef(() => AutoService))
     private autoService: AutoService,
     private schemaHistoryService: SchemaHistoryService,
-    @Inject(CACHE_MANAGER) private cache: Cache,
     private dataSourceService: DataSourceService,
+    private redisLockService: RedisLockService,
   ) {}
 
   async pullMetadataFromDb() {
@@ -84,7 +84,7 @@ export class MetadataSyncService {
 
   async syncAll() {
     this.logger.warn('⏳ Locking schema for sync...');
-    await this.cache.set(SCHEMA_LOCK_EVENT_KEY, true, 10000);
+    await this.redisLockService.acquire(SCHEMA_LOCK_EVENT_KEY, true, 10000);
     try {
       await this.pullMetadataFromDb();
 
@@ -108,11 +108,7 @@ export class MetadataSyncService {
       await this.schemaHistoryService.restore();
     } finally {
       this.logger.log('✅ Unlocking schema');
-      await this.cache.del(SCHEMA_LOCK_EVENT_KEY);
+      await this.redisLockService.release(SCHEMA_LOCK_EVENT_KEY, true);
     }
-  }
-
-  async isLocked(): Promise<boolean> {
-    return !!(await this.cache.get(SCHEMA_LOCK_EVENT_KEY));
   }
 }

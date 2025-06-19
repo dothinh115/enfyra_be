@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { CommonService } from '../common/common.service';
-import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { GLOBAL_ROUTES_KEY } from '../utils/constant';
 import { DataSourceService } from '../data-source/data-source.service';
 import { JwtService } from '@nestjs/jwt';
@@ -15,22 +14,23 @@ import { TableHandlerService } from '../table/table.service';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { QueryBuilderService } from '../query-builder/query-builder.service';
+import { RedisLockService } from '../common/redis-lock.service';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
   constructor(
     private commonService: CommonService,
-    @Inject(CACHE_MANAGER) private cache: Cache,
     private dataSourceService: DataSourceService,
     private jwtService: JwtService,
     private queryBuilderService: QueryBuilderService,
     private tableHandlerService: TableHandlerService,
+    private redisLockService: RedisLockService,
   ) {}
 
   async use(req: any, res: any, next: (error?: any) => void) {
     const method = req.method;
     let routes: any[] =
-      (await this.cache.get(GLOBAL_ROUTES_KEY)) ||
+      (await this.redisLockService.get(GLOBAL_ROUTES_KEY)) ||
       (await this.loadAndCacheRoutes(method));
 
     const matchedRoute = this.findMatchedRoute(routes, req.baseUrl, method);
@@ -160,7 +160,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
       ].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
     });
 
-    await this.cache.set(GLOBAL_ROUTES_KEY, routes, 5000);
+    await this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 5000);
     return routes;
   }
 

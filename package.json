@@ -25,7 +25,7 @@
     "migration:revert": "npm run typeorm migration:revert"
   },
   "dependencies": {
-    "@nestjs/cache-manager": "^3.0.1",
+    "@liaoliaots/nestjs-redis": "^10.0.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.0",
@@ -39,8 +39,6 @@
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.8",
     "bcryptjs": "^3.0.2",
-    "cache-manager": "^6.4.3",
-    "cache-manager-ioredis": "^2.1.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "cors": "^2.8.5",

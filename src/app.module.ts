@@ -7,15 +7,12 @@ import * as path from 'path';
 import { RabbitMQRegistry } from './rabbitmq/rabbitmq.service';
 import { DataSourceModule } from './data-source/data-source.module';
 import { CommonModule } from './common/common.module';
-import { BootstrapService } from './bootstrap/bootstrap.service';
 import { AutoModule } from './auto/auto.module';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { HideFieldInterceptor } from './interceptors/hidden-field.interceptor';
-import { CacheModule } from '@nestjs/cache-manager';
-import * as redisStore from 'cache-manager-ioredis';
 import { AuthModule } from './auth/auth.module';
 import { RoleGuard } from './guard/role.guard';
 import { MeModule } from './me/me.module';
@@ -33,6 +30,7 @@ import { SystemRecordProtectGuard } from './guard/system-record-protect.guard';
 import { MetadataSyncService } from './metadata/metadata-sync.service';
 import { SchemaHistoryService } from './metadata/schema-history.service';
 import { BootstrapModule } from './bootstrap/bootstrap.module';
+import { RedisModule } from '@liaoliaots/nestjs-redis';
 
 @Global()
 @Module({
@@ -55,14 +53,14 @@ import { BootstrapModule } from './bootstrap/bootstrap.module';
       },
       inject: [ConfigService],
     }),
-    CacheModule.registerAsync({
-      isGlobal: true,
-      useFactory: async (configService: ConfigService) => ({
-        store: redisStore,
-        url: configService.get('REDIS_URI'),
-        ttl: configService.get('DEFAULT_TTL'),
-      }),
+    RedisModule.forRootAsync({
       inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        config: {
+          url: configService.get('REDIS_URI'),
+          ttl: configService.get<number>('DEFAULT_TTL'),
+        },
+      }),
     }),
     QueryBuilderModule,
     AuthModule,
