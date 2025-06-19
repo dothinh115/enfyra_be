@@ -106,7 +106,7 @@ export class SchemaReloadService {
     while (
       await this.redisLockService.exists(
         SCHEMA_PULLING_EVENT_KEY,
-        this.sourceInstanceId,
+        data.sourceInstanceId,
       )
     ) {
       await this.commonService.delay(Math.random() * 300 + 300);
