@@ -7,22 +7,19 @@ const logger = new Logger('MigrationHelper');
 
 export function generateMigrationFile() {
   const migrationDir = path.resolve('src', 'migrations', 'AutoMigration');
-  const appDataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
   const needDeleteDir = path.resolve('src', 'migrations');
+  const appDataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
 
   logger.log('Chuẩn bị generate file migration');
 
   try {
     if (fs.existsSync(needDeleteDir)) {
-      const files = fs.readdirSync(needDeleteDir);
-      for (const file of files) {
-        fs.unlinkSync(path.join(needDeleteDir, file));
-      }
+      fs.rmSync(needDeleteDir, { recursive: true, force: true });
       logger.log(`Đã xoá sạch thư mục ${needDeleteDir}`);
-    } else {
-      fs.mkdirSync(migrationDir, { recursive: true });
-      logger.log(`Đã tạo thư mục ${migrationDir}`);
     }
+
+    fs.mkdirSync(migrationDir, { recursive: true });
+    logger.log(`Đã tạo thư mục ${migrationDir}`);
 
     const script = `npm run typeorm -- migration:generate ${migrationDir} -d ${appDataSourceDir}`;
     execSync(script, { stdio: 'inherit' });
