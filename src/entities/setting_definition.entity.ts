@@ -18,8 +18,6 @@ export class Setting_definition {
     projectUrl: string;
     @Column({ type: "varchar", nullable: true })
     test: string;
-    @Column({ type: "varchar", nullable: true })
-    test2: string;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

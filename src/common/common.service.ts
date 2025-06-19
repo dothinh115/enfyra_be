@@ -234,6 +234,6 @@ export class CommonService {
   ): Promise<boolean> {
     const redis = this.cache as any;
     const result = await redis.set(key, value, 'NX', 'EX', ttlSeconds);
-    return result === 'OK';
+    return !!result;
   }
 }
