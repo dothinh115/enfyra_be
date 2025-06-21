@@ -33,6 +33,7 @@ export class GraphqlService implements OnApplicationBootstrap {
     private tableHandlerService: TableHandlerService,
     private queryBuilderService: QueryBuilderService,
   ) {}
+
   private yogaApp: ReturnType<typeof createYoga>;
 
   async onApplicationBootstrap() {
@@ -42,7 +43,6 @@ export class GraphqlService implements OnApplicationBootstrap {
   private async pullMetadataFromDb(): Promise<any[]> {
     const dataSource = this.dataSourceService.getDataSource();
     const tableDefRepo = dataSource.getRepository('table_definition');
-
     const rootMeta = dataSource.getMetadata('table_definition');
 
     const qb = tableDefRepo.createQueryBuilder('table');
@@ -52,57 +52,37 @@ export class GraphqlService implements OnApplicationBootstrap {
 
     const aliasMap = new Map<string, string>();
     const visited = new Set<number>();
-    const MAX_DEPTH = 3;
 
-    function walk(
-      meta: EntityMetadata,
-      path: string[],
-      alias: string,
-      depth: number,
-    ) {
-      // if (depth >= MAX_DEPTH) return;
-
-      // Nếu table này đã đi qua rồi → skip
+    function walk(meta: EntityMetadata, path: string[], alias: string) {
       const tableId = meta.tableName;
-      if (visited.has(tableId as any)) {
-        console.warn(`⚠️ Skip cyclic table: ${tableId}`);
-        return;
-      }
+      if (visited.has(tableId as any)) return;
 
       visited.add(tableId as any);
 
       for (const rel of meta.relations) {
         const relPath = [...path, rel.propertyName];
         const aliasKey = ['table', ...relPath].join('_');
-
         const joinPath = `${alias}.${rel.propertyName}`;
 
-        if (aliasMap.has(aliasKey)) continue;
-
-        aliasMap.set(aliasKey, aliasKey);
-
-        qb.leftJoinAndSelect(joinPath, aliasKey);
-
-        const targetMeta = rel.inverseEntityMetadata;
-
-        walk(targetMeta, relPath, aliasKey, depth + 1);
+        if (!aliasMap.has(aliasKey)) {
+          aliasMap.set(aliasKey, aliasKey);
+          qb.leftJoinAndSelect(joinPath, aliasKey);
+          walk(rel.inverseEntityMetadata, relPath, aliasKey);
+        }
       }
 
-      // Sau khi duyệt xong table này → remove khỏi visited
       visited.delete(tableId as any);
     }
 
-    walk(rootMeta, [], 'table', 0);
+    walk(rootMeta, [], 'table');
 
-    const tables = await qb.getMany();
-
-    return tables;
+    return await qb.getMany();
   }
 
   private async schemaGenerator(): Promise<GraphQLSchema> {
     const tables = await this.pullMetadataFromDb();
-
-    const typeDefs = generateTypeDefsFromTables(tables);
+    const metadatas = this.dataSourceService.getDataSource().entityMetadatas;
+    const typeDefs = generateTypeDefsFromTables(tables, metadatas);
 
     const resolvers = {
       DynamicType: {
@@ -124,19 +104,22 @@ export class GraphqlService implements OnApplicationBootstrap {
           context: any,
           info: any,
         ) => {
-          const {
-            mainTable,
-            targetTables,
-            matchedRoute,
-            user,
-            handler,
-            decodedToken,
-          } = await this.middlewareForDynamicResolver(context, info);
-          const fieldPicker = convertFieldNodesToFieldPicker(info);
+          const { mainTable, targetTables, user, handler } =
+            await this.middlewareForDynamicResolver(context, info);
+
+          const selections =
+            info.fieldNodes?.[0]?.selectionSet?.selections || [];
+          const fullFieldPicker = convertFieldNodesToFieldPicker(selections);
+          const fieldPicker = fullFieldPicker
+            .filter((f) => f.startsWith('data.'))
+            .map((f) => f.replace(/^data\./, ''));
+
+          console.log('fieldPicker:', fieldPicker);
+
           const dynamicFindEntries = await Promise.all(
             [mainTable, ...targetTables]?.map(async (table) => {
               const dynamicRepo = new DynamicRepoService({
-                fields: fieldPicker.join(',') as string,
+                fields: fieldPicker.join(','),
                 filter: args.filter,
                 page: Number(args.page ?? 1),
                 tableName: table.name,
@@ -144,27 +127,23 @@ export class GraphqlService implements OnApplicationBootstrap {
                 tableHandlerService: this.tableHandlerService,
                 dataSourceService: this.dataSourceService,
                 queryBuilderService: this.queryBuilderService,
-                ...(args.meta && {
-                  meta: args.meta,
-                }),
-                ...(args.sort && {
-                  sort: args.sort,
-                }),
-                ...(args.aggregate && {
-                  aggregate: args.aggregate,
-                }),
+                ...(args.meta && { meta: args.meta }),
+                ...(args.sort && { sort: args.sort }),
+                ...(args.aggregate && { aggregate: args.aggregate }),
               });
+
               await dynamicRepo.init();
+
               const name =
                 table.name === mainTable.name
                   ? 'main'
                   : (table.alias ?? table.name);
-              return [`${name}`, dynamicRepo];
+
+              return [name, dynamicRepo];
             }),
           );
 
-          const dynamicFindMap: { any: any } =
-            Object.fromEntries(dynamicFindEntries);
+          const dynamicFindMap = Object.fromEntries(dynamicFindEntries);
 
           const vmCxt: TGqlDynamicContext = {
             $errors: {
@@ -185,7 +164,6 @@ export class GraphqlService implements OnApplicationBootstrap {
             $req: context.request,
           };
 
-          const logs: any[] = [];
           const timeoutMs = 3000;
 
           const vmContext = vm.createContext({
@@ -201,22 +179,22 @@ export class GraphqlService implements OnApplicationBootstrap {
             }
 
             const scriptCode = `
-                  (async () => {
-                    "use strict";
-                    try {
-                      ${userHandler || defaultHandler}
-                    } catch (err) {
-                      throw err;
-                    }
-                  })()
-                `;
+              (async () => {
+                "use strict";
+                try {
+                  ${userHandler || defaultHandler}
+                } catch (err) {
+                  throw err;
+                }
+              })()
+            `;
+
             const script = new vm.Script(scriptCode);
             const result = await script.runInContext(vmContext, {
               timeout: timeoutMs,
             });
 
             const typeName = mainTable.name;
-
             return {
               data: result.data.map((row) => ({
                 ...row,
@@ -238,11 +216,11 @@ export class GraphqlService implements OnApplicationBootstrap {
         },
       },
     };
-    const schema = makeExecutableSchema({
+
+    return makeExecutableSchema({
       typeDefs,
       resolvers,
     });
-    return schema;
   }
 
   private async middlewareForDynamicResolver(context: any, info: any) {
@@ -276,7 +254,7 @@ export class GraphqlService implements OnApplicationBootstrap {
 
     try {
       decoded = this.jwtService.verify(accessToken);
-    } catch (e) {
+    } catch {
       throwGqlError('401', 'Unauthorized');
     }
 
@@ -302,7 +280,6 @@ export class GraphqlService implements OnApplicationBootstrap {
       (handler: any) => handler.path === 'GQL_QUERY',
     );
 
-    // Trả về context đã "đầy đủ" thông tin
     return {
       matchedRoute: currentRoute,
       user,

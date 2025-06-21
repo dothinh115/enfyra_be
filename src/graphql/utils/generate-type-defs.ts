@@ -1,3 +1,5 @@
+import { EntityMetadata } from 'typeorm';
+
 function mapColumnTypeToGraphQL(type: string): string {
   const map: Record<string, string> = {
     int: 'Int',
@@ -21,9 +23,11 @@ function mapColumnTypeToGraphQL(type: string): string {
   return map[type] || 'String';
 }
 
-export function generateTypeDefsFromTables(tables: any[]): string {
+export function generateTypeDefsFromTables(
+  tables: any[],
+  metadatas: EntityMetadata[],
+): string {
   let typeDefs = '';
-
   const typeNames: string[] = [];
 
   for (const table of tables) {
@@ -32,12 +36,16 @@ export function generateTypeDefsFromTables(tables: any[]): string {
 
     typeDefs += `\ntype ${typeName} {\n`;
 
+    // Lấy đúng EntityMetadata
+    const entityMeta = metadatas.find((meta) => meta.tableName === table.name);
+    if (!entityMeta) continue;
+
+    // Scalar columns
     for (const column of table.columns || []) {
       const gqlType = mapColumnTypeToGraphQL(column.type);
       const fieldName = column.name;
       const isRequired = !column.isNullable ? '!' : '';
 
-      // Primary key -> ID
       const finalType =
         column.isPrimary && gqlType === 'ID'
           ? 'ID!'
@@ -46,27 +54,27 @@ export function generateTypeDefsFromTables(tables: any[]): string {
       typeDefs += `  ${fieldName}: ${finalType}\n`;
     }
 
-    for (const rel of table.relations || []) {
+    // Relations → lấy từ entityMeta.relations
+    for (const rel of entityMeta.relations) {
       const relName = rel.propertyName;
-      const targetType = rel.targetTable?.name || 'UNKNOWN';
+      const targetType = rel.inverseEntityMetadata?.tableName || 'UNKNOWN';
+      const isArray = rel.isOneToMany || rel.isManyToMany; // chính xác hơn là isArray relation
 
-      if (['many-to-one', 'one-to-one'].includes(rel.type)) {
-        typeDefs += `  ${relName}: ${targetType}\n`;
-      } else if (['one-to-many', 'many-to-many'].includes(rel.type)) {
+      if (isArray) {
         typeDefs += `  ${relName}: [${targetType}!]!\n`;
+      } else {
+        typeDefs += `  ${relName}: ${targetType}\n`;
       }
     }
 
     typeDefs += `}\n`;
   }
 
-  // Build union DynamicType
   const unionDef =
     typeNames.length > 0
       ? `\nunion DynamicType = ${typeNames.join(' | ')}\n`
       : '';
 
-  // MetaResult
   const metaResultDef = `
 type MetaResult {
   totalCount: Int
@@ -75,7 +83,6 @@ type MetaResult {
 }
 `;
 
-  // DynamicResolverResult
   const dynamicResolverResultDef = `
 type DynamicResolverResult {
   data: [DynamicType!]!
@@ -83,7 +90,6 @@ type DynamicResolverResult {
 }
 `;
 
-  // Query
   const queryDef = `
 type Query {
   dynamicResolver(

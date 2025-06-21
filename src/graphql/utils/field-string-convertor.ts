@@ -1,20 +1,35 @@
-export function convertFieldNodesToFieldPicker(info: any): string[] {
-  const selections = info.fieldNodes?.[0]?.selectionSet?.selections || [];
+export function convertFieldNodesToFieldPicker(
+  selections: any[],
+  parentPath: string[] = [],
+): string[] {
+  const fields: string[] = [];
 
-  // Tìm InlineFragment → dynamic type
-  const fragment = selections.find((sel) => sel.kind === 'InlineFragment');
+  for (const selection of selections) {
+    if (selection.kind === 'Field') {
+      const name = selection.name?.value;
+      if (!name) continue;
 
-  if (!fragment) return [];
+      const currentPath = [...parentPath, name];
 
-  const dataField = fragment.selectionSet.selections.find(
-    (sel) => sel.kind === 'Field' && sel.name.value === 'data',
-  );
+      if (selection.selectionSet?.selections?.length > 0) {
+        const subFields = convertFieldNodesToFieldPicker(
+          selection.selectionSet.selections,
+          currentPath,
+        );
+        fields.push(...subFields);
+      } else {
+        fields.push(currentPath.join('.'));
+      }
+    }
 
-  if (!dataField) return [];
+    if (selection.kind === 'InlineFragment') {
+      const subFields = convertFieldNodesToFieldPicker(
+        selection.selectionSet?.selections || [],
+        parentPath,
+      );
+      fields.push(...subFields);
+    }
+  }
 
-  const fieldSelections = dataField.selectionSet?.selections || [];
-
-  return fieldSelections
-    .filter((sel) => sel.kind === 'Field')
-    .map((sel) => sel.name.value);
+  return fields;
 }
