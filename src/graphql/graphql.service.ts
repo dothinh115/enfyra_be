@@ -23,6 +23,7 @@ import { QueryBuilderService } from '../query-builder/query-builder.service';
 import { convertFieldNodesToFieldPicker } from './utils/field-string-convertor';
 import * as vm from 'vm';
 import { findMainTableName } from './utils/find-table-name';
+import e from 'express';
 
 @Injectable()
 export class GraphqlService implements OnApplicationBootstrap {
@@ -113,8 +114,6 @@ export class GraphqlService implements OnApplicationBootstrap {
           const fieldPicker = fullFieldPicker
             .filter((f) => f.startsWith('data.'))
             .map((f) => f.replace(/^data\./, ''));
-
-          console.log('fieldPicker:', fieldPicker);
 
           const dynamicFindEntries = await Promise.all(
             [mainTable, ...targetTables]?.map(async (table) => {
@@ -244,10 +243,6 @@ export class GraphqlService implements OnApplicationBootstrap {
       (route) => route.path === '/' + mainTableName,
     );
 
-    if (!currentRoute?.publishedMethods?.includes('GQL_QUERY')) {
-      throwGqlError('404', 'NotFound');
-    }
-
     const accessToken =
       context.request?.headers?.get('authorization')?.split('Bearer ')[1] || '';
     let decoded: any;
@@ -264,17 +259,7 @@ export class GraphqlService implements OnApplicationBootstrap {
       relations: ['role'],
     });
 
-    if (!user) {
-      throwGqlError('401', 'Invalid user');
-    }
-
-    const canPass = currentRoute.routePermissions?.find(
-      (permission: any) => permission.role.id === user.role.id,
-    );
-
-    if (!canPass) {
-      throwGqlError('403', 'Not allowed');
-    }
+    this.canPass(currentRoute, user);
 
     const handler = currentRoute.handlers?.find(
       (handler: any) => handler.path === 'GQL_QUERY',
@@ -302,5 +287,28 @@ export class GraphqlService implements OnApplicationBootstrap {
 
   getYogaInstance() {
     return this.yogaApp;
+  }
+
+  canPass(currentRoute: any, user: any) {
+    const isPublished = currentRoute.publishedMethods?.includes('GQL_QUERY');
+    if (!isPublished) {
+      throwGqlError('404', 'NotFound');
+    }
+    if (isPublished) {
+      return true;
+    }
+
+    if (!user) {
+      throwGqlError('401', 'Invalid user');
+    }
+
+    const canPass =
+      currentRoute.routePermissions?.find(
+        (permission: any) => permission.role.id === user.role.id,
+      ) || user.isRootAdmin;
+
+    if (!canPass) {
+      throwGqlError('403', 'Not allowed');
+    }
   }
 }
