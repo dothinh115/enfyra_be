@@ -10,6 +10,7 @@ export class DynamicRepoService {
   private page: number;
   private limit: number;
   private meta: 'filterCount' | 'totalCount' | '*';
+  private aggregate: any;
   private sort: string | string[];
   private tableName: string;
   private queryBuilderService: QueryBuilderService;
@@ -27,6 +28,7 @@ export class DynamicRepoService {
     tableHandlerService,
     meta,
     sort,
+    aggregate = {},
   }: {
     fields: string;
     filter: any;
@@ -38,6 +40,7 @@ export class DynamicRepoService {
     tableHandlerService: TableHandlerService;
     meta?: 'filterCount' | 'totalCount' | '*' | undefined;
     sort?: string | string[];
+    aggregate: any;
   }) {
     this.fields = fields;
     this.filter = filter;
@@ -49,6 +52,7 @@ export class DynamicRepoService {
     this.tableHandlerService = tableHandlerService;
     this.meta = meta;
     this.sort = sort;
+    this.aggregate = aggregate;
   }
 
   async init() {
@@ -56,7 +60,7 @@ export class DynamicRepoService {
   }
 
   async find(id?: string | number) {
-    return await this.queryBuilderService.find({
+    const result = await this.queryBuilderService.find({
       fields: this.fields,
       filter: id ? { ...this.filter, id: { _eq: id } } : this.filter,
       page: this.page,
@@ -64,7 +68,9 @@ export class DynamicRepoService {
       tableName: this.tableName,
       meta: this.meta,
       sort: this.sort,
+      aggregate: this.aggregate,
     });
+    return result;
   }
 
   async create(body: any) {

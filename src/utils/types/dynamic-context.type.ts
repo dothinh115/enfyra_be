@@ -19,3 +19,20 @@ export type TDynamicContext = {
   };
   $result?: any;
 };
+
+export type TGqlDynamicContext = {
+  $repos: any;
+  $args: any;
+  $user: any;
+  $helpers: {
+    [key: string]: any;
+  };
+  $req: Request & {
+    [key: string]: any;
+  };
+  $errors: {
+    throw400: (msg: string) => never;
+    throw401: () => never;
+  };
+  $result?: any;
+};

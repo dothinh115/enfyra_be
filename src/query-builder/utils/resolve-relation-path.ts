@@ -30,3 +30,32 @@ export function resolveRelationPath(
     select.add(`${aliasSafe}.${idCol}`); // dùng aliasSafe
   }
 }
+
+export function resolveAllRelationPathsInFilter(
+  filter: any,
+  path: string[],
+  meta: EntityMetadata,
+  rootAlias: string,
+  aliasMap: Map<string, string>,
+  joinSet: Set<string>,
+  select: Set<string>,
+) {
+  if (!filter || typeof filter !== 'object') return;
+
+  for (const key of Object.keys(filter)) {
+    const rel = meta.relations.find((r) => r.propertyName === key);
+    if (rel) {
+      const newPath = [...path, key];
+      resolveRelationPath(newPath, meta, rootAlias, aliasMap, joinSet, select);
+      resolveAllRelationPathsInFilter(
+        filter[key],
+        newPath,
+        rel.inverseEntityMetadata,
+        rootAlias,
+        aliasMap,
+        joinSet,
+        select,
+      );
+    }
+  }
+}

@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import { buildToJs } from './auto/utils/build-helper';
+import { GraphqlService } from './graphql/graphql.service';
 
 async function bootstrap() {
   const logger = new Logger('Main');
@@ -25,6 +26,12 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(AppModule);
+  const graphqlService = app.get(GraphqlService);
+  const expressApp = app.getHttpAdapter().getInstance();
+
+  expressApp.use('/graphql', (req, res, next) => {
+    return graphqlService.getYogaInstance()(req, res, next);
+  });
   const configService = app.get(ConfigService);
 
   app.use(
@@ -41,8 +48,6 @@ async function bootstrap() {
   );
   app.use(express.json());
 
-  const httpAdapter = app.getHttpAdapter();
-  const expressApp = httpAdapter.getInstance();
   expressApp.set('query parser', (str) => qs.parse(str, { depth: 10 }));
 
   app.useGlobalPipes(

@@ -486,12 +486,22 @@ export class QueryBuilderService {
       const metaObj: Record<string, any> = obj.meta || {};
 
       if (meta === 'filterCount' || meta === '*') {
-        const filterQb = repo.createQueryBuilder(tableName);
-        for (const join of allJoins) {
-          filterQb.leftJoin(join.path, join.alias);
-        }
-        filterQb.where(extract.where).setParameters(extract.params);
-        metaObj.filterCount = await filterQb.getCount();
+        const currentMeta = this.dataSourceService
+          .getDataSource()
+          .getMetadata(tableName);
+        const countQb = qb
+          .clone()
+          .select(
+            'COUNT(DISTINCT ' +
+              tableName +
+              '.' +
+              currentMeta.primaryColumns[0].propertyName +
+              ')',
+            'cnt',
+          );
+
+        const countResult = await countQb.getRawOne();
+        metaObj.filterCount = Number(countResult?.cnt ?? 0);
       }
 
       if (meta === 'totalCount' || meta === '*') {

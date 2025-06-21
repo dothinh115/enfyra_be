@@ -13,7 +13,6 @@ export class AuthService {
   constructor(
     private bcryptService: BcryptService,
     private configService: ConfigService,
-
     private jwtService: JwtService,
     private dataSourceService: DataSourceService,
   ) {}

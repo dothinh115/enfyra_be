@@ -30,6 +30,9 @@ export class MeService {
       ...(req.query.sort && {
         sort: req.query.sort as string,
       }),
+      ...(req.query.aggregate && {
+        aggregate: req.query.aggregate,
+      }),
     });
     await repo.init();
     return repo.find(req.user.id);
@@ -51,6 +54,9 @@ export class MeService {
       }),
       ...(req.query.sort && {
         sort: req.query.sort as string,
+      }),
+      ...(req.query.aggregate && {
+        aggregate: req.query.aggregate,
       }),
     });
     return await repo.update(req.user.id, body);

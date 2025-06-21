@@ -31,6 +31,7 @@ import { MetadataSyncService } from './metadata/metadata-sync.service';
 import { SchemaHistoryService } from './metadata/schema-history.service';
 import { BootstrapModule } from './bootstrap/bootstrap.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
+import { GraphqlModule } from './graphql/graphql.module';
 
 @Global()
 @Module({
@@ -67,6 +68,7 @@ import { RedisModule } from '@liaoliaots/nestjs-redis';
     MeModule,
     DynamicModule,
     BootstrapModule,
+    GraphqlModule,
   ],
   providers: [
     RabbitMQRegistry,

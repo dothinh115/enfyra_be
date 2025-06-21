@@ -1,10 +1,10 @@
 import {
   CanActivate,
   ExecutionContext,
-  Inject,
   Injectable,
   UnauthorizedException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY, GLOBAL_SETTINGS_KEY } from '../utils/constant';
@@ -26,6 +26,7 @@ export class RoleGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
+
     if (isPublic || req.routeData?.isPublished) return true;
 
     if (!req.user) throw new UnauthorizedException();
@@ -42,12 +43,15 @@ export class RoleGuard implements CanActivate {
     }
 
     const action = methodMap[req.method];
+
     if (!action)
       throw new NotFoundException(`Không có quyền cho method ${req.method}`);
 
-    const rolePermissions = req.user.role?.permissions || [];
-    if (!rolePermissions.includes(action)) {
-      throw new UnauthorizedException(`Bạn không có quyền '${action}'`);
+    const canPass = req.routeData.routePermissions.find(
+      (permission: any) => permission.role.id === req.user.role.id,
+    );
+    if (!canPass) {
+      throw new ForbiddenException();
     }
 
     return true;
