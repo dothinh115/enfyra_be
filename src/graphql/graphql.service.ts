@@ -26,7 +26,7 @@ import { findMainTableName } from './utils/find-table-name';
 import e from 'express';
 
 @Injectable()
-export class GraphqlService implements OnApplicationBootstrap {
+export class GraphqlService {
   constructor(
     private dataSourceService: DataSourceService,
     private redisLockService: RedisLockService,
@@ -36,10 +36,6 @@ export class GraphqlService implements OnApplicationBootstrap {
   ) {}
 
   private yogaApp: ReturnType<typeof createYoga>;
-
-  async onApplicationBootstrap() {
-    await this.reloadSchema();
-  }
 
   private async pullMetadataFromDb(): Promise<any[]> {
     const dataSource = this.dataSourceService.getDataSource();

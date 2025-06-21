@@ -13,6 +13,7 @@ import { RedisPubSubService } from '../redis-pubsub/redis-pubsub.service';
 import { CommonService } from '../common/common.service';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
 import { RedisLockService } from '../common/redis-lock.service';
+import { GraphqlService } from '../graphql/graphql.service';
 
 @Injectable()
 export class SchemaReloadService {
@@ -29,6 +30,7 @@ export class SchemaReloadService {
     @Inject(forwardRef(() => MetadataSyncService))
     private metadataSyncService: MetadataSyncService,
     private redisLockService: RedisLockService,
+    private graphqlService: GraphqlService,
   ) {
     this.sourceInstanceId = uuidv4();
     this.logger.log(`Khởi tạo với sourceInstanceId: ${this.sourceInstanceId}`);
@@ -75,6 +77,7 @@ export class SchemaReloadService {
       await this.commonService.delay(Math.random() * 300 + 300);
       this.logger.log('Cùng node, chỉ reload lại DataSource');
       await this.dataSourceService.reloadDataSource();
+      await this.graphqlService.reloadSchema();
       this.schemaStateService.setVersion(newestSchema['id']);
       this.logger.log(
         `Reload DataSource xong, set version = ${newestSchema['id']}`,
@@ -113,6 +116,7 @@ export class SchemaReloadService {
 
     this.logger.log('Lock đã bị xoá, tiến hành reload DataSource');
     await this.dataSourceService.reloadDataSource();
+    await this.graphqlService.reloadSchema();
     this.schemaStateService.setVersion(newestSchema['id']);
     this.logger.log(`Đã reload xong, set version = ${newestSchema['id']}`);
   }

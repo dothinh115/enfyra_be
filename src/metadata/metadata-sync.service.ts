@@ -8,10 +8,9 @@ import {
   runMigration,
 } from '../auto/utils/migration-helper';
 import { SchemaHistoryService } from './schema-history.service';
-import { SCHEMA_LOCK_EVENT_KEY } from '../utils/constant';
 import { DataSourceService } from '../data-source/data-source.service';
 import { clearOldEntitiesJs } from './utils/clear-old-entities';
-import { RedisLockService } from '../common/redis-lock.service';
+import { GraphqlService } from '../graphql/graphql.service';
 
 @Injectable()
 export class MetadataSyncService {
@@ -22,7 +21,7 @@ export class MetadataSyncService {
     private autoService: AutoService,
     private schemaHistoryService: SchemaHistoryService,
     private dataSourceService: DataSourceService,
-    private redisLockService: RedisLockService,
+    private graphqlService: GraphqlService,
   ) {}
 
   async pullMetadataFromDb() {
@@ -94,6 +93,7 @@ export class MetadataSyncService {
       generateMigrationFile();
       runMigration();
       await this.dataSourceService.reloadDataSource();
+      await this.graphqlService.reloadSchema();
       const version = await this.schemaHistoryService.backup();
       return version;
     } catch (err) {

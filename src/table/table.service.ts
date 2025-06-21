@@ -3,8 +3,6 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
 import { SchemaReloadService } from '../schema/schema-reload.service';
-import { RedisLockService } from '../common/redis-lock.service';
-import { SCHEMA_LOCK_EVENT_KEY } from '../utils/constant';
 import { CommonService } from '../common/common.service';
 
 @Injectable()
@@ -15,7 +13,6 @@ export class TableHandlerService {
     private dataSourceService: DataSourceService,
     private metadataSyncService: MetadataSyncService,
     private schemaReloadService: SchemaReloadService,
-    private redisLockService: RedisLockService,
     private commonService: CommonService,
   ) {}
 
