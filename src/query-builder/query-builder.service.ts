@@ -242,51 +242,23 @@ export class QueryBuilderService {
       for (const rawField of fields) {
         const parts = rawField.split('.');
         const isWildcard = parts.at(-1) === '*';
-        const isRelationOnly = parts.length === 1;
-        const relationExists = rootMeta.relations.some(
-          (r) => r.propertyName === parts[0],
-        );
 
-        const pathToEntity = isWildcard
-          ? parts.slice(0, -1)
-          : isRelationOnly && relationExists
-            ? parts
-            : parts.slice(0, -1);
+        for (let depth = 1; depth <= parts.length; depth++) {
+          const pathToEntity = parts.slice(0, depth - 1);
+          const currentField = parts[depth - 1];
 
-        if (pathToEntity.length) {
-          resolveRelationPath(
-            pathToEntity,
-            rootMeta,
-            rootAlias,
-            aliasMap,
-            joinSet,
-            select,
+          const currentMeta = this.getMetadataByPath(pathToEntity, rootMeta);
+          if (!currentMeta) break;
+
+          const alias = aliasMap.get(pathToEntity.join('.')) || rootAlias;
+
+          const rel = currentMeta.relations.find(
+            (r) => r.propertyName === currentField,
           );
-        }
 
-        const alias = aliasMap.get(pathToEntity.join('.')) || rootAlias;
-
-        if (isWildcard) {
-          const targetMeta = this.getMetadataByPath(pathToEntity, rootMeta);
-          if (targetMeta) {
-            resolveRelationPath(
-              pathToEntity,
-              rootMeta,
-              rootAlias,
-              aliasMap,
-              joinSet,
-              select,
-            );
-
-            selectAllFieldsForEntity(targetMeta, pathToEntity, 1);
-          }
-        } else if (isRelationOnly && relationExists) {
-          const rel = rootMeta.relations.find(
-            (r) => r.propertyName === parts[0],
-          );
           if (rel) {
             resolveRelationPath(
-              parts,
+              [...pathToEntity, currentField],
               rootMeta,
               rootAlias,
               aliasMap,
@@ -294,8 +266,30 @@ export class QueryBuilderService {
               select,
             );
           }
-        } else {
-          select.add(`${alias}.${parts.at(-1)}`);
+
+          if (depth === parts.length) {
+            if (isWildcard) {
+              const targetMeta = this.getMetadataByPath(
+                parts.slice(0, -1),
+                rootMeta,
+              );
+              if (targetMeta) {
+                selectAllFieldsForEntity(targetMeta, parts.slice(0, -1), 1);
+              }
+            } else if (rel) {
+              const relAlias = aliasMap.get(
+                [...pathToEntity, currentField].join('.'),
+              );
+              const idCol =
+                rel.inverseEntityMetadata.primaryColumns[0]?.propertyName ||
+                'id';
+              if (relAlias) {
+                select.add(`${relAlias}.${idCol}`);
+              }
+            } else {
+              select.add(`${alias}.${currentField}`);
+            }
+          }
         }
       }
     }
