@@ -1,8 +1,9 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
-  OnApplicationBootstrap,
   UnauthorizedException,
 } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
@@ -23,7 +24,6 @@ import { QueryBuilderService } from '../query-builder/query-builder.service';
 import { convertFieldNodesToFieldPicker } from './utils/field-string-convertor';
 import * as vm from 'vm';
 import { findMainTableName } from './utils/find-table-name';
-import e from 'express';
 
 @Injectable()
 export class GraphqlService {
@@ -31,6 +31,7 @@ export class GraphqlService {
     private dataSourceService: DataSourceService,
     private redisLockService: RedisLockService,
     private jwtService: JwtService,
+    @Inject(forwardRef(() => TableHandlerService))
     private tableHandlerService: TableHandlerService,
     private queryBuilderService: QueryBuilderService,
   ) {}
