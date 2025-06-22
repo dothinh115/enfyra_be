@@ -70,7 +70,6 @@ export class DynamicRepoService {
       sort: this.sort,
       aggregate: this.aggregate,
     });
-    console.log(result);
     return result;
   }
 

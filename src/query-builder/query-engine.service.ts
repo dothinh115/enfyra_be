@@ -28,10 +28,10 @@ export class QueryEngine {
     sort?: string | string[];
     page?: number;
     limit?: number;
-    meta?: 'totalCount' | 'filterCount' | '*';
+    meta?: string;
     aggregate?: any;
   }): Promise<any> {
-    const { tableName, fields, filter, sort, page, limit } = options;
+    const { tableName, fields, filter, sort, page, limit, meta } = options;
     const dataSource = this.dataSourceService.getDataSource();
     const metaData = dataSource.getMetadata(tableName);
 
@@ -60,7 +60,7 @@ export class QueryEngine {
       );
     }
 
-    qb.select([...selectArr]); // Nếu người dùng chọn rõ fields thì giữ nguyên
+    qb.select([...selectArr]);
 
     if (parts.length > 0) {
       qb.where(
@@ -76,27 +76,68 @@ export class QueryEngine {
       );
     }
 
-    for (const sort of sortArr) {
-      qb.addOrderBy(`${sort.alias}.${sort.field}`, sort.direction);
-    }
+    // for (const sort of sortArr) {
+    //   qb.addOrderBy(`${sort.alias}.${sort.field}`, sort.direction);
+    // }
 
+    // === Xử lý meta ===
+    const metaParts = (meta || '').split(',').map((x) => x.trim());
     let totalCount = 0;
-    if (options.meta === 'totalCount' || options.meta === '*') {
-      totalCount = await qb.getCount();
+    let filterCount = 0;
+
+    // totalCount = full table
+    if (metaParts.includes('totalCount') || metaParts.includes('*')) {
+      totalCount = await dataSource
+        .createQueryBuilder(metaData.target, tableName)
+        .getCount();
       this.log.push(`+ totalCount = ${totalCount}`);
     }
 
+    // filterCount = sau filter
+    if (metaParts.includes('filterCount') || metaParts.includes('*')) {
+      const filterQb = dataSource.createQueryBuilder(
+        metaData.target,
+        tableName,
+      );
+
+      if (parts.length > 0) {
+        filterQb.where(
+          new Brackets((qb2) => {
+            for (const p of parts) {
+              if (p.operator === 'AND') {
+                qb2.andWhere(p.sql, p.params);
+              } else {
+                qb2.orWhere(p.sql, p.params);
+              }
+            }
+          }),
+        );
+      }
+
+      filterCount = await filterQb.getCount();
+      this.log.push(`+ filterCount = ${filterCount}`);
+    }
+
+    // === paging ===
     if (limit) qb.take(limit);
     if (page && limit) qb.skip((page - 1) * limit);
 
-    const data = await qb.getMany();
+    const rows = await qb.getMany();
 
     return {
-      data,
-      totalCount,
-      log: this.log,
-      // sql: qb.getSql(),
-      selectArr,
+      data: rows,
+      ...(meta && {
+        meta: {
+          totalCount,
+          filterCount,
+        },
+      }),
+      // debug: {
+      //   sql: qb.getSql(),
+      //   select: selectArr,
+      //   join: joinArr,
+      //   log: this.log,
+      // },
     };
   }
 
@@ -142,7 +183,9 @@ export class QueryEngine {
 
         if (found.kind === 'relation') {
           parentAlias = currentAlias;
-          currentAlias = `${currentAlias}_${segment}`;
+
+          // Sửa chỗ này — alias phụ thuộc vào path
+          currentAlias = `${rootAlias}_${path.slice(0, i + 1).join('_')}`;
 
           const propertyPath = segment;
 
@@ -255,6 +298,7 @@ export class QueryEngine {
 
       for (const rel of res.lastMeta.relations) {
         const relPath = [...path, rel.propertyName];
+
         const childResult = addJoin(relPath);
         if (childResult) {
           selectSet.add(`${childResult.alias}.id`);
