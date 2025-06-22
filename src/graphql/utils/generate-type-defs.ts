@@ -28,11 +28,11 @@ export function generateTypeDefsFromTables(
   metadatas: EntityMetadata[],
 ): string {
   let typeDefs = '';
-  const typeNames: string[] = [];
+  let queryDefs = '';
+  let resultDefs = '';
 
   for (const table of tables) {
     const typeName = table.name;
-    typeNames.push(typeName);
 
     typeDefs += `\ntype ${typeName} {\n`;
 
@@ -58,7 +58,7 @@ export function generateTypeDefsFromTables(
     for (const rel of entityMeta.relations) {
       const relName = rel.propertyName;
       const targetType = rel.inverseEntityMetadata?.tableName || 'UNKNOWN';
-      const isArray = rel.isOneToMany || rel.isManyToMany; // chính xác hơn là isArray relation
+      const isArray = rel.isOneToMany || rel.isManyToMany;
 
       if (isArray) {
         typeDefs += `  ${relName}: [${targetType}!]!\n`;
@@ -68,12 +68,23 @@ export function generateTypeDefsFromTables(
     }
 
     typeDefs += `}\n`;
-  }
 
-  const unionDef =
-    typeNames.length > 0
-      ? `\nunion DynamicType = ${typeNames.join(' | ')}\n`
-      : '';
+    // Generate XXXResult type
+    resultDefs += `
+type ${typeName}Result {
+  data: [${typeName}!]!
+  meta: MetaResult
+}
+`;
+
+    // Generate Query field
+    queryDefs += `  ${typeName}(
+    filter: JSON,
+    sort: [String!],
+    page: Int,
+    limit: Int
+  ): ${typeName}Result!\n`;
+  }
 
   const metaResultDef = `
 type MetaResult {
@@ -83,31 +94,15 @@ type MetaResult {
 }
 `;
 
-  const dynamicResolverResultDef = `
-type DynamicResolverResult {
-  data: [DynamicType!]!
-  meta: MetaResult
-}
-`;
-
-  const queryDef = `
-type Query {
-  dynamicResolver(
-    filter: JSON,
-    sort: [String!],
-    page: Int,
-    limit: Int
-  ): DynamicResolverResult!
-}
-`;
-
   const fullTypeDefs = `
 scalar JSON
 ${typeDefs}
-${unionDef}
+${resultDefs}
 ${metaResultDef}
-${dynamicResolverResultDef}
-${queryDef}
+
+type Query {
+${queryDefs}
+}
 `;
 
   return fullTypeDefs;
