@@ -20,10 +20,10 @@ import { JwtService } from '@nestjs/jwt';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TGqlDynamicContext } from '../utils/types/dynamic-context.type';
 import { TableHandlerService } from '../table/table.service';
-import { QueryBuilderService } from '../query-builder/query-builder.service';
 import { convertFieldNodesToFieldPicker } from './utils/field-string-convertor';
 import * as vm from 'vm';
 import { findMainTableName } from './utils/find-table-name';
+import { QueryEngine } from '../query-builder/query-engine.service';
 
 @Injectable()
 export class GraphqlService {
@@ -33,7 +33,7 @@ export class GraphqlService {
     private jwtService: JwtService,
     @Inject(forwardRef(() => TableHandlerService))
     private tableHandlerService: TableHandlerService,
-    private queryBuilderService: QueryBuilderService,
+    private queryEngine: QueryEngine,
   ) {}
 
   private yogaApp: ReturnType<typeof createYoga>;
@@ -122,7 +122,7 @@ export class GraphqlService {
                 limit: Number(args.limit ?? 10),
                 tableHandlerService: this.tableHandlerService,
                 dataSourceService: this.dataSourceService,
-                queryBuilderService: this.queryBuilderService,
+                queryEngine: this.queryEngine,
                 ...(args.meta && { meta: args.meta }),
                 ...(args.sort && { sort: args.sort }),
                 ...(args.aggregate && { aggregate: args.aggregate }),

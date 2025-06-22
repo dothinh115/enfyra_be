@@ -3,14 +3,14 @@ import { Request } from 'express';
 import { DataSourceService } from '../data-source/data-source.service';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TableHandlerService } from '../table/table.service';
-import { QueryBuilderService } from '../query-builder/query-builder.service';
+import { QueryEngine } from '../query-builder/query-engine.service';
 
 @Injectable()
 export class MeService {
   constructor(
     private dataSourceService: DataSourceService,
     private tableHandlerService: TableHandlerService,
-    private queryBuilderService: QueryBuilderService,
+    private queryEngine: QueryEngine,
   ) {}
 
   async find(req: Request & { user: any }) {
@@ -23,7 +23,7 @@ export class MeService {
       limit: Number(req.query.limit ?? 10),
       tableHandlerService: this.tableHandlerService,
       dataSourceService: this.dataSourceService,
-      queryBuilderService: this.queryBuilderService,
+      queryEngine: this.queryEngine,
       ...(req.query.meta && {
         meta: req.query.meta as any,
       }),
@@ -48,7 +48,7 @@ export class MeService {
       limit: Number(req.query.limit ?? 10),
       tableHandlerService: this.tableHandlerService,
       dataSourceService: this.dataSourceService,
-      queryBuilderService: this.queryBuilderService,
+      queryEngine: this.queryEngine,
       ...(req.query.meta && {
         meta: req.query.meta as any,
       }),

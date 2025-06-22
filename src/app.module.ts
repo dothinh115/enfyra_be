@@ -24,7 +24,6 @@ import { RedisPubSubService } from './redis-pubsub/redis-pubsub.service';
 import { SchemaStateService } from './schema/schema-state.service';
 import { SchemaLockGuard } from './guard/schema-lock.guard';
 import { SqlFunctionService } from './sql/sql-function.service';
-import { QueryBuilderModule } from './query-builder/query-builder.module';
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { SystemRecordProtectGuard } from './guard/system-record-protect.guard';
 import { MetadataSyncService } from './metadata/metadata-sync.service';
@@ -32,6 +31,7 @@ import { SchemaHistoryService } from './metadata/schema-history.service';
 import { BootstrapModule } from './bootstrap/bootstrap.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { GraphqlModule } from './graphql/graphql.module';
+import { QueryEngineModule } from './query-builder/query-engine.module';
 
 @Global()
 @Module({
@@ -63,7 +63,7 @@ import { GraphqlModule } from './graphql/graphql.module';
         },
       }),
     }),
-    QueryBuilderModule,
+    QueryEngineModule,
     AuthModule,
     MeModule,
     DynamicModule,

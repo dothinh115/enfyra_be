@@ -11,9 +11,9 @@ import { JwtService } from '@nestjs/jwt';
 import { TableHandlerService } from '../table/table.service';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
-import { QueryBuilderService } from '../query-builder/query-builder.service';
 import { RedisLockService } from '../common/redis-lock.service';
 import { loadAndCacheRoutes } from './utils/load-and-cache-routes';
+import { QueryEngine } from '../query-builder/query-engine.service';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
@@ -21,7 +21,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private commonService: CommonService,
     private dataSourceService: DataSourceService,
     private jwtService: JwtService,
-    private queryBuilderService: QueryBuilderService,
+    private queryEngine: QueryEngine,
     private tableHandlerService: TableHandlerService,
     private redisLockService: RedisLockService,
   ) {}
@@ -50,7 +50,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
               limit: Number(req.query.limit ?? 10),
               tableHandlerService: this.tableHandlerService,
               dataSourceService: this.dataSourceService,
-              queryBuilderService: this.queryBuilderService,
+              queryEngine: this.queryEngine,
               ...(req.query.meta && {
                 meta: req.query.meta,
               }),

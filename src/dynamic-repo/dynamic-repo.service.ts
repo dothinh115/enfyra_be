@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { Repository } from 'typeorm';
 import { TableHandlerService } from '../table/table.service';
-import { QueryBuilderService } from '../query-builder/query-builder.service';
+import { QueryEngine } from '../query-builder/query-engine.service';
 
 export class DynamicRepoService {
   private fields: string;
@@ -13,7 +13,7 @@ export class DynamicRepoService {
   private aggregate: any;
   private sort: string | string[];
   private tableName: string;
-  private queryBuilderService: QueryBuilderService;
+  private queryEngine: QueryEngine;
   private dataSourceService: DataSourceService;
   private repo: Repository<any>;
   private tableHandlerService: TableHandlerService;
@@ -23,7 +23,7 @@ export class DynamicRepoService {
     page = 1,
     limit = 10,
     tableName,
-    queryBuilderService,
+    queryEngine,
     dataSourceService,
     tableHandlerService,
     meta,
@@ -35,7 +35,7 @@ export class DynamicRepoService {
     page: number;
     limit: number;
     tableName: string;
-    queryBuilderService: QueryBuilderService;
+    queryEngine: QueryEngine;
     dataSourceService: DataSourceService;
     tableHandlerService: TableHandlerService;
     meta?: 'filterCount' | 'totalCount' | '*' | undefined;
@@ -47,7 +47,7 @@ export class DynamicRepoService {
     this.page = page;
     this.limit = limit;
     this.tableName = tableName;
-    this.queryBuilderService = queryBuilderService;
+    this.queryEngine = queryEngine;
     this.dataSourceService = dataSourceService;
     this.tableHandlerService = tableHandlerService;
     this.meta = meta;
@@ -60,7 +60,7 @@ export class DynamicRepoService {
   }
 
   async find(id?: string | number) {
-    const result = await this.queryBuilderService.find({
+    const result = await this.queryEngine.find({
       fields: this.fields,
       filter: id ? { ...this.filter, id: { _eq: id } } : this.filter,
       page: this.page,
@@ -70,6 +70,7 @@ export class DynamicRepoService {
       sort: this.sort,
       aggregate: this.aggregate,
     });
+    console.log(result);
     return result;
   }
 
