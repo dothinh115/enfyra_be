@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  OnApplicationBootstrap,
-  OnModuleInit,
-} from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { createYoga } from 'graphql-yoga';
 import { makeExecutableSchema } from '@graphql-tools/schema';
@@ -12,15 +8,11 @@ import { generateTypeDefsFromTables } from './utils/generate-type-defs';
 import { DynamicResolver } from './dynamic.resolver';
 
 @Injectable()
-export class GraphqlService implements OnApplicationBootstrap {
+export class GraphqlService {
   constructor(
     private dataSourceService: DataSourceService,
     private dynamicResolver: DynamicResolver,
   ) {}
-
-  async onApplicationBootstrap() {
-    await this.reloadSchema();
-  }
 
   private yogaApp: ReturnType<typeof createYoga>;
 
