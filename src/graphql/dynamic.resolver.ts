@@ -130,14 +130,7 @@ export class DynamicResolver {
         timeout: timeoutMs,
       });
 
-      const typeName = mainTable.name;
-      return {
-        data: result.data.map((row) => ({
-          ...row,
-          __typename: typeName,
-        })),
-        meta: result.meta || {},
-      };
+      return result;
     } catch (error) {
       if (
         error instanceof UnauthorizedException ||
