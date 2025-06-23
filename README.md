@@ -150,7 +150,6 @@ Client → REST Request → RouteDetectMiddleware → DynamicService.execute()
 | Method | Endpoint                | Mặc định      |
 | ------ | ----------------------- | ------------- |
 | GET    | `/table_definition`     | list + filter |
-| GET    | `/table_definition/:id` | get by id     |
 | POST   | `/table_definition`     | create        |
 | PATCH  | `/table_definition/:id` | update        |
 | DELETE | `/table_definition/:id` | delete        |
