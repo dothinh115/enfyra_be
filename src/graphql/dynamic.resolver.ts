@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  OnApplicationBootstrap,
   UnauthorizedException,
 } from '@nestjs/common';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
@@ -18,6 +19,7 @@ import { JwtService } from '@nestjs/jwt';
 import { DataSourceService } from '../data-source/data-source.service';
 import { loadAndCacheRoutes } from '../middleware/utils/load-and-cache-routes';
 import { GLOBAL_ROUTES_KEY } from '../utils/constant';
+import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
 
 @Injectable()
 export class DynamicResolver {
@@ -28,7 +30,9 @@ export class DynamicResolver {
     private redisLockService: RedisLockService,
     private jwtService: JwtService,
     private dataSourceService: DataSourceService,
+    private handlerExecutorService: HandlerExecutorService,
   ) {}
+
   async dynamicResolver(
     tableName: string,
     args: {
@@ -81,7 +85,7 @@ export class DynamicResolver {
 
     const dynamicFindMap = Object.fromEntries(dynamicFindEntries);
 
-    const vmCxt: TGqlDynamicContext = {
+    const handlerCtx: TGqlDynamicContext = {
       $errors: {
         throw400: (msg: string) => {
           throw new BadRequestException(msg);
@@ -100,12 +104,6 @@ export class DynamicResolver {
       $req: context.request,
     };
 
-    const timeoutMs = 3000;
-
-    const vmContext = vm.createContext({
-      ...vmCxt,
-    });
-
     try {
       const userHandler = handler?.trim();
       const defaultHandler = `return await $repos.main.find();`;
@@ -114,21 +112,20 @@ export class DynamicResolver {
         throw new BadRequestException('Không có handler tương ứng');
       }
 
-      const scriptCode = `
-              (async () => {
-                "use strict";
-                try {
-                  ${userHandler || defaultHandler}
-                } catch (err) {
-                  throw err;
-                }
-              })()
-            `;
+      const scriptCode = `return (async () => {
+    "use strict";
+    try {
+      ${userHandler || defaultHandler}
+    } catch (err) {
+      throw err;
+    }
+  })()`;
 
-      const script = new vm.Script(scriptCode);
-      const result = await script.runInContext(vmContext, {
-        timeout: timeoutMs,
-      });
+      const result = await this.handlerExecutorService.runHandler(
+        scriptCode,
+        handlerCtx,
+        5000,
+      );
 
       return result;
     } catch (error) {
@@ -166,19 +163,7 @@ export class DynamicResolver {
       context.request?.headers?.get('authorization')?.split('Bearer ')[1] || '';
     let decoded: any;
 
-    try {
-      decoded = this.jwtService.verify(accessToken);
-    } catch {
-      throwGqlError('401', 'Unauthorized');
-    }
-
-    const userRepo = this.dataSourceService.getRepository('user_definition');
-    const user: any = await userRepo.findOne({
-      where: { id: decoded.id },
-      relations: ['role'],
-    });
-
-    this.canPass(currentRoute, user);
+    const user = await this.canPass(currentRoute, accessToken);
 
     const handler = currentRoute.handlers?.find(
       (handler: any) => handler.path === 'GQL_QUERY',
@@ -194,7 +179,7 @@ export class DynamicResolver {
     };
   }
 
-  canPass(currentRoute: any, user: any) {
+  async canPass(currentRoute: any, accessToken: string) {
     const isEnabled = currentRoute.isEnabled;
     if (!isEnabled) {
       throwGqlError('404', 'NotFound');
@@ -202,8 +187,20 @@ export class DynamicResolver {
     const isPublished = currentRoute.publishedMethods?.includes('GQL_QUERY');
 
     if (isPublished) {
-      return true;
+      return undefined;
     }
+    let decoded;
+    try {
+      decoded = this.jwtService.verify(accessToken);
+    } catch {
+      throwGqlError('401', 'Unauthorized');
+    }
+
+    const userRepo = this.dataSourceService.getRepository('user_definition');
+    const user: any = await userRepo.findOne({
+      where: { id: decoded.id },
+      relations: ['role'],
+    });
 
     if (!user) {
       throwGqlError('401', 'Invalid user');
@@ -218,6 +215,6 @@ export class DynamicResolver {
       throwGqlError('403', 'Not allowed');
     }
 
-    return true;
+    return user;
   }
 }

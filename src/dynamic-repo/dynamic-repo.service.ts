@@ -59,10 +59,10 @@ export class DynamicRepoService {
     this.repo = this.dataSourceService.getRepository(this.tableName);
   }
 
-  async find(id?: string | number) {
+  async find({ where }: { where?: any }) {
     const result = await this.queryEngine.find({
       fields: this.fields,
-      filter: id ? { ...this.filter, id: { _eq: id } } : this.filter,
+      filter: where || this.filter,
       page: this.page,
       limit: this.limit,
       tableName: this.tableName,
@@ -79,7 +79,13 @@ export class DynamicRepoService {
       return await this.find(table.id);
     }
     const result: any = await this.repo.save(body);
-    return await this.find(result.id);
+    return await this.find({
+      where: {
+        id: {
+          _eq: result.id,
+        },
+      },
+    });
   }
 
   async update(id: string | number, body: any) {
@@ -95,7 +101,13 @@ export class DynamicRepoService {
     if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
     await this.repo.save(body);
 
-    return await this.find(id);
+    return await this.find({
+      where: {
+        id: {
+          _eq: exists.id,
+        },
+      },
+    });
   }
 
   async delete(id: string | number) {

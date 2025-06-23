@@ -4,7 +4,13 @@ import { Brackets, EntityMetadata } from 'typeorm';
 
 const OPERATORS = [
   '_eq',
+  '_neq',
+  '_gt',
+  '_gte',
+  '_lt',
+  '_lte',
   '_in',
+  '_not_in',
   '_between',
   '_not',
   '_is_null',
@@ -519,6 +525,26 @@ export class QueryEngine {
               param[paramKey] = parsedValue;
             } else if (key === '_in') {
               sql = `EXISTS (SELECT 1 FROM ${currentAlias} sub WHERE sub.${lastField} IN (:...${paramKey}))`;
+              param[paramKey] = Array.isArray(f[key])
+                ? f[key].map((v) => this.parseValue(fieldType, v))
+                : [this.parseValue(fieldType, f[key])];
+            } else if (key === '_neq') {
+              sql = `${currentAlias}.${lastField} != :${paramKey}`;
+              param[paramKey] = parsedValue;
+            } else if (key === '_gt') {
+              sql = `${currentAlias}.${lastField} > :${paramKey}`;
+              param[paramKey] = parsedValue;
+            } else if (key === '_gte') {
+              sql = `${currentAlias}.${lastField} >= :${paramKey}`;
+              param[paramKey] = parsedValue;
+            } else if (key === '_lt') {
+              sql = `${currentAlias}.${lastField} < :${paramKey}`;
+              param[paramKey] = parsedValue;
+            } else if (key === '_lte') {
+              sql = `${currentAlias}.${lastField} <= :${paramKey}`;
+              param[paramKey] = parsedValue;
+            } else if (key === '_not_in') {
+              sql = `${currentAlias}.${lastField} NOT IN (:...${paramKey})`;
               param[paramKey] = Array.isArray(f[key])
                 ? f[key].map((v) => this.parseValue(fieldType, v))
                 : [this.parseValue(fieldType, f[key])];

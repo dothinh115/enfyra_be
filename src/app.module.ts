@@ -32,6 +32,7 @@ import { BootstrapModule } from './bootstrap/bootstrap.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { GraphqlModule } from './graphql/graphql.module';
 import { QueryEngineModule } from './query-builder/query-engine.module';
+import { HandlerExecutorService } from './handler-executor/handler-executor.service';
 
 @Global()
 @Module({
@@ -80,6 +81,7 @@ import { QueryEngineModule } from './query-builder/query-engine.module';
     SqlFunctionService,
     MetadataSyncService,
     SchemaHistoryService,
+    HandlerExecutorService,
     { provide: APP_GUARD, useClass: SchemaLockGuard },
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
@@ -97,6 +99,7 @@ import { QueryEngineModule } from './query-builder/query-engine.module';
     RedisPubSubService,
     MetadataSyncService,
     SchemaHistoryService,
+    HandlerExecutorService,
   ],
 })
 export class AppModule implements NestModule {

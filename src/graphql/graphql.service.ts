@@ -8,12 +8,14 @@ import { generateTypeDefsFromTables } from './utils/generate-type-defs';
 import { DynamicResolver } from './dynamic.resolver';
 
 @Injectable()
-export class GraphqlService {
+export class GraphqlService implements OnApplicationBootstrap {
   constructor(
     private dataSourceService: DataSourceService,
     private dynamicResolver: DynamicResolver,
   ) {}
-
+  async onApplicationBootstrap() {
+    await this.reloadSchema();
+  }
   private yogaApp: ReturnType<typeof createYoga>;
 
   private async pullMetadataFromDb(): Promise<any[]> {
