@@ -14,12 +14,12 @@ Dynamiq là một nền tảng **backend động**, kết hợp giữa BaaS/AaaS
 
 ## ✨ Tính năng nổi bật
 
-✅ Schema động → sinh CRUD & GQL tự động  
-✅ Override logic dễ dàng qua JS/TS  
-✅ Dynamic REST + Dynamic GraphQL  
-✅ Multi-instance & auto-sync  
-✅ Snapshot / restore schema  
-✅ Permission per Query/Mutation (hiếm có)  
+✅ Schema động → sinh CRUD & GQL tự động\
+✅ Override logic dễ dàng qua JS/TS\
+✅ Dynamic REST + Dynamic GraphQL\
+✅ Multi-instance & auto-sync\
+✅ Snapshot / restore schema\
+✅ Permission per Query/Mutation (hiếm có)\
 ✅ UI tự động theo metadata
 
 ---
@@ -31,7 +31,7 @@ Dynamiq là một nền tảng **backend động**, kết hợp giữa BaaS/AaaS
 | GraphQL API                   | ✅ (queries, mutations, subs) | ✅          | ✅             | ✅            |
 | Permission per Query/Mutation | ✅                            | ⚠️ (plugin) | ❓             | ✅            |
 | Permission per field          | ✅                            | ✅          | ❓             | ❌ (chưa có)  |
-| Dynamic Logic (JS handler)    | ❌                            | ⚠️ plugin   | ✅?            | ✅ (cực mạnh) |
+| Dynamic Logic (JS handler)    | ❌                            | ⚠️ plugin   | ❌             | ✅ (cực mạnh) |
 | Multi-instance/auto-sync      | ❌                            | ❌          | ⚠️ có giới hạn | ✅            |
 
 ---
@@ -103,22 +103,21 @@ query {
 
 ### API `$repos.xxx` hiện tại:
 
-| Method                                  | Support hiện tại   |
-| --------------------------------------- | ------------------ |
-| `.find({ where })`                      | ✅ override filter |
-| `.create(body)`                         | ✅                 |
-| `.update(id, body)`                     | ✅                 |
-| `.delete(id)`                           | ✅                 |
-| `.count()`                              | ❌ (chưa có)       |
-| `.find() + custom where inside .find()` | ✅                 |
+| Method                                  | Support hiện tại   |     |
+| --------------------------------------- | ------------------ | --- |
+| `.find({ where })`                      | ✅ override filter |     |
+| `.create(body)`                         | ✅                 |     |
+| `.update(id, body)`                     | ✅                 |     |
+| `.delete(id)`                           | ✅                 |     |
+|                                         |                    |     |
+| `.find() + custom where inside .find()` | ✅                 |     |
 
 ---
 
-### Ví dụ override handler_code:
+### Ví dụ override handler_code (GQL):
 
 ```js
-// Nếu user không phải admin → chỉ thấy static = false
-if ($ctx.user.role !== 'admin') {
+if ($ctx.$user.role !== 'admin') {
   return await $repos.table_definition.find({
     where: {
       isStatic: false,
@@ -127,7 +126,7 @@ if ($ctx.user.role !== 'admin') {
 }
 
 return await $repos.table_definition.find({
-  where: $ctx.args.filter,
+  where: $ctx.$args.filter,
 });
 ```
 
@@ -147,12 +146,12 @@ Client → REST Request → RouteDetectMiddleware → DynamicService.execute()
 
 ### REST Endpoint mặc định:
 
-| Method | Endpoint                | Mặc định      |
-| ------ | ----------------------- | ------------- |
-| GET    | `/table_definition`     | list + filter |
-| POST   | `/table_definition`     | create        |
-| PATCH  | `/table_definition/:id` | update        |
-| DELETE | `/table_definition/:id` | delete        |
+| Method | Endpoint            | Mặc định                          |
+| ------ | ------------------- | --------------------------------- |
+| GET    | `/table_definition` | list + filter (bao gồm filter id) |
+| POST   | `/table_definition` | create                            |
+| PATCH  | `/table_definition` | update                            |
+| DELETE | `/table_definition` | delete                            |
 
 ---
 
@@ -166,7 +165,7 @@ Client → REST Request → RouteDetectMiddleware → DynamicService.execute()
 ```js
 return await $repos.user.find({
   where: {
-    id: { _eq: $ctx.user.id },
+    id: { _eq: $ctx.$user.id },
   },
 });
 ```
@@ -174,17 +173,17 @@ return await $repos.user.find({
 ### Ví dụ override REST POST `/publish-post`:
 
 ```js
-if (!$ctx.user) throw new Error('Unauthorized');
+if (!$ctx.$user) throw new Error('Unauthorized');
 
 const post = await $repos.post.find({
-  where: { id: $ctx.body.id },
+  where: { id: $ctx.$body.id },
 });
 
-if (post.data[0].authorId !== $ctx.user.id) {
+if (post.data[0].authorId !== $ctx.$user.id) {
   throw new Error('Not your post');
 }
 
-await $repos.post.update($ctx.body.id, {
+await $repos.post.update($ctx.$body.id, {
   published: true,
 });
 
@@ -206,8 +205,6 @@ return { success: true };
 
 ## 👥 Người dùng mục tiêu
 
-1️⃣ Dev cá nhân / team nhỏ cần backend nhanh  
-2️⃣ App lớn, SaaS cần scale-out multi-instance  
+1️⃣ Dev cá nhân / team nhỏ cần backend nhanh\
+2️⃣ App lớn, SaaS cần scale-out multi-instance\
 3️⃣ Nền tảng cloud cần dynamic schema per-tenant
-
----
