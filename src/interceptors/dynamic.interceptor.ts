@@ -36,9 +36,6 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
             try {
               const code = hook.afterHook;
               req.routeData.context.$data = req.routeData.context.$data ?? data;
-              console.log(
-                (req.routeData.context.$data = req.routeData.context.$data),
-              );
               req.routeData.context.$statusCode = context
                 .switchToHttp()
                 .getResponse().statusCode;
