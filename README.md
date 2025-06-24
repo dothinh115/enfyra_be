@@ -118,14 +118,14 @@ query {
 
 ```js
 if ($ctx.$user.role !== 'admin') {
-  return await $repos.table_definition.find({
+  return await $ctx.$repos.table_definition.find({
     where: {
       isStatic: false,
     },
   });
 }
 
-return await $repos.table_definition.find({
+return await $ctx.$repos.table_definition.find({
   where: $ctx.$args.filter,
 });
 ```
@@ -175,7 +175,7 @@ return await $repos.user.find({
 ```js
 if (!$ctx.$user) throw new Error('Unauthorized');
 
-const post = await $repos.post.find({
+const post = await $ctx.$repos.post.find({
   where: { id: $ctx.$body.id },
 });
 
@@ -183,7 +183,7 @@ if (post.data[0].authorId !== $ctx.$user.id) {
   throw new Error('Not your post');
 }
 
-await $repos.post.update($ctx.$body.id, {
+await $ctx.$repos.post.update($ctx.$body.id, {
   published: true,
 });
 
