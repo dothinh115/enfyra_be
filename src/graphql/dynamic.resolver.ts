@@ -88,10 +88,10 @@ export class DynamicResolver {
     const handlerCtx: TGqlDynamicContext = {
       $errors: {
         throw400: (msg: string) => {
-          throw new BadRequestException(msg);
+          throwGqlError('400', msg);
         },
         throw401: () => {
-          throw new UnauthorizedException();
+          throwGqlError('401', 'unauthorized');
         },
       },
       $helpers: {
@@ -122,14 +122,6 @@ export class DynamicResolver {
 
       return result;
     } catch (error) {
-      if (
-        error instanceof UnauthorizedException ||
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
-        throw error;
-      }
-
       throw new BadRequestException(`Script error: ${error.message}`);
     }
   }

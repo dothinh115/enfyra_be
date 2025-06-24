@@ -1,16 +1,18 @@
+import { buildFunctionProxy } from './utils/build-fn-proxy';
+
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
-let callCounter = 1;
-const pendingCalls = new Map();
+export const pendingCalls = new Map();
 
 process.on('message', async (msg: any) => {
   if (msg.type === 'call_result') {
-    const { callId, result, error } = msg;
+    const { callId, result, error, ...others } = msg;
     const resolver = pendingCalls.get(callId);
     if (resolver) {
       pendingCalls.delete(callId);
-      if (error) resolver.reject(new Error(error));
-      else resolver.resolve(result);
+      if (error) {
+        resolver.reject({ ...error, ...others });
+      } else resolver.resolve(result);
     }
   }
   if (msg.type === 'execute') {
@@ -20,24 +22,10 @@ process.on('message', async (msg: any) => {
     ctx.$repos = {};
 
     for (const serviceName of Object.keys(originalRepos)) {
-      ctx.$repos[serviceName] = new Proxy(
-        {},
-        {
-          get(target, methodName) {
-            const callId = `call_${++callCounter}`;
-            return async (...args) => {
-              process.send({
-                type: 'call',
-                path: `$repos.${serviceName}.${String(methodName)}`,
-                args,
-                callId,
-              });
-              return await waitForParentResponse(callId);
-            };
-          },
-        },
-      );
+      ctx.$repos[serviceName] = buildFunctionProxy(`$repos.${serviceName}`);
     }
+    ctx.$errors = buildFunctionProxy('$errors');
+    ctx.$helpers = buildFunctionProxy('$helpers');
 
     try {
       const asyncFn = new AsyncFunction(
@@ -62,9 +50,3 @@ process.on('message', async (msg: any) => {
     }
   }
 });
-
-function waitForParentResponse(callId) {
-  return new Promise((resolve, reject) => {
-    pendingCalls.set(callId, { resolve, reject });
-  });
-}

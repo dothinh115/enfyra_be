@@ -6,6 +6,13 @@ import {
 } from '../utils/types/dynamic-context.type';
 import { wrapCtx } from './utils/wrap-ctx';
 import { resolvePath } from './utils/resolve-path';
+import {
+  BadRequestException,
+  ForbiddenException,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 export class HandlerExecutorService {
   async run(
@@ -35,7 +42,8 @@ export class HandlerExecutorService {
             child.send({
               type: 'call_result',
               callId: msg.callId,
-              error: err.message,
+              error: true,
+              ...err.response,
             });
           }
         }
@@ -45,7 +53,14 @@ export class HandlerExecutorService {
           resolve(msg.data);
         }
         if (msg.type === 'error') {
-          reject(msg.error);
+          let error = new InternalServerErrorException(msg.error.message);
+          if (msg.error.statusCode === 400)
+            error = new BadRequestException(msg.error.message);
+          else if (msg.error.statusCode === 401)
+            error = new UnauthorizedException();
+          else if (msg.error.statusCode === 403)
+            error = new ForbiddenException();
+          reject(error);
         }
       });
 
