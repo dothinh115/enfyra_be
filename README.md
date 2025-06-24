@@ -163,7 +163,7 @@ Client → REST Request → RouteDetectMiddleware → DynamicService.execute()
 ### Ví dụ override REST GET `/my-account`:
 
 ```js
-return await $repos.user.find({
+return await $ctx.$repos.user.find({
   where: {
     id: { _eq: $ctx.$user.id },
   },
