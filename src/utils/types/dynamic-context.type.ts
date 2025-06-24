@@ -18,6 +18,8 @@ export type TDynamicContext = {
     throw401: () => never;
   };
   $result?: any;
+  $data?: any;
+  $statusCode?: number;
 };
 
 export type TGqlDynamicContext = {
@@ -35,4 +37,5 @@ export type TGqlDynamicContext = {
     throw401: () => never;
   };
   $result?: any;
+  $data?: any;
 };

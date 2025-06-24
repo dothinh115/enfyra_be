@@ -36,11 +36,17 @@ export class RouteDetectMiddleware implements NestMiddleware {
         this.redisLockService,
       ));
     const matchedRoute = this.findMatchedRoute(routes, req.baseUrl, method);
+    const systemTables = [
+      'table_definition',
+      'column_definition',
+      'relation_definition',
+    ];
 
     if (matchedRoute) {
       const dynamicFindEntries = await Promise.all(
-        [matchedRoute.route.mainTable, ...matchedRoute.route.targetTables]?.map(
-          async (table) => {
+        [matchedRoute.route.mainTable, ...matchedRoute.route.targetTables]
+          ?.filter((route) => !systemTables.includes(route.mainTable.name))
+          .map(async (table) => {
             const dynamicRepo = new DynamicRepoService({
               fields: req.query.fields as string,
               filter: req.query.filter,
@@ -66,8 +72,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
                 ? 'main'
                 : (table.alias ?? table.name);
             return [`${name}`, dynamicRepo];
-          },
-        ),
+          }),
       );
 
       const dynamicFindMap: { any: any } =

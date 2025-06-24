@@ -47,6 +47,9 @@ export class HandlerExecutorService {
           }
         }
         if (msg.type === 'done') {
+          for (const key of Object.keys(msg.ctx)) {
+            ctx[key] = msg.ctx[key];
+          }
           clearTimeout(timeout);
           child.kill();
           resolve(msg.data);

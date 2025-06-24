@@ -41,6 +41,7 @@ process.on('message', async (msg: any) => {
       process.send({
         type: 'done',
         data: result,
+        ctx,
       });
     } catch (error) {
       process.send({
