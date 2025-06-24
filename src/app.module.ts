@@ -24,7 +24,6 @@ import { RedisPubSubService } from './redis-pubsub/redis-pubsub.service';
 import { SchemaStateService } from './schema/schema-state.service';
 import { SchemaLockGuard } from './guard/schema-lock.guard';
 import { SqlFunctionService } from './sql/sql-function.service';
-import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { SystemRecordProtectGuard } from './guard/system-record-protect.guard';
 import { MetadataSyncService } from './metadata/metadata-sync.service';
 import { SchemaHistoryService } from './metadata/schema-history.service';
@@ -33,6 +32,7 @@ import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { GraphqlModule } from './graphql/graphql.module';
 import { QueryEngineModule } from './query-builder/query-engine.module';
 import { HandlerExecutorService } from './handler-executor/handler-executor.service';
+import { DynamicInterceptor } from './interceptors/dynamic.interceptor';
 
 @Global()
 @Module({
@@ -87,8 +87,8 @@ import { HandlerExecutorService } from './handler-executor/handler-executor.serv
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RoleGuard },
     { provide: APP_GUARD, useClass: SystemRecordProtectGuard },
+    { provide: APP_INTERCEPTOR, useClass: DynamicInterceptor },
     { provide: APP_INTERCEPTOR, useClass: HideFieldInterceptor },
-    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
   ],
   exports: [
     RabbitMQRegistry,

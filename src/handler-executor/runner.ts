@@ -45,7 +45,12 @@ process.on('message', async (msg: any) => {
     } catch (error) {
       process.send({
         type: 'error',
-        error,
+        error: {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+          statusCode: error.statusCode,
+        },
       });
     }
   }

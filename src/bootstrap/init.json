@@ -70,6 +70,13 @@
             "isSystem":true,
             "icon":"lucide:link"
         }
+    ], 
+    "defaultHook": [
+        {
+            "isEnabled": true,
+            "afterHook": "const $data = {statusCode: $ctx.$statusCode,data: $ctx.$data,message: 'Success'};return {$data}",
+            "name": "Default response"
+        }
     ]
 }
 

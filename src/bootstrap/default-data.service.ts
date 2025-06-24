@@ -104,4 +104,23 @@ export class DefaultDataService {
       this.logger.log(`✅ Tạo route mặc định: ${path} → ${mainTable}`);
     }
   }
+
+  async insertDefaultHook(): Promise<void> {
+    const hookDefRepo = this.dataSourceService.getRepository('hook_definition');
+
+    const count = await hookDefRepo.count();
+
+    if (count === 0) {
+      this.logger.log(
+        `Bảng 'hook_definition' chưa có dữ liệu, tiến hành tạo mặc định.`,
+      );
+
+      const hooks = hookDefRepo.create(initJson.defaultHook);
+      await hookDefRepo.save(hooks);
+
+      this.logger.log(`✅ Tạo hook mặc định thành công.`);
+    } else {
+      this.logger.debug(`Bảng 'hook_definition' đã có dữ liệu.`);
+    }
+  }
 }
