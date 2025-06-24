@@ -16,8 +16,8 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
     next: CallHandler<T>,
   ): Promise<Observable<any>> {
     const req = context.switchToHttp().getRequest();
-    const routeCtx = req.routeData.context;
-    const hooks = req.routeData.hooks;
+    const routeCtx = req.routeData?.context;
+    const hooks = req.routeData?.hooks;
     if (hooks?.length) {
       for (const hook of hooks) {
         try {
@@ -30,7 +30,7 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
     }
     return next.handle().pipe(
       mergeMap(async (data) => {
-        if (hooks.length) {
+        if (hooks?.length) {
           for (const hook of hooks) {
             try {
               const code = hook.afterHook;

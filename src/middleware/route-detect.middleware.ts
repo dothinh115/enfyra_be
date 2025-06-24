@@ -35,7 +35,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
         this.dataSourceService,
         this.redisLockService,
       ));
-
     const matchedRoute = this.findMatchedRoute(routes, req.baseUrl, method);
 
     if (matchedRoute) {

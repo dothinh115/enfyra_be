@@ -69,6 +69,20 @@
             "isEnabled": true,
             "isSystem":true,
             "icon":"lucide:link"
+        },
+        {
+            "path": "/auth/login",
+            "mainTable": "user_definition",
+            "isEnabled": true,
+            "isSystem":true,
+            "icon":"lucide:route"
+        },
+        {
+            "path": "/me",
+            "mainTable": "user_definition",
+            "isEnabled": true,
+            "isSystem":true,
+            "icon":"lucide:route"
         }
     ], 
     "defaultHook": [
