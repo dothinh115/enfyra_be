@@ -106,22 +106,15 @@ export class DynamicResolver {
 
     try {
       const userHandler = handler?.trim();
-      const defaultHandler = `return await $repos.main.find();`;
+      const defaultHandler = `return await $ctx.$repos.main.find();`;
 
       if (!userHandler && !defaultHandler) {
         throw new BadRequestException('Không có handler tương ứng');
       }
 
-      const scriptCode = `return (async () => {
-    "use strict";
-    try {
-      ${userHandler || defaultHandler}
-    } catch (err) {
-      throw err;
-    }
-  })()`;
+      const scriptCode = userHandler || defaultHandler;
 
-      const result = await this.handlerExecutorService.runHandler(
+      const result = await this.handlerExecutorService.run(
         scriptCode,
         handlerCtx,
         5000,

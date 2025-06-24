@@ -59,10 +59,10 @@ export class DynamicRepoService {
     this.repo = this.dataSourceService.getRepository(this.tableName);
   }
 
-  async find({ where }: { where?: any }) {
+  async find(opt: { where?: any }) {
     const result = await this.queryEngine.find({
       fields: this.fields,
-      filter: where || this.filter,
+      filter: opt?.where || this.filter,
       page: this.page,
       limit: this.limit,
       tableName: this.tableName,

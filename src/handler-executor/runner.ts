@@ -1,67 +1,70 @@
-const { v4: uuidv4 } = require('uuid');
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
+let callCounter = 1;
 const pendingCalls = new Map();
 
-process.on('message', async (message: any) => {
-  if (message.type === 'RUN') {
-    const { code, ctx } = message;
-    console.log('🔥 Runner.js started with ctx:', ctx);
+process.on('message', async (msg: any) => {
+  if (msg.type === 'call_result') {
+    const { callId, result, error } = msg;
+    const resolver = pendingCalls.get(callId);
+    if (resolver) {
+      pendingCalls.delete(callId);
+      if (error) resolver.reject(new Error(error));
+      else resolver.resolve(result);
+    }
+  }
+  if (msg.type === 'execute') {
+    const originalRepos = msg.ctx.$repos || {};
 
-    const AsyncFunction = Object.getPrototypeOf(
-      async function () {},
-    ).constructor;
-    const fn = new AsyncFunction('$repos', code);
+    const ctx = msg.ctx;
+    ctx.$repos = {};
 
-    try {
-      const $call = (repo, method, ...params) => {
-        return new Promise((resolve, reject) => {
-          const callId = uuidv4();
-          pendingCalls.set(callId, { resolve, reject });
-          process.send({
-            type: 'CALL',
-            repo,
-            method,
-            params,
-            callId,
-          });
-        });
-      };
-
-      const $repos = new Proxy(
+    for (const serviceName of Object.keys(originalRepos)) {
+      ctx.$repos[serviceName] = new Proxy(
         {},
         {
-          get(target, repoName) {
-            return new Proxy(
-              {},
-              {
-                get(target2, methodName) {
-                  return (...params) => $call(repoName, methodName, ...params);
-                },
-              },
-            );
+          get(target, methodName) {
+            const callId = `call_${++callCounter}`;
+            return async (...args) => {
+              process.send({
+                type: 'call',
+                path: `$repos.${serviceName}.${String(methodName)}`,
+                args,
+                callId,
+              });
+              return await waitForParentResponse(callId);
+            };
           },
         },
       );
-
-      const result = await fn(ctx, $repos);
-
-      process.send({ type: 'RESULT', result });
-    } catch (err) {
-      process.send({ type: 'ERROR', error: err.message });
     }
-  } else if (message.type === 'CALL_RESULT') {
-    const { callId, result } = message;
-    const call = pendingCalls.get(callId);
-    if (call) {
-      call.resolve(result);
-      pendingCalls.delete(callId);
-    }
-  } else if (message.type === 'CALL_ERROR') {
-    const { callId, error } = message;
-    const call = pendingCalls.get(callId);
-    if (call) {
-      call.reject(new Error(error));
-      pendingCalls.delete(callId);
+
+    try {
+      const asyncFn = new AsyncFunction(
+        '$ctx',
+        `
+          "use strict";
+          return (async () => {
+            ${msg.code}
+          })();
+        `,
+      );
+      const result = await asyncFn(ctx);
+      process.send({
+        type: 'done',
+        data: result,
+      });
+    } catch (error) {
+      process.send({
+        type: 'error',
+        error,
+      });
     }
   }
 });
+
+function waitForParentResponse(callId) {
+  return new Promise((resolve, reject) => {
+    pendingCalls.set(callId, { resolve, reject });
+  });
+}

@@ -6,11 +6,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
-import * as vm from 'vm';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
+import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
 @Injectable()
 export class DynamicService {
   private logger = new Logger(DynamicService.name);
+
+  constructor(private handlerExecutorService: HandlerExecutorService) {}
 
   async runHandler(
     req: Request & {
@@ -29,13 +31,6 @@ export class DynamicService {
       logs.push(...args);
     };
 
-    const vmContext = vm.createContext({
-      ...req.routeData.context,
-      console: {
-        log: (...args: any[]) => logs.push(...args),
-      },
-    });
-
     try {
       const userHandler = req.routeData.handler?.trim();
       const defaultHandler = this.getDefaultHandler(req.method);
@@ -44,21 +39,12 @@ export class DynamicService {
         throw new BadRequestException('Không có handler tương ứng');
       }
 
-      const scriptCode = `
-        (async () => {
-          "use strict";
-          try {
-            ${userHandler || defaultHandler}
-          } catch (err) {
-            throw err;
-          }
-        })()
-      `;
+      const scriptCode = userHandler || defaultHandler;
 
-      const script = new vm.Script(scriptCode);
-      const result = await script.runInContext(vmContext, {
-        timeout: timeoutMs,
-      });
+      const result = await this.handlerExecutorService.run(
+        scriptCode,
+        req.routeData.context,
+      );
 
       return logs.length ? { result, logs } : result;
     } catch (error) {
@@ -80,13 +66,13 @@ export class DynamicService {
   private getDefaultHandler(method: string): string {
     switch (method) {
       case 'DELETE':
-        return `return await $repos.main.delete($params.id);`;
+        return `return await $ctx.$repos.main.delete($params.id);`;
       case 'POST':
-        return `return await $repos.main.create($body);`;
+        return `return await $ctx.$repos.main.create($body);`;
       case 'PATCH':
-        return `return await $repos.main.update($params.id, $body);`;
+        return `return await $ctx.$repos.main.update($params.id, $body);`;
       default:
-        return `return await $repos.main.find();`;
+        return `return await $ctx.$repos.main.find();`;
     }
   }
 }
