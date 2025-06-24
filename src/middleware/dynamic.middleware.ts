@@ -28,7 +28,7 @@ export class DynamicMiddleware implements NestMiddleware {
             `Middleware must be returned with $req`,
           );
         }
-        Object.assign(req, result.$req);
+        Object.assign(req.routeData.$req, result.$req);
       } catch (err) {
         throw new InternalServerErrorException(
           `middleware error: ${err.message}`,
