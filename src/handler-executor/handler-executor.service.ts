@@ -10,7 +10,6 @@ import {
   BadRequestException,
   ForbiddenException,
   InternalServerErrorException,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 

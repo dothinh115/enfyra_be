@@ -30,17 +30,15 @@ export function wrapCtx(
   for (const key of Object.keys(obj)) {
     const val = obj[key];
 
-    // SPECIAL CASE: $repos → chỉ giữ tên
     if (key === '$repos') {
       wrapped[key] = {};
       const serviceNames = Object.keys(val);
       for (const serviceName of serviceNames) {
-        wrapped[key][serviceName] = {}; // chỉ cần giữ tên
+        wrapped[key][serviceName] = {};
       }
       continue;
     }
 
-    // SPECIAL CASE: $req
     if (key === '$req') {
       wrapped[key] = {
         method: val.method,
@@ -57,7 +55,6 @@ export function wrapCtx(
       continue;
     }
 
-    // SPECIAL CASE: $headers
     if (key === '$headers') {
       wrapped[key] = {
         authorization: val['authorization'],
@@ -66,7 +63,6 @@ export function wrapCtx(
       continue;
     }
 
-    // NORMAL FUNCTION → wrap path
     if (typeof val === 'function') {
       wrapped[key] = {
         __type: 'function',
@@ -75,7 +71,6 @@ export function wrapCtx(
       continue;
     }
 
-    // NORMAL OBJECT → wrap tiếp
     wrapped[key] = wrapCtx(val, [...path, key], seen);
   }
 
