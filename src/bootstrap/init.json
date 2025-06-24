@@ -77,6 +77,20 @@
             "isSystem":true,
             "icon":"lucide:route"
         },
+         {
+            "path": "/auth/logout",
+            "mainTable": "user_definition",
+            "isEnabled": true,
+            "isSystem":true,
+            "icon":"lucide:route"
+        },
+         {
+            "path": "/auth/refresh-token",
+            "mainTable": "user_definition",
+            "isEnabled": true,
+            "isSystem":true,
+            "icon":"lucide:route"
+        },
         {
             "path": "/me",
             "mainTable": "user_definition",

@@ -16,13 +16,12 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
     next: CallHandler<T>,
   ): Promise<Observable<any>> {
     const req = context.switchToHttp().getRequest();
-    const routeCtx = req.routeData?.context;
     const hooks = req.routeData?.hooks;
     if (hooks?.length) {
       for (const hook of hooks) {
         try {
           const code = hook.preHook;
-          await this.handlerExecurtorService.run(code, routeCtx);
+          await this.handlerExecurtorService.run(code, req.routeData.context);
         } catch (error) {
           throw error;
         }
@@ -34,11 +33,14 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
           for (const hook of hooks) {
             try {
               const code = hook.afterHook;
-              const result = await this.handlerExecurtorService.run(code, {
-                ...routeCtx,
-                $data: data,
-                $statusCode: context.switchToHttp().getResponse().statusCode,
-              });
+              req.routeData.context.$data = data;
+              req.routeData.context.$statusCode = context
+                .switchToHttp()
+                .getResponse().statusCode;
+              const result = await this.handlerExecurtorService.run(
+                code,
+                req.routeData.context,
+              );
               if (result?.$data) {
                 data = result.$data;
               }
