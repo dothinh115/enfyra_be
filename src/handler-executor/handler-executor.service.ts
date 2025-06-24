@@ -14,7 +14,7 @@ export class HandlerExecutorService {
     timeoutMs = 5000,
   ): Promise<any> {
     return new Promise((resolve, reject) => {
-      const child = fork(path.resolve(__dirname, 'runner.js'));
+      const child = fork(path.resolve(__dirname, 'runner'));
 
       const timeout = setTimeout(() => {
         child.kill();
