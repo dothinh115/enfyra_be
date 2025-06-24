@@ -19,6 +19,7 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
     const hooks = req.routeData?.hooks;
     if (hooks?.length) {
       for (const hook of hooks) {
+        if (!hook.preHook) continue;
         try {
           const code = hook.preHook;
           await this.handlerExecurtorService.run(code, req.routeData.context);
@@ -31,9 +32,13 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
       mergeMap(async (data) => {
         if (hooks?.length) {
           for (const hook of hooks) {
+            if (!hook.afterHook) continue;
             try {
               const code = hook.afterHook;
-              req.routeData.context.$data = req.routeData.context.$data || data;
+              req.routeData.context.$data = req.routeData.context.$data ?? data;
+              console.log(
+                (req.routeData.context.$data = req.routeData.context.$data),
+              );
               req.routeData.context.$statusCode = context
                 .switchToHttp()
                 .getResponse().statusCode;

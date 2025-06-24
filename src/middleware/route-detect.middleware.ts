@@ -44,35 +44,38 @@ export class RouteDetectMiddleware implements NestMiddleware {
 
     if (matchedRoute) {
       const dynamicFindEntries = await Promise.all(
-        [matchedRoute.route.mainTable, ...matchedRoute.route.targetTables]
-          ?.filter((route) => !systemTables.includes(route.mainTable.name))
-          .map(async (table) => {
-            const dynamicRepo = new DynamicRepoService({
-              fields: req.query.fields as string,
-              filter: req.query.filter,
-              page: Number(req.query.page ?? 1),
-              tableName: table.name,
-              limit: Number(req.query.limit ?? 10),
-              tableHandlerService: this.tableHandlerService,
-              dataSourceService: this.dataSourceService,
-              queryEngine: this.queryEngine,
-              ...(req.query.meta && {
-                meta: req.query.meta,
-              }),
-              ...(req.query.sort && {
-                sort: req.query.sort,
-              }),
-              ...(req.query.aggregate && {
-                aggregate: req.query.aggregate,
-              }),
-            });
-            await dynamicRepo.init();
-            const name =
-              table.name === matchedRoute.route.mainTable.name
-                ? 'main'
-                : (table.alias ?? table.name);
-            return [`${name}`, dynamicRepo];
-          }),
+        [
+          matchedRoute.route.mainTable,
+          ...matchedRoute.route.targetTables?.filter(
+            (route) => !systemTables.includes(route.name),
+          ),
+        ]?.map(async (table) => {
+          const dynamicRepo = new DynamicRepoService({
+            fields: req.query.fields as string,
+            filter: req.query.filter,
+            page: Number(req.query.page ?? 1),
+            tableName: table.name,
+            limit: Number(req.query.limit ?? 10),
+            tableHandlerService: this.tableHandlerService,
+            dataSourceService: this.dataSourceService,
+            queryEngine: this.queryEngine,
+            ...(req.query.meta && {
+              meta: req.query.meta,
+            }),
+            ...(req.query.sort && {
+              sort: req.query.sort,
+            }),
+            ...(req.query.aggregate && {
+              aggregate: req.query.aggregate,
+            }),
+          });
+          await dynamicRepo.init();
+          const name =
+            table.name === matchedRoute.route.mainTable.name
+              ? 'main'
+              : (table.alias ?? table.name);
+          return [`${name}`, dynamicRepo];
+        }),
       );
 
       const dynamicFindMap: { any: any } =
