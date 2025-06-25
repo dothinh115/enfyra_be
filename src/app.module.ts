@@ -33,6 +33,7 @@ import { GraphqlModule } from './graphql/graphql.module';
 import { QueryEngineModule } from './query-builder/query-engine.module';
 import { HandlerExecutorService } from './handler-executor/handler-executor.service';
 import { DynamicInterceptor } from './interceptors/dynamic.interceptor';
+import { HandlerExecutorModule } from './handler-executor/hanler-executor.module';
 
 @Global()
 @Module({
@@ -70,6 +71,7 @@ import { DynamicInterceptor } from './interceptors/dynamic.interceptor';
     DynamicModule,
     BootstrapModule,
     GraphqlModule,
+    HandlerExecutorModule,
   ],
   providers: [
     RabbitMQRegistry,
@@ -81,7 +83,6 @@ import { DynamicInterceptor } from './interceptors/dynamic.interceptor';
     SqlFunctionService,
     MetadataSyncService,
     SchemaHistoryService,
-    HandlerExecutorService,
     { provide: APP_GUARD, useClass: SchemaLockGuard },
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
@@ -99,7 +100,6 @@ import { DynamicInterceptor } from './interceptors/dynamic.interceptor';
     RedisPubSubService,
     MetadataSyncService,
     SchemaHistoryService,
-    HandlerExecutorService,
   ],
 })
 export class AppModule implements NestModule {

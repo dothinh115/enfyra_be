@@ -1,5 +1,3 @@
-import { fork } from 'child_process';
-import * as path from 'path';
 import {
   TDynamicContext,
   TGqlDynamicContext,
@@ -9,19 +7,24 @@ import { resolvePath } from './utils/resolve-path';
 import {
   BadRequestException,
   ForbiddenException,
+  Injectable,
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ExecutorPoolService } from './executor-pool.service';
 
+@Injectable()
 export class HandlerExecutorService {
+  constructor(private executorPoolService: ExecutorPoolService) {}
   async run(
     code: string,
     ctx: TDynamicContext | TGqlDynamicContext,
     timeoutMs = 5000,
   ): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const child = fork(path.resolve(__dirname, 'runner'));
+    const pool = this.executorPoolService.getPool();
 
+    return new Promise(async (resolve, reject) => {
+      const child = await pool.acquire();
       const timeout = setTimeout(() => {
         child.kill();
         reject(new Error('Timeout'));
