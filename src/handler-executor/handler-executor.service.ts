@@ -22,14 +22,16 @@ export class HandlerExecutorService {
     timeoutMs = 5000,
   ): Promise<any> {
     const pool = this.executorPoolService.getPool();
-
+    let isDone = false;
     return new Promise(async (resolve, reject) => {
       const child = await pool.acquire();
-      const timeout = setTimeout(() => {
-        child.kill();
+      const timeout = setTimeout(async () => {
+        child.removeAllListeners();
+        await pool.release(child);
         reject(new Error('Timeout'));
       }, timeoutMs);
       child.on('message', async (msg: any) => {
+        if (isDone) return;
         if (msg.type === 'call') {
           try {
             const { parent, method } = resolvePath(ctx, msg.path);
@@ -50,14 +52,18 @@ export class HandlerExecutorService {
           }
         }
         if (msg.type === 'done') {
+          isDone = true;
+          child.removeAllListeners();
           for (const key of Object.keys(msg.ctx)) {
             ctx[key] = msg.ctx[key];
           }
           clearTimeout(timeout);
-          child.kill();
+          await pool.release(child);
           resolve(msg.data);
         }
         if (msg.type === 'error') {
+          isDone = true;
+          child.removeAllListeners();
           let error = new InternalServerErrorException(msg.error.message);
           if (msg.error.statusCode === 400)
             error = new BadRequestException(msg.error.message);
@@ -65,6 +71,8 @@ export class HandlerExecutorService {
             error = new UnauthorizedException();
           else if (msg.error.statusCode === 403)
             error = new ForbiddenException();
+          await pool.release(child);
+
           reject(error);
         }
       });

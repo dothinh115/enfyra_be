@@ -20,7 +20,7 @@ export class ExecutorPoolService implements OnModuleInit {
     };
     this.executorPool = createPool(factory, {
       min: 2,
-      max: 6,
+      max: 4,
       idleTimeoutMillis: 30000,
     });
   }

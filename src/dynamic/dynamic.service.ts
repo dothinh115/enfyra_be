@@ -8,6 +8,8 @@ import {
 import { Request } from 'express';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
+import * as vm from 'vm';
+
 @Injectable()
 export class DynamicService {
   private logger = new Logger(DynamicService.name);
@@ -46,6 +48,14 @@ export class DynamicService {
         req.routeData.context,
       );
 
+      //       const ctx = vm.createContext({ $ctx: req.routeData.context });
+      //       const script = new vm.Script(`
+      //   (async () => {
+      //     ${scriptCode}
+      //   })();
+      // `);
+      // const result = await script.runInContext(ctx);
+
       return logs.length ? { result, logs } : result;
     } catch (error) {
       this.logger.error('❌ Lỗi khi chạy handler:', error.message);
@@ -66,11 +76,11 @@ export class DynamicService {
   private getDefaultHandler(method: string): string {
     switch (method) {
       case 'DELETE':
-        return `return await $ctx.$repos.main.delete($params.id);`;
+        return `return await $ctx.$repos.main.delete($ctx.$params.id);`;
       case 'POST':
-        return `return await $ctx.$repos.main.create($body);`;
+        return `return await $ctx.$repos.main.create($ctx.$body);`;
       case 'PATCH':
-        return `return await $ctx.$repos.main.update($params.id, $body);`;
+        return `return await $ctx.$repos.main.update($ctx.$params.id, $ctx.$body);`;
       default:
         return `return await $ctx.$repos.main.find();`;
     }
