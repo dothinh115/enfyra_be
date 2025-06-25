@@ -30,6 +30,7 @@ export class HandlerExecutorService {
         await pool.release(child);
         reject(new Error('Timeout'));
       }, timeoutMs);
+
       child.on('message', async (msg: any) => {
         if (isDone) return;
         if (msg.type === 'call') {
@@ -71,10 +72,37 @@ export class HandlerExecutorService {
             error = new UnauthorizedException();
           else if (msg.error.statusCode === 403)
             error = new ForbiddenException();
+          clearTimeout(timeout);
           await pool.release(child);
 
           reject(error);
         }
+      });
+
+      child.once('exit', async (code, signal) => {
+        if (isDone) return;
+        isDone = true;
+        child.removeAllListeners();
+        clearTimeout(timeout);
+        await pool.release(child);
+        reject(
+          new InternalServerErrorException(
+            `Child process exited with code ${code}, signal ${signal}`,
+          ),
+        );
+      });
+
+      child.once('error', async (err) => {
+        if (isDone) return;
+        isDone = true;
+        child.removeAllListeners();
+        clearTimeout(timeout);
+        await pool.release(child);
+        reject(
+          new InternalServerErrorException(
+            `Child process error: ${err?.message || err}`,
+          ),
+        );
       });
 
       child.send({
