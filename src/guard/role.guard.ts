@@ -9,7 +9,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY, GLOBAL_SETTINGS_KEY } from '../utils/constant';
 import { DataSourceService } from '../data-source/data-source.service';
-import { RedisLockService } from '../common/redis-lock.service';
+import { RedisLockService } from '../redis/redis-lock.service';
 
 @Injectable()
 export class RoleGuard implements CanActivate {

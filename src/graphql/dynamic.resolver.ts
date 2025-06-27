@@ -3,23 +3,19 @@ import {
   forwardRef,
   Inject,
   Injectable,
-  NotFoundException,
-  OnApplicationBootstrap,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TGqlDynamicContext } from '../utils/types/dynamic-context.type';
 import { convertFieldNodesToFieldPicker } from './utils/field-string-convertor';
-import * as vm from 'vm';
 import { TableHandlerService } from '../table/table.service';
 import { QueryEngine } from '../query-builder/query-engine.service';
 import { throwGqlError } from './utils/throw-error';
-import { RedisLockService } from '../common/redis-lock.service';
+import { RedisLockService } from '../redis/redis-lock.service';
 import { JwtService } from '@nestjs/jwt';
 import { DataSourceService } from '../data-source/data-source.service';
-import { loadAndCacheRoutes } from '../middleware/utils/load-and-cache-routes';
 import { GLOBAL_ROUTES_KEY } from '../utils/constant';
 import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
+import { RouteCacheService } from '../redis/route-cache.service';
 
 @Injectable()
 export class DynamicResolver {
@@ -31,6 +27,7 @@ export class DynamicResolver {
     private jwtService: JwtService,
     private dataSourceService: DataSourceService,
     private handlerExecutorService: HandlerExecutorService,
+    private routeCacheService: RouteCacheService,
   ) {}
 
   async dynamicResolver(
@@ -46,7 +43,7 @@ export class DynamicResolver {
     context: any,
     info: any,
   ) {
-    const { mainTable, targetTables, user, handler } = await this.middleware(
+    const { mainTable, targetTables, user } = await this.middleware(
       tableName,
       context,
       info,
@@ -72,6 +69,7 @@ export class DynamicResolver {
           ...(args.meta && { meta: args.meta }),
           ...(args.sort && { sort: args.sort }),
           ...(args.aggregate && { aggregate: args.aggregate }),
+          routeCacheService: this.routeCacheService,
         });
 
         await dynamicRepo.init();
@@ -105,14 +103,9 @@ export class DynamicResolver {
     };
 
     try {
-      const userHandler = handler?.trim();
       const defaultHandler = `return await $ctx.$repos.main.find();`;
 
-      if (!userHandler && !defaultHandler) {
-        throw new BadRequestException('Không có handler tương ứng');
-      }
-
-      const scriptCode = userHandler || defaultHandler;
+      const scriptCode = defaultHandler;
 
       const result = await this.handlerExecutorService.run(
         scriptCode,
@@ -131,14 +124,9 @@ export class DynamicResolver {
       throwGqlError('400', 'Missing table name');
     }
 
-    const method = '';
     let routes: any[] =
       (await this.redisLockService.get(GLOBAL_ROUTES_KEY)) ||
-      (await loadAndCacheRoutes(
-        method,
-        this.dataSourceService,
-        this.redisLockService,
-      ));
+      (await this.routeCacheService.loadAndCacheRoutes());
 
     const currentRoute = routes.find(
       (route) => route.path === '/' + mainTableName,
@@ -150,14 +138,9 @@ export class DynamicResolver {
 
     const user = await this.canPass(currentRoute, accessToken);
 
-    const handler = currentRoute.handlers?.find(
-      (handler: any) => handler.path === 'GQL_QUERY',
-    );
-
     return {
       matchedRoute: currentRoute,
       user,
-      handler,
       decodedToken: decoded,
       mainTable: currentRoute.mainTable,
       targetTables: currentRoute.targetTables,

@@ -11,9 +11,9 @@ import { JwtService } from '@nestjs/jwt';
 import { TableHandlerService } from '../table/table.service';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
-import { RedisLockService } from '../common/redis-lock.service';
-import { loadAndCacheRoutes } from './utils/load-and-cache-routes';
+import { RedisLockService } from '../redis/redis-lock.service';
 import { QueryEngine } from '../query-builder/query-engine.service';
+import { RouteCacheService } from '../redis/route-cache.service';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
@@ -24,17 +24,14 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private queryEngine: QueryEngine,
     private tableHandlerService: TableHandlerService,
     private redisLockService: RedisLockService,
+    private routeCacheService: RouteCacheService,
   ) {}
 
   async use(req: any, res: any, next: (error?: any) => void) {
     const method = req.method;
     let routes: any[] =
       (await this.redisLockService.get(GLOBAL_ROUTES_KEY)) ||
-      (await loadAndCacheRoutes(
-        method,
-        this.dataSourceService,
-        this.redisLockService,
-      ));
+      (await this.routeCacheService.loadAndCacheRoutes());
     const matchedRoute = this.findMatchedRoute(routes, req.baseUrl, method);
     const systemTables = [
       'table_definition',
@@ -68,6 +65,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
             ...(req.query.aggregate && {
               aggregate: req.query.aggregate,
             }),
+            routeCacheService: this.routeCacheService,
           });
           await dynamicRepo.init();
           const name =
@@ -105,7 +103,9 @@ export class RouteDetectMiddleware implements NestMiddleware {
       const { route, params } = matchedRoute;
       req.routeData = {
         ...route,
-        handler: route.handlers.length ? route.handlers[0].logic : null,
+        handler:
+          route.handlers.find((handler) => handler.method === method)?.logic ??
+          null,
         params,
         isPublished:
           matchedRoute.route.publishedMethods?.includes(req.method) || false,

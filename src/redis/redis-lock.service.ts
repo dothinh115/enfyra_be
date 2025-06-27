@@ -65,4 +65,14 @@ export class RedisLockService {
     console.log(`[RedisLockService] EXISTS ${key} => ${isEqual}`);
     return isEqual;
   }
+
+  async deleteKey(key: string): Promise<void> {
+    await this.redis.del(key);
+    console.log(`[RedisLockService] DELETE ${key}`);
+  }
+
+  async setNoExpire<T = any>(key: string, val: T): Promise<void> {
+    await this.redis.set(key, JSON.stringify(val));
+    console.log(`[RedisLockService] SET ${key} (no expiry)`);
+  }
 }

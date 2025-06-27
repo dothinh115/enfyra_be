@@ -3,6 +3,9 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { Repository } from 'typeorm';
 import { TableHandlerService } from '../table/table.service';
 import { QueryEngine } from '../query-builder/query-engine.service';
+import { RedisLockService } from '../redis/redis-lock.service';
+import { GLOBAL_ROUTES_KEY } from '../utils/constant';
+import { RouteCacheService } from '../redis/route-cache.service';
 
 export class DynamicRepoService {
   private fields: string;
@@ -17,6 +20,7 @@ export class DynamicRepoService {
   private dataSourceService: DataSourceService;
   private repo: Repository<any>;
   private tableHandlerService: TableHandlerService;
+  private routeCacheService: RouteCacheService;
   constructor({
     fields = '',
     filter = {},
@@ -29,6 +33,7 @@ export class DynamicRepoService {
     meta,
     sort,
     aggregate = {},
+    routeCacheService,
   }: {
     fields: string;
     filter: any;
@@ -41,6 +46,7 @@ export class DynamicRepoService {
     meta?: 'filterCount' | 'totalCount' | '*' | undefined;
     sort?: string | string[];
     aggregate: any;
+    routeCacheService: RouteCacheService;
   }) {
     this.fields = fields;
     this.filter = filter;
@@ -53,6 +59,7 @@ export class DynamicRepoService {
     this.meta = meta;
     this.sort = sort;
     this.aggregate = aggregate;
+    this.routeCacheService = routeCacheService;
   }
 
   async init() {
@@ -76,16 +83,23 @@ export class DynamicRepoService {
   async create(body: any) {
     if (this.tableName === 'table_definition') {
       const table: any = await this.tableHandlerService.createTable(body);
+      await this.routeCacheService.reloadRouteCache();
+
       return await this.find(table.id);
     }
-    const result: any = await this.repo.save(body);
-    return await this.find({
+    const created: any = await this.repo.save(body);
+
+    const result = await this.find({
       where: {
         id: {
-          _eq: result.id,
+          _eq: created.id,
         },
       },
     });
+    if (this.tableName === 'route_definition') {
+      await this.routeCacheService.reloadRouteCache();
+    }
+    return result;
   }
 
   async update(id: string | number, body: any) {
@@ -101,18 +115,23 @@ export class DynamicRepoService {
     if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
     await this.repo.save(body);
 
-    return await this.find({
+    const result = await this.find({
       where: {
         id: {
           _eq: exists.id,
         },
       },
     });
+    if (this.tableName === 'route_definition') {
+      await this.routeCacheService.reloadRouteCache();
+    }
+    return result;
   }
 
   async delete(id: string | number) {
     if (this.tableName === 'table_definition') {
       await this.tableHandlerService.delete(+id);
+      await this.routeCacheService.reloadRouteCache();
       return 'Success';
     }
     const exists = await this.repo.findOne({
@@ -122,7 +141,11 @@ export class DynamicRepoService {
     });
     if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
     const repo = this.dataSourceService.getRepository(this.tableName);
+
     await repo.delete(id);
+    if (this.tableName === 'route_definition') {
+      await this.routeCacheService.reloadRouteCache();
+    }
     return `Delete successfully!`;
   }
 }

@@ -20,7 +20,7 @@ import { RouteDetectMiddleware } from './middleware/route-detect.middleware';
 import { DynamicMiddleware } from './middleware/dynamic.middleware';
 import { NotFoundDetectGuard } from './guard/not-found-detect.guard';
 import { SchemaReloadService } from './schema/schema-reload.service';
-import { RedisPubSubService } from './redis-pubsub/redis-pubsub.service';
+import { RedisPubSubService } from './redis/redis-pubsub.service';
 import { SchemaStateService } from './schema/schema-state.service';
 import { SchemaLockGuard } from './guard/schema-lock.guard';
 import { SqlFunctionService } from './sql/sql-function.service';
@@ -31,9 +31,9 @@ import { BootstrapModule } from './bootstrap/bootstrap.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { GraphqlModule } from './graphql/graphql.module';
 import { QueryEngineModule } from './query-builder/query-engine.module';
-import { HandlerExecutorService } from './handler-executor/handler-executor.service';
 import { DynamicInterceptor } from './interceptors/dynamic.interceptor';
 import { HandlerExecutorModule } from './handler-executor/hanler-executor.module';
+import { RouteCacheService } from './redis/route-cache.service';
 
 @Global()
 @Module({
@@ -83,6 +83,7 @@ import { HandlerExecutorModule } from './handler-executor/hanler-executor.module
     SqlFunctionService,
     MetadataSyncService,
     SchemaHistoryService,
+    RouteCacheService,
     { provide: APP_GUARD, useClass: SchemaLockGuard },
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
@@ -100,11 +101,10 @@ import { HandlerExecutorModule } from './handler-executor/hanler-executor.module
     RedisPubSubService,
     MetadataSyncService,
     SchemaHistoryService,
+    RouteCacheService,
   ],
 })
 export class AppModule implements NestModule {
-  constructor(private readonly redisPubSubService: RedisPubSubService) {}
-
   async configure(consumer: MiddlewareConsumer) {
     consumer.apply(RouteDetectMiddleware).forRoutes('*');
     consumer.apply(DynamicMiddleware).forRoutes('*');

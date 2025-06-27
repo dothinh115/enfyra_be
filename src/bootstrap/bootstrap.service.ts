@@ -6,7 +6,7 @@ import { DefaultDataService } from './default-data.service';
 import { CoreInitService } from './core-init.service';
 import { DataSourceService } from '../data-source/data-source.service';
 import { SchemaReloadService } from '../schema/schema-reload.service';
-import { RedisLockService } from '../common/redis-lock.service';
+import { RedisLockService } from '../redis/redis-lock.service';
 
 @Injectable()
 export class BootstrapService implements OnApplicationBootstrap {

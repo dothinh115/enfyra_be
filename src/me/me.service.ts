@@ -4,6 +4,7 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TableHandlerService } from '../table/table.service';
 import { QueryEngine } from '../query-builder/query-engine.service';
+import { RouteCacheService } from '../redis/route-cache.service';
 
 @Injectable()
 export class MeService {
@@ -11,6 +12,7 @@ export class MeService {
     private dataSourceService: DataSourceService,
     private tableHandlerService: TableHandlerService,
     private queryEngine: QueryEngine,
+    private routeCacheService: RouteCacheService,
   ) {}
 
   async find(req: Request & { user: any }) {
@@ -33,6 +35,7 @@ export class MeService {
       ...(req.query.aggregate && {
         aggregate: req.query.aggregate,
       }),
+      routeCacheService: this.routeCacheService,
     });
     await repo.init();
     return repo.find(req.user.id);
@@ -58,6 +61,7 @@ export class MeService {
       ...(req.query.aggregate && {
         aggregate: req.query.aggregate,
       }),
+      routeCacheService: this.routeCacheService,
     });
     return await repo.update(req.user.id, body);
   }

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { CommonService } from '../common/common.service';
 import { SCHEMA_LOCK_EVENT_KEY } from '../utils/constant';
-import { RedisLockService } from '../common/redis-lock.service';
+import { RedisLockService } from '../redis/redis-lock.service';
 
 @Injectable()
 export class SchemaLockGuard implements CanActivate {
