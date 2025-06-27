@@ -113,7 +113,10 @@ export class DynamicRepoService {
       return this.find(table.id);
     }
     if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
-    await this.repo.save(body);
+    await this.repo.save({
+      ...exists,
+      ...body,
+    });
 
     const result = await this.find({
       where: {

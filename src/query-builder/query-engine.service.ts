@@ -82,9 +82,9 @@ export class QueryEngine {
       );
     }
 
-    // for (const sort of sortArr) {
-    //   qb.addOrderBy(`${sort.alias}.${sort.field}`, sort.direction);
-    // }
+    for (const sort of sortArr) {
+      qb.addOrderBy(`${sort.alias}.${sort.field}`, sort.direction);
+    }
 
     // === Xử lý meta ===
     const metaParts = (meta || '').split(',').map((x) => x.trim());
@@ -129,6 +129,12 @@ export class QueryEngine {
     if (page && limit) qb.skip((page - 1) * limit);
 
     const rows = await qb.getMany();
+    // const rows = this.groupRawResultRecursive(
+    //   rawRows,
+    //   tableName,
+    //   metaData,
+    //   joinArr,
+    // );
 
     return {
       data: rows,
@@ -259,17 +265,17 @@ export class QueryEngine {
         selectSet.add(`${res.alias}.id`);
         this.log.push(`+ Add select (relation.id): ${res.alias}.id`);
 
-        for (const rel of res.lastMeta.relations) {
-          const relPath = [...path, rel.propertyName];
-          const childResult = addJoin(relPath);
-          if (childResult) {
-            selectSet.add(`${childResult.alias}.id`);
+        // for (const rel of res.lastMeta.relations) {
+        //   const relPath = [...path, rel.propertyName];
+        //   const childResult = addJoin(relPath);
+        //   if (childResult) {
+        //     selectSet.add(`${childResult.alias}.id`);
 
-            this.log.push(
-              `+ Add select (relation 1 tầng).id: ${childResult.alias}.id`,
-            );
-          }
-        }
+        //     this.log.push(
+        //       `+ Add select (relation 1 tầng).id: ${childResult.alias}.id`,
+        //     );
+        //   }
+        // }
       }
     };
 
@@ -298,6 +304,17 @@ export class QueryEngine {
       });
 
       for (const col of res.lastMeta.columns) {
+        // Nếu tồn tại relation trùng tên thì bỏ qua (vì alias này là relation, ko phải column thật)
+        if (
+          res.lastMeta.relations.some(
+            (r) => r.propertyName === col.propertyName,
+          )
+        ) {
+          this.log.push(
+            `- Skip column "${col.propertyName}" vì trùng với relation`,
+          );
+          continue;
+        }
         selectSet.add(`${res.alias}.${col.propertyName}`);
         this.log.push(`+ Add select ( * ): ${res.alias}.${col.propertyName}`);
       }
@@ -801,5 +818,158 @@ export class QueryEngine {
       default:
         return String(value);
     }
+  }
+
+  private groupRawResultRecursive(
+    rows: any[],
+    rootAlias: string,
+    rootMeta: EntityMetadata,
+    joinArr: { alias: string; parentAlias: string; propertyPath: string }[],
+  ): any[] {
+    const grouped = new Map<any, any>();
+
+    const aliasToMeta = new Map<string, EntityMetadata>();
+    aliasToMeta.set(rootAlias, rootMeta);
+
+    const keyOf = (alias: string) => `${alias}_id`;
+
+    // Map để biết alias nào là con của alias nào
+    const childJoinMap = new Map<
+      string,
+      { alias: string; propertyPath: string }[]
+    >();
+    for (const join of joinArr) {
+      if (!childJoinMap.has(join.parentAlias)) {
+        childJoinMap.set(join.parentAlias, []);
+      }
+      childJoinMap.get(join.parentAlias)!.push({
+        alias: join.alias,
+        propertyPath: join.propertyPath,
+      });
+
+      // lưu metadata cho alias
+      const parentMeta = aliasToMeta.get(join.parentAlias);
+      const rel = parentMeta?.relations.find(
+        (r) => r.propertyName === join.propertyPath,
+      );
+      if (rel) {
+        aliasToMeta.set(join.alias, rel.inverseEntityMetadata);
+      }
+    }
+
+    const buildEntity = (
+      alias: string,
+      meta: EntityMetadata,
+      row: any,
+    ): any => {
+      const obj: any = {};
+
+      for (const col of meta.columns) {
+        const key = `${alias}_${col.propertyName}`;
+        let val = row[key];
+
+        if (col.type === 'simple-json' && typeof val === 'string') {
+          try {
+            val = JSON.parse(val);
+          } catch {
+            val = null;
+          }
+        }
+        const BOOLEAN_TYPES = ['boolean', 'bool', 'tinyint'];
+
+        if (
+          typeof val === 'number' &&
+          BOOLEAN_TYPES.includes(col.type as string) &&
+          (col.type !== 'tinyint' ||
+            col.width === 1 ||
+            /^is[A-Z]/.test(col.propertyName))
+        ) {
+          val = Boolean(val);
+        }
+
+        obj[col.propertyName] = val;
+      }
+
+      // Chỉ init quan hệ nếu có join
+      const childJoins = childJoinMap.get(alias) || [];
+      for (const { propertyPath } of childJoins) {
+        const rel = meta.relations.find((r) => r.propertyName === propertyPath);
+        if (!rel) continue;
+
+        if (
+          rel.relationType === 'one-to-many' ||
+          rel.relationType === 'many-to-many'
+        ) {
+          obj[rel.propertyName] = [];
+        } else {
+          obj[rel.propertyName] = null;
+        }
+      }
+
+      return obj;
+    };
+
+    const processAlias = (
+      alias: string,
+      meta: EntityMetadata,
+      row: any,
+      entityMap: Map<string, any>,
+    ): any => {
+      const id = row[keyOf(alias)];
+      if (id == null) return null;
+
+      const entityKey = `${alias}_${id}`;
+      if (entityMap.has(entityKey)) return entityMap.get(entityKey);
+
+      const obj = buildEntity(alias, meta, row);
+      entityMap.set(entityKey, obj);
+
+      const children = childJoinMap.get(alias);
+      if (children) {
+        for (const { alias: childAlias, propertyPath } of children) {
+          const childMeta = aliasToMeta.get(childAlias);
+          const childEntity = processAlias(
+            childAlias,
+            childMeta!,
+            row,
+            entityMap,
+          );
+          if (!childEntity) continue;
+
+          const rel = meta.relations.find(
+            (r) => r.propertyName === propertyPath,
+          );
+          if (!rel) continue;
+
+          if (
+            rel.relationType === 'one-to-many' ||
+            rel.relationType === 'many-to-many'
+          ) {
+            const arr = obj[propertyPath] || [];
+            if (!arr.find((i: any) => i.id === childEntity.id)) {
+              arr.push(childEntity);
+            }
+            obj[propertyPath] = arr;
+          } else {
+            obj[propertyPath] = childEntity;
+          }
+        }
+      }
+
+      return obj;
+    };
+
+    for (const row of rows) {
+      const id = row[keyOf(rootAlias)];
+      if (id == null) continue;
+
+      if (!grouped.has(id)) {
+        const entityMap = new Map<string, any>();
+        const rootEntity = processAlias(rootAlias, rootMeta, row, entityMap);
+        grouped.set(id, rootEntity);
+      }
+    }
+
+    return Array.from(grouped.values());
   }
 }
