@@ -84,7 +84,13 @@ export class DynamicRepoService {
         const table: any = await this.tableHandlerService.createTable(body);
         await this.routeCacheService.reloadRouteCache();
 
-        return await this.find(table.id);
+        return await this.find({
+          where: {
+            id: {
+              _eq: table.id,
+            },
+          },
+        });
       }
       const created: any = await this.repo.save(body);
 
@@ -121,7 +127,13 @@ export class DynamicRepoService {
           +id,
           body,
         );
-        return this.find(table.id);
+        return this.find({
+          where: {
+            id: {
+              _eq: table.id,
+            },
+          },
+        });
       }
       if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
       await this.repo.save({
