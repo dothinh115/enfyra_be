@@ -22,10 +22,20 @@ export function generateMigrationFile() {
     logger.log(`Đã tạo thư mục ${migrationDir}`);
 
     const script = `npm run typeorm -- migration:generate ${migrationDir} -d ${appDataSourceDir}`;
-    execSync(script, { stdio: 'inherit' });
+    execSync(script, { encoding: 'utf-8' });
     logger.debug('Generate file migration thành công!');
-  } catch (error) {
-    logger.error('Lỗi khi chạy generate migration:', error);
+  } catch (error: any) {
+    const output = error?.output?.[1]?.toString() ?? '';
+
+    logger.error('Lỗi khi chạy generate migration:');
+    console.error(output);
+
+    if (output.includes('No changes in database schema were found')) {
+      logger.warn('⏭️ Không có gì thay đổi để generate migration. Bỏ qua.');
+      return; // không throw, để tránh loop restore
+    }
+
+    throw error;
   }
 }
 
@@ -41,5 +51,6 @@ export function runMigration() {
     logger.debug('Run migration thành công!');
   } catch (error) {
     logger.error('Lỗi khi chạy shell script:', error);
+    throw error;
   }
 }

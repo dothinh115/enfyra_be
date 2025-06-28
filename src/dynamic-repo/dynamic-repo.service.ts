@@ -3,8 +3,6 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { Repository } from 'typeorm';
 import { TableHandlerService } from '../table/table.service';
 import { QueryEngine } from '../query-builder/query-engine.service';
-import { RedisLockService } from '../redis/redis-lock.service';
-import { GLOBAL_ROUTES_KEY } from '../utils/constant';
 import { RouteCacheService } from '../redis/route-cache.service';
 
 export class DynamicRepoService {
@@ -81,74 +79,100 @@ export class DynamicRepoService {
   }
 
   async create(body: any) {
-    if (this.tableName === 'table_definition') {
-      const table: any = await this.tableHandlerService.createTable(body);
-      await this.routeCacheService.reloadRouteCache();
+    try {
+      if (this.tableName === 'table_definition') {
+        const table: any = await this.tableHandlerService.createTable(body);
+        await this.routeCacheService.reloadRouteCache();
 
-      return await this.find(table.id);
-    }
-    const created: any = await this.repo.save(body);
+        return await this.find(table.id);
+      }
+      const created: any = await this.repo.save(body);
 
-    const result = await this.find({
-      where: {
-        id: {
-          _eq: created.id,
+      const result = await this.find({
+        where: {
+          id: {
+            _eq: created.id,
+          },
         },
-      },
-    });
-    if (this.tableName === 'route_definition') {
-      await this.routeCacheService.reloadRouteCache();
+      });
+      if (this.tableName === 'route_definition') {
+        await this.routeCacheService.reloadRouteCache();
+      }
+      return result;
+    } catch (error) {
+      console.log('❌ Lỗi trong dynamic repo:', error);
+      if (this.tableName === 'table_definition')
+        throw new BadRequestException(
+          `Something went wrong, check your table schema again...`,
+        );
+      throw new BadRequestException(error.message);
     }
-    return result;
   }
 
   async update(id: string | number, body: any) {
-    const exists = await this.repo.findOne({
-      where: {
-        id,
-      },
-    });
-    if (this.tableName === 'table_definition') {
-      const table: any = await this.tableHandlerService.updateTable(+id, body);
-      return this.find(table.id);
-    }
-    if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
-    await this.repo.save({
-      ...exists,
-      ...body,
-    });
-
-    const result = await this.find({
-      where: {
-        id: {
-          _eq: exists.id,
+    try {
+      const exists = await this.repo.findOne({
+        where: {
+          id,
         },
-      },
-    });
-    if (this.tableName === 'route_definition') {
-      await this.routeCacheService.reloadRouteCache();
+      });
+      if (this.tableName === 'table_definition') {
+        const table: any = await this.tableHandlerService.updateTable(
+          +id,
+          body,
+        );
+        return this.find(table.id);
+      }
+      if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
+      await this.repo.save({
+        ...exists,
+        ...body,
+      });
+
+      const result = await this.find({
+        where: {
+          id: {
+            _eq: exists.id,
+          },
+        },
+      });
+      if (this.tableName === 'route_definition') {
+        await this.routeCacheService.reloadRouteCache();
+      }
+      return result;
+    } catch (error) {
+      console.log('❌ Lỗi trong dynamic repo:', error);
+      if (this.tableName === 'table_definition')
+        throw new BadRequestException(
+          `Something went wrong, check your table schema again...`,
+        );
+      throw new BadRequestException(error.message);
     }
-    return result;
   }
 
   async delete(id: string | number) {
-    if (this.tableName === 'table_definition') {
-      await this.tableHandlerService.delete(+id);
-      await this.routeCacheService.reloadRouteCache();
-      return 'Success';
-    }
-    const exists = await this.repo.findOne({
-      where: {
-        id,
-      },
-    });
-    if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
-    const repo = this.dataSourceService.getRepository(this.tableName);
+    try {
+      if (this.tableName === 'table_definition') {
+        await this.tableHandlerService.delete(+id);
+        await this.routeCacheService.reloadRouteCache();
+        return 'Success';
+      }
+      const exists = await this.repo.findOne({
+        where: {
+          id,
+        },
+      });
+      if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
+      const repo = this.dataSourceService.getRepository(this.tableName);
 
-    await repo.delete(id);
-    if (this.tableName === 'route_definition') {
-      await this.routeCacheService.reloadRouteCache();
+      await repo.delete(id);
+      if (this.tableName === 'route_definition') {
+        await this.routeCacheService.reloadRouteCache();
+      }
+      return `Delete successfully!`;
+    } catch (error) {
+      console.log('❌ Lỗi trong dynamic repo:', error);
+      throw new BadRequestException(error.message);
     }
-    return `Delete successfully!`;
   }
 }

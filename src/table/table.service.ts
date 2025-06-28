@@ -1,5 +1,5 @@
 import { CreateColumnDto, CreateTableDto } from '../table/dto/create-table.dto';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
 import { SchemaReloadService } from '../schema/schema-reload.service';
@@ -33,7 +33,7 @@ export class TableHandlerService {
         },
       });
       if (hasTable && result) {
-        throw new BadRequestException(`Bảng ${body.name} đã tồn tại!`);
+        throw new Error(`Bảng ${body.name} đã tồn tại!`);
       }
 
       // Tạo entity từ dữ liệu đã được xử lý
@@ -44,7 +44,7 @@ export class TableHandlerService {
 
       result = await manager.save(tableEntity, createTableEntity);
       await queryRunner.commitTransaction();
-      await this.afterEffect();
+      await this.afterEffect({ entityName: result.name, type: 'create' });
       const routeDefRepo =
         this.dataSourceService.getRepository('route_definition');
       await routeDefRepo.save({
@@ -55,9 +55,7 @@ export class TableHandlerService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error.stack || error.message || error);
-      throw new BadRequestException(
-        `Error: "${error.message}"` || 'Unknown error',
-      );
+      throw new Error(`Error: "${error.message}"` || 'Unknown error');
     } finally {
       await queryRunner.release();
     }
@@ -78,19 +76,17 @@ export class TableHandlerService {
       });
 
       if (!exists) {
-        throw new BadRequestException(`Table ${body.name} không tồn tại.`);
+        throw new Error(`Table ${body.name} không tồn tại.`);
       }
       const result = await manager.save(tableEntity, body as any);
       await queryRunner.commitTransaction();
-      await this.afterEffect();
+      await this.afterEffect({ entityName: result.name, type: 'update' });
 
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(error.stack || error.message || error);
-      throw new BadRequestException(
-        `Error: "${error.message}"` || 'Unknown error',
-      );
+      throw new Error(`Error: "${error.message}"` || 'Unknown error');
     } finally {
       await queryRunner.release();
     }
@@ -138,33 +134,41 @@ export class TableHandlerService {
       });
 
       if (!exists) {
-        throw new BadRequestException(`Table với id ${id} không tồn tại.`);
+        throw new Error(`Table với id ${id} không tồn tại.`);
       }
 
       if (exists.isSystem) {
-        throw new BadRequestException(
-          `Không thể xoá bảng static (${exists.name}).`,
-        );
+        throw new Error(`Không thể xoá bảng static (${exists.name}).`);
       }
 
       const result = await tableDefRepo.remove(exists);
-      await this.afterEffect();
+      await this.afterEffect(result.name);
       return result;
     } catch (error) {
       console.error(error.stack || error.message || error);
-      throw new BadRequestException(
-        `Error: "${error.message}"` || 'Unknown error',
-      );
+      throw new Error(`Error: "${error.message}"` || 'Unknown error');
     }
   }
 
-  async afterEffect() {
-    this.logger.warn('⏳ Locking schema for sync...');
-    await this.schemaReloadService.lockSchema();
-    const version = await this.metadataSyncService.syncAll();
-    await this.schemaReloadService.publishSchemaUpdated(version);
-    await this.commonService.delay(1000);
-    this.logger.log('✅ Unlocking schema');
-    await this.schemaReloadService.unlockSchema();
+  async afterEffect(options: {
+    entityName: string;
+    type: 'create' | 'update';
+  }) {
+    try {
+      this.logger.warn('⏳ Locking schema for sync...');
+      await this.schemaReloadService.lockSchema();
+      const version = await this.metadataSyncService.syncAll({
+        entityName: options.entityName,
+        type: options?.type,
+      });
+      await this.schemaReloadService.publishSchemaUpdated(version);
+      await this.commonService.delay(1000);
+      this.logger.log('✅ Unlocking schema');
+      await this.schemaReloadService.unlockSchema();
+    } catch (error) {
+      this.logger.error('❌ Lỗi trong afterEffect khi đồng bộ schema:', error);
+      await this.schemaReloadService.unlockSchema();
+      throw error;
+    }
   }
 }

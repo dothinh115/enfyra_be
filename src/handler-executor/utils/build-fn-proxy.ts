@@ -25,5 +25,7 @@ export function buildFunctionProxy(prefixPath) {
 function waitForParentResponse(callId) {
   return new Promise((resolve, reject) => {
     pendingCalls.set(callId, { resolve, reject });
-  }).catch(() => {});
+  }).catch((err) => {
+    throw err;
+  });
 }

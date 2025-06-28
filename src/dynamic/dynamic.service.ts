@@ -8,7 +8,6 @@ import {
 import { Request } from 'express';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
-import * as vm from 'vm';
 
 @Injectable()
 export class DynamicService {
@@ -46,28 +45,13 @@ export class DynamicService {
       const result = await this.handlerExecutorService.run(
         scriptCode,
         req.routeData.context,
+        7000,
       );
-
-      //       const ctx = vm.createContext({ $ctx: req.routeData.context });
-      //       const script = new vm.Script(`
-      //   (async () => {
-      //     ${scriptCode}
-      //   })();
-      // `);
-      // const result = await script.runInContext(ctx);
 
       return logs.length ? { result, logs } : result;
     } catch (error) {
       this.logger.error('❌ Lỗi khi chạy handler:', error.message);
       this.logger.debug(error.stack);
-
-      if (
-        error instanceof UnauthorizedException ||
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
-        throw error;
-      }
 
       throw new BadRequestException(`Script error: ${error.message}`);
     }

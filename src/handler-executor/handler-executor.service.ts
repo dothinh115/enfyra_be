@@ -44,12 +44,14 @@ export class HandlerExecutorService {
               result,
             });
           } catch (err) {
-            child.send({
-              type: 'call_result',
-              callId: msg.callId,
-              error: true,
-              ...err.response,
-            });
+            if (!err.message.includes('.toJSON')) {
+              child.send({
+                type: 'call_result',
+                callId: msg.callId,
+                error: true,
+                errorResponse: err.response,
+              });
+            }
           }
         }
         if (msg.type === 'done') {

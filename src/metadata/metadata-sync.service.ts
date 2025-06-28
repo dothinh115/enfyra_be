@@ -1,6 +1,12 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { AutoService } from '../auto/auto.service';
 import { buildToJs } from '../auto/utils/build-helper';
 import {
@@ -81,14 +87,17 @@ export class MetadataSyncService {
     );
   }
 
-  async syncAll() {
+  async syncAll(options?: {
+    entityName?: string;
+    fromRestore?: boolean;
+    type: 'create' | 'update';
+  }) {
     try {
       await this.pullMetadataFromDb();
       buildToJs({
         targetDir: path.resolve('src/entities'),
         outDir: path.resolve('dist/entities'),
       });
-
       await this.autoService.clearMigrationsTable();
       generateMigrationFile();
       runMigration();
@@ -101,7 +110,15 @@ export class MetadataSyncService {
         '❌ Lỗi khi đồng bộ metadata, đang khôi phục schema trước đó...',
         err,
       );
-      await this.schemaHistoryService.restore();
+      await this.schemaHistoryService.restore({
+        entityName: options?.entityName,
+        type: options.type,
+      });
+      this.logger.error('🛑 THROWING lỗi sau khi restore');
+
+      throw new BadRequestException(
+        `Something went wrong, check your table schema again....`,
+      );
     }
   }
 }

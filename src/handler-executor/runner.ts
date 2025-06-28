@@ -47,12 +47,16 @@ process.on('message', async (msg: any) => {
       process.send({
         type: 'error',
         error: {
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
-          statusCode: error.statusCode,
+          message: error.errorResponse?.message,
+          stack: error.errorResponse?.stack,
+          name: error.errorResponse?.name,
+          statusCode: error.errorResponse?.statusCode,
         },
       });
     }
   }
+});
+
+process.on('error', (err) => {
+  console.log(err);
 });

@@ -49,21 +49,28 @@ export class SchemaHistoryService {
     return result.id;
   }
 
-  async restore() {
+  async restore(options?: { entityName?: string; type: 'create' | 'update' }) {
     const tableDefRepo =
       this.dataSourceService.getRepository('table_definition');
     const schemaHistoryRepo =
       this.dataSourceService.getRepository('schema_history');
+    if (options.type === 'create') {
+      await tableDefRepo.delete({ name: options.entityName });
+    }
 
     const oldest: any = await schemaHistoryRepo.findOne({
       where: {},
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'DESC' },
     });
 
     if (oldest) {
+      console.log(oldest.id);
       await tableDefRepo.save(oldest.schema);
       this.logger.warn('⚠️ Đã khôi phục metadata từ schema_history');
-      await this.metadataSyncService.syncAll();
+      await this.metadataSyncService.syncAll({
+        fromRestore: true,
+        type: options?.type,
+      });
     } else {
       this.logger.warn('⚠️ Không có bản backup schema nào để khôi phục');
     }

@@ -14,7 +14,7 @@ export class GraphqlService implements OnApplicationBootstrap {
     private dynamicResolver: DynamicResolver,
   ) {}
   async onApplicationBootstrap() {
-    await this.reloadSchema();
+    // await this.reloadSchema();
   }
   private yogaApp: ReturnType<typeof createYoga>;
 
