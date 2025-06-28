@@ -68,7 +68,7 @@ export class RouteCacheService {
       route.middlewares = [...globalMiddlewares, ...route.middlewares];
     });
 
-    await this.redisLockService.setNoExpire(GLOBAL_ROUTES_KEY, routes);
+    await this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 30000);
     return routes;
   }
 

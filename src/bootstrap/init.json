@@ -102,7 +102,7 @@
     "defaultHook": [
         {
             "isEnabled": true,
-            "afterHook": "$ctx.$data = {statusCode: $ctx.$statusCode,data: $ctx.$data,message: 'Success'}",
+            "afterHook": "$ctx.$data = {statusCode: $ctx.$statusCode,...$ctx.$data,message: 'Success'}",
             "name": "Default response"
         }
     ]
