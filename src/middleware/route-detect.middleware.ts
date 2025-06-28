@@ -112,7 +112,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
         context,
       };
     }
-
     next();
   }
 

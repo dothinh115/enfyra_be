@@ -37,77 +37,40 @@ export class QueryEngine {
     meta?: string;
     aggregate?: any;
   }): Promise<any> {
-    const { tableName, fields, filter, sort, page, limit, meta } = options;
-    const dataSource = this.dataSourceService.getDataSource();
-    const metaData = dataSource.getMetadata(tableName);
+    try {
+      const { tableName, fields, filter, sort, page, limit, meta } = options;
+      const dataSource = this.dataSourceService.getDataSource();
+      const metaData = dataSource.getMetadata(tableName);
 
-    this.log = [];
+      this.log = [];
 
-    const { joinArr, selectArr, sortArr } = this.buildJoinTree({
-      meta: metaData,
-      fields,
-      filter,
-      sort,
-      rootAlias: tableName,
-    });
+      const { joinArr, selectArr, sortArr } = this.buildJoinTree({
+        meta: metaData,
+        fields,
+        filter,
+        sort,
+        rootAlias: tableName,
+      });
 
-    const { parts } = this.walkFilter({
-      filter,
-      currentMeta: metaData,
-      currentAlias: tableName,
-    });
+      const { parts } = this.walkFilter({
+        filter,
+        currentMeta: metaData,
+        currentAlias: tableName,
+      });
 
-    const qb = dataSource.createQueryBuilder(metaData.target, tableName);
+      const qb = dataSource.createQueryBuilder(metaData.target, tableName);
 
-    for (const join of joinArr) {
-      qb.leftJoinAndSelect(
-        `${join.parentAlias}.${join.propertyPath}`,
-        join.alias,
-      );
-    }
+      for (const join of joinArr) {
+        qb.leftJoinAndSelect(
+          `${join.parentAlias}.${join.propertyPath}`,
+          join.alias,
+        );
+      }
 
-    qb.select([...selectArr]);
-
-    if (parts.length > 0) {
-      qb.where(
-        new Brackets((qb2) => {
-          for (const p of parts) {
-            if (p.operator === 'AND') {
-              qb2.andWhere(p.sql, p.params);
-            } else {
-              qb2.orWhere(p.sql, p.params);
-            }
-          }
-        }),
-      );
-    }
-
-    for (const sort of sortArr) {
-      qb.addOrderBy(`${sort.alias}.${sort.field}`, sort.direction);
-    }
-
-    // === Xử lý meta ===
-    const metaParts = (meta || '').split(',').map((x) => x.trim());
-    let totalCount = 0;
-    let filterCount = 0;
-
-    // totalCount = full table
-    if (metaParts.includes('totalCount') || metaParts.includes('*')) {
-      totalCount = await dataSource
-        .createQueryBuilder(metaData.target, tableName)
-        .getCount();
-      this.log.push(`+ totalCount = ${totalCount}`);
-    }
-
-    // filterCount = sau filter
-    if (metaParts.includes('filterCount') || metaParts.includes('*')) {
-      const filterQb = dataSource.createQueryBuilder(
-        metaData.target,
-        tableName,
-      );
+      qb.select([...selectArr]);
 
       if (parts.length > 0) {
-        filterQb.where(
+        qb.where(
           new Brackets((qb2) => {
             for (const p of parts) {
               if (p.operator === 'AND') {
@@ -120,37 +83,85 @@ export class QueryEngine {
         );
       }
 
-      filterCount = await filterQb.getCount();
-      this.log.push(`+ filterCount = ${filterCount}`);
+      for (const sort of sortArr) {
+        qb.addOrderBy(`${sort.alias}.${sort.field}`, sort.direction);
+      }
+
+      // === Xử lý meta ===
+      const metaParts = (meta || '').split(',').map((x) => x.trim());
+      let totalCount = 0;
+      let filterCount = 0;
+
+      // totalCount = full table
+      if (metaParts.includes('totalCount') || metaParts.includes('*')) {
+        totalCount = await dataSource
+          .createQueryBuilder(metaData.target, tableName)
+          .getCount();
+        this.log.push(`+ totalCount = ${totalCount}`);
+      }
+
+      // filterCount = sau filter
+      if (metaParts.includes('filterCount') || metaParts.includes('*')) {
+        const filterQb = dataSource.createQueryBuilder(
+          metaData.target,
+          tableName,
+        );
+
+        if (parts.length > 0) {
+          for (const join of joinArr) {
+            filterQb.leftJoin(
+              `${join.parentAlias}.${join.propertyPath}`,
+              join.alias,
+            );
+          }
+
+          filterQb.where(
+            new Brackets((qb2) => {
+              for (const p of parts) {
+                if (p.operator === 'AND') {
+                  qb2.andWhere(p.sql, p.params);
+                } else {
+                  qb2.orWhere(p.sql, p.params);
+                }
+              }
+            }),
+          );
+        }
+
+        filterCount = await filterQb.getCount();
+        this.log.push(`+ filterCount = ${filterCount}`);
+      }
+
+      // === paging ===
+      if (limit) qb.take(limit);
+      if (page && limit) qb.skip((page - 1) * limit);
+
+      const rows = await qb.getMany();
+      // const rows = this.groupRawResultRecursive(
+      //   rawRows,
+      //   tableName,
+      //   metaData,
+      //   joinArr,
+      // );
+
+      return {
+        data: rows,
+        ...(meta && {
+          meta: {
+            totalCount,
+            filterCount,
+          },
+        }),
+        // debug: {
+        //   sql: qb.getSql(),
+        //   select: selectArr,
+        //   join: joinArr,
+        //   log: this.log,
+        // },
+      };
+    } catch (error) {
+      console.log(error);
     }
-
-    // === paging ===
-    if (limit) qb.take(limit);
-    if (page && limit) qb.skip((page - 1) * limit);
-
-    const rows = await qb.getMany();
-    // const rows = this.groupRawResultRecursive(
-    //   rawRows,
-    //   tableName,
-    //   metaData,
-    //   joinArr,
-    // );
-
-    return {
-      data: rows,
-      ...(meta && {
-        meta: {
-          totalCount,
-          filterCount,
-        },
-      }),
-      // debug: {
-      //   sql: qb.getSql(),
-      //   select: selectArr,
-      //   join: joinArr,
-      //   log: this.log,
-      // },
-    };
   }
 
   private buildJoinTree({

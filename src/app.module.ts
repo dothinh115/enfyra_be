@@ -34,6 +34,7 @@ import { QueryEngineModule } from './query-builder/query-engine.module';
 import { DynamicInterceptor } from './interceptors/dynamic.interceptor';
 import { HandlerExecutorModule } from './handler-executor/hanler-executor.module';
 import { RouteCacheService } from './redis/route-cache.service';
+import { ParseQueryMiddleware } from './middleware/parse-query.middleware';
 
 @Global()
 @Module({
@@ -106,6 +107,7 @@ import { RouteCacheService } from './redis/route-cache.service';
 })
 export class AppModule implements NestModule {
   async configure(consumer: MiddlewareConsumer) {
+    consumer.apply(ParseQueryMiddleware).forRoutes('*');
     consumer.apply(RouteDetectMiddleware).forRoutes('*');
     consumer.apply(DynamicMiddleware).forRoutes('*');
   }
