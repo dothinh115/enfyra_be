@@ -7,7 +7,7 @@ export class Column_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
     @Column({ type: "simple-json", nullable: true })
-    default: any;
+    defaultValue: any;
     @Column({ type: "text", nullable: true })
     description: string;
     @Column({ type: "simple-json", nullable: true })

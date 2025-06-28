@@ -190,16 +190,29 @@ async function writeEntitiesFromSnapshot() {
 
         if (col.isUnique) opts.push('unique: true');
 
-        if (col.default !== undefined && col.default !== null) {
-          if (
-            typeof col.default === 'string' &&
-            col.default.toLowerCase() === 'now'
+        if (col.defaultValue !== undefined && col.defaultValue !== null) {
+          const defaultVal = col.defaultValue;
+          const invalidDefault =
+            (col.type === 'uuid' && defaultVal === '') ||
+            (col.type === 'number' && isNaN(Number(defaultVal))) ||
+            (col.type === 'boolean' &&
+              typeof defaultVal !== 'boolean' &&
+              defaultVal !== 'true' &&
+              defaultVal !== 'false');
+
+          if (invalidDefault) {
+            console.warn(
+              `⚠️ Bỏ qua defaultValue không hợp lệ cho cột "${col.name}"`,
+            );
+          } else if (
+            typeof defaultVal === 'string' &&
+            defaultVal.toLowerCase() === 'now'
           ) {
             opts.push(`default: () => 'now()'`);
-          } else if (typeof col.default === 'string') {
-            opts.push(`default: '${col.default}'`);
+          } else if (typeof defaultVal === 'string') {
+            opts.push(`default: '${defaultVal}'`);
           } else {
-            opts.push(`default: ${col.default}`);
+            opts.push(`default: ${defaultVal}`);
           }
         }
 

@@ -36,11 +36,27 @@ export class TableHandlerService {
         throw new Error(`Bảng ${body.name} đã tồn tại!`);
       }
 
+      const idCol = body.columns.find(
+        (col) => col.name === 'id' && col.isPrimary,
+      );
+      if (!idCol) {
+        throw new Error(
+          `Table must contain a column named "id" with isPrimary = true.`,
+        );
+      }
+
+      const validTypes = ['int', 'uuid'];
+      if (!validTypes.includes(idCol.type)) {
+        throw new Error(`The primary column "id" must be of type int, uuid.`);
+      }
+
+      const primaryCount = body.columns.filter((col) => col.isPrimary).length;
+      if (primaryCount !== 1) {
+        throw new Error(`Only one column is allowed to have isPrimary = true.`);
+      }
+
       // Tạo entity từ dữ liệu đã được xử lý
-      const createTableEntity = manager.create(tableEntity, {
-        columns: this.normalizeColumnsWithAutoId(body.columns),
-        ...body,
-      } as any);
+      const createTableEntity = manager.create(tableEntity, body);
 
       result = await manager.save(tableEntity, createTableEntity);
       await queryRunner.commitTransaction();
@@ -78,7 +94,10 @@ export class TableHandlerService {
       if (!exists) {
         throw new Error(`Table ${body.name} không tồn tại.`);
       }
-      const result = await manager.save(tableEntity, body as any);
+      if (!body.columns?.some((col) => col.isPrimary)) {
+        throw new Error(`Table must contains id column with isPrimary = true!`);
+      }
+      const result = await manager.save(tableEntity, body);
       await queryRunner.commitTransaction();
       await this.afterEffect({ entityName: result.name, type: 'update' });
 
@@ -90,39 +109,6 @@ export class TableHandlerService {
     } finally {
       await queryRunner.release();
     }
-  }
-
-  normalizeColumnsWithAutoId(columns: CreateColumnDto[]): CreateColumnDto[] {
-    // Tìm xem user có cố gắng định nghĩa cột id không
-    const userIdCol = columns.find((col) => col.name === 'id');
-    const idType =
-      userIdCol?.type === 'varchar' || userIdCol?.type === 'uuid'
-        ? 'uuid'
-        : 'int';
-
-    // Loại bỏ cột id do user định nghĩa
-    const filtered = columns.filter((col) => col.name !== 'id');
-
-    // Tạo cột id chuẩn
-    const idColumn: CreateColumnDto =
-      idType === 'uuid'
-        ? {
-            name: 'id',
-            type: 'uuid',
-            isPrimary: true,
-            isGenerated: true,
-            isNullable: false,
-          }
-        : {
-            name: 'id',
-            type: 'int',
-            isPrimary: true,
-            isGenerated: true,
-            isNullable: false,
-          };
-
-    // Trả về kết quả
-    return [idColumn, ...filtered];
   }
 
   async delete(id: number) {

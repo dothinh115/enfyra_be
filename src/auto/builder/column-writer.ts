@@ -32,14 +32,19 @@ export function addColumnToClass({
       opts.push('nullable: true');
     }
 
-    if (col.default !== undefined && col.default !== null) {
-      if (col.default === 'now') {
+    if (col.defaultValue !== undefined && col.defaultValue !== null) {
+      const invalidDefault =
+        (col.type === 'uuid' && col.defaultValue === '') ||
+        (col.type === 'number' && isNaN(Number(col.defaultValue)));
+
+      if (invalidDefault) {
+      } else if (col.defaultValue === 'now') {
         opts.push(`default: () => "now()"`);
       } else {
         opts.push(
-          typeof col.default === 'string'
-            ? `default: "${col.default}"`
-            : `default: ${col.default}`,
+          typeof col.defaultValue === 'string'
+            ? `default: "${col.defaultValue}"`
+            : `default: ${col.defaultValue}`,
         );
       }
     }
