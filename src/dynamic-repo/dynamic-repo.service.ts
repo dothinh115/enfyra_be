@@ -107,10 +107,6 @@ export class DynamicRepoService {
       return result;
     } catch (error) {
       console.log('❌ Lỗi trong dynamic repo:', error);
-      if (this.tableName === 'table_definition')
-        throw new BadRequestException(
-          `Something went wrong, check your table schema again...`,
-        );
       throw new BadRequestException(error.message);
     }
   }
@@ -154,10 +150,7 @@ export class DynamicRepoService {
       return result;
     } catch (error) {
       console.log('❌ Lỗi trong dynamic repo:', error);
-      if (this.tableName === 'table_definition')
-        throw new BadRequestException(
-          `Something went wrong, check your table schema again...`,
-        );
+
       throw new BadRequestException(error.message);
     }
   }
