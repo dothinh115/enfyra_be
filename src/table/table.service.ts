@@ -1,4 +1,4 @@
-import { CreateColumnDto, CreateTableDto } from '../table/dto/create-table.dto';
+import { CreateTableDto } from '../table/dto/create-table.dto';
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
@@ -85,8 +85,13 @@ export class TableHandlerService {
     const manager = queryRunner.manager;
     const tableEntity =
       this.dataSourceService.entityClassMap.get('table_definition');
+    const columnEntity =
+      this.dataSourceService.entityClassMap.get('column_definition');
+    const relationEntity = this.dataSourceService.entityClassMap.get(
+      'relation_definition',
+    );
     try {
-      const exists = await manager.findOne(tableEntity, {
+      const exists: any = await manager.findOne(tableEntity, {
         where: { id },
         relations: ['columns', 'relations'],
       });
@@ -97,6 +102,20 @@ export class TableHandlerService {
       if (!body.columns?.some((col) => col.isPrimary)) {
         throw new Error(`Table must contains id column with isPrimary = true!`);
       }
+
+      const deletedColumnIds = this.getDeletedIds(exists.columns, body.columns);
+      const deletedRelationIds = this.getDeletedIds(
+        exists.relations,
+        body.relations,
+      );
+
+      if (deletedColumnIds.length) {
+        await manager.delete(columnEntity, deletedColumnIds);
+      }
+      if (deletedRelationIds.length) {
+        await manager.delete(relationEntity, deletedRelationIds);
+      }
+
       const result = await manager.save(tableEntity, body);
       await queryRunner.commitTransaction();
       await this.afterEffect({ entityName: result.name, type: 'update' });
@@ -156,5 +175,11 @@ export class TableHandlerService {
       await this.schemaReloadService.unlockSchema();
       throw error;
     }
+  }
+
+  getDeletedIds<T extends { id?: any }>(oldItems: T[], newItems: T[]): any[] {
+    const oldIds = oldItems.map((item) => item.id).filter(Boolean);
+    const newIds = newItems.map((item) => item.id).filter(Boolean);
+    return oldIds.filter((id) => !newIds.includes(id));
   }
 }

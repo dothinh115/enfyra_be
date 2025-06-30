@@ -118,6 +118,8 @@ export class DynamicRepoService {
           id,
         },
       });
+
+      if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
       if (this.tableName === 'table_definition') {
         const table: any = await this.tableHandlerService.updateTable(
           +id,
@@ -131,7 +133,13 @@ export class DynamicRepoService {
           },
         });
       }
-      if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
+      if (
+        this.tableName === 'route_definition' &&
+        exists.isSystem &&
+        !body.isEnabled
+      ) {
+        throw new Error(`Can't disable system route`);
+      }
       await this.repo.save({
         ...exists,
         ...body,
@@ -150,7 +158,6 @@ export class DynamicRepoService {
       return result;
     } catch (error) {
       console.log('❌ Lỗi trong dynamic repo:', error);
-
       throw new BadRequestException(error.message);
     }
   }
