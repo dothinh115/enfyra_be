@@ -4,6 +4,8 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
 import { SchemaReloadService } from '../schema/schema-reload.service';
 import { CommonService } from '../common/common.service';
+import { validateUniquePropertyNames } from './utils/duplicate-field-check';
+import { getDeletedIds } from './utils/get-deleted-ids';
 
 @Injectable()
 export class TableHandlerService {
@@ -55,6 +57,8 @@ export class TableHandlerService {
         throw new Error(`Only one column is allowed to have isPrimary = true.`);
       }
 
+      validateUniquePropertyNames(body.columns || [], body.relations || []);
+
       // Tạo entity từ dữ liệu đã được xử lý
       const createTableEntity = manager.create(tableEntity, body);
 
@@ -103,8 +107,10 @@ export class TableHandlerService {
         throw new Error(`Table must contains id column with isPrimary = true!`);
       }
 
-      const deletedColumnIds = this.getDeletedIds(exists.columns, body.columns);
-      const deletedRelationIds = this.getDeletedIds(
+      validateUniquePropertyNames(body.columns || [], body.relations || []);
+
+      const deletedColumnIds = getDeletedIds(exists.columns, body.columns);
+      const deletedRelationIds = getDeletedIds(
         exists.relations,
         body.relations,
       );
@@ -175,11 +181,5 @@ export class TableHandlerService {
       await this.schemaReloadService.unlockSchema();
       throw error;
     }
-  }
-
-  getDeletedIds<T extends { id?: any }>(oldItems: T[], newItems: T[]): any[] {
-    const oldIds = oldItems.map((item) => item.id).filter(Boolean);
-    const newIds = newItems.map((item) => item.id).filter(Boolean);
-    return oldIds.filter((id) => !newIds.includes(id));
   }
 }
