@@ -23,8 +23,14 @@ export function addColumnToClass({
     decorators.push({ name: 'PrimaryGeneratedColumn', arguments: [strategy] });
     usedImports.add('PrimaryGeneratedColumn');
   } else {
-    const type = col.type === 'date' ? 'timestamp' : col.type;
-    const opts = [`type: "${type}"`];
+    const dbType =
+      col.type === 'date'
+        ? 'timestamp'
+        : col.type === 'richtext'
+          ? 'text'
+          : col.type;
+
+    const opts = [`type: "${dbType}"`];
 
     if (col.isNullable === false) {
       opts.push('nullable: false');
@@ -76,7 +82,9 @@ export function addColumnToClass({
       ? col.enumValues.map((v) => `'${v}'`).join(' | ')
       : col.type === 'date'
         ? 'Date'
-        : helpers.dbTypeToTSType(col.type);
+        : col.type === 'richtext'
+          ? 'string'
+          : helpers.dbTypeToTSType(col.type);
 
   classDeclaration.addProperty({
     name: col.name,
