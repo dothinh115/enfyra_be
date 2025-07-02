@@ -43,12 +43,13 @@ export class QueryEngine {
       const metaData = dataSource.getMetadata(tableName);
 
       this.log = [];
+      const parsedSort = this.parseSortInput(sort);
 
       const { joinArr, selectArr, sortArr } = this.buildJoinTree({
         meta: metaData,
         fields,
         filter,
-        sort,
+        sort: parsedSort.map((parsed) => parsed.field),
         rootAlias: tableName,
       });
 
@@ -84,7 +85,11 @@ export class QueryEngine {
       }
 
       for (const sort of sortArr) {
-        qb.addOrderBy(`${sort.alias}.${sort.field}`, sort.direction);
+        qb.addOrderBy(
+          `${sort.alias}.${sort.field}`,
+          parsedSort.find((parsed) => parsed.field === sort.field)?.direction ??
+            'ASC',
+        );
       }
 
       // === Xử lý meta ===
@@ -207,7 +212,6 @@ export class QueryEngine {
         if (found.kind === 'relation') {
           parentAlias = currentAlias;
 
-          // Sửa chỗ này — alias phụ thuộc vào path
           currentAlias = `${rootAlias}_${path.slice(0, i + 1).join('_')}`;
 
           const propertyPath = segment;
@@ -831,156 +835,14 @@ export class QueryEngine {
     }
   }
 
-  private groupRawResultRecursive(
-    rows: any[],
-    rootAlias: string,
-    rootMeta: EntityMetadata,
-    joinArr: { alias: string; parentAlias: string; propertyPath: string }[],
-  ): any[] {
-    const grouped = new Map<any, any>();
-
-    const aliasToMeta = new Map<string, EntityMetadata>();
-    aliasToMeta.set(rootAlias, rootMeta);
-
-    const keyOf = (alias: string) => `${alias}_id`;
-
-    // Map để biết alias nào là con của alias nào
-    const childJoinMap = new Map<
-      string,
-      { alias: string; propertyPath: string }[]
-    >();
-    for (const join of joinArr) {
-      if (!childJoinMap.has(join.parentAlias)) {
-        childJoinMap.set(join.parentAlias, []);
+  parseSortInput(sort?: string | string[]) {
+    if (!sort) return [];
+    const arr = Array.isArray(sort) ? sort : [sort];
+    return arr.map((s) => {
+      if (typeof s === 'string' && s.startsWith('-')) {
+        return { field: s.substring(1), direction: 'DESC' as const };
       }
-      childJoinMap.get(join.parentAlias)!.push({
-        alias: join.alias,
-        propertyPath: join.propertyPath,
-      });
-
-      // lưu metadata cho alias
-      const parentMeta = aliasToMeta.get(join.parentAlias);
-      const rel = parentMeta?.relations.find(
-        (r) => r.propertyName === join.propertyPath,
-      );
-      if (rel) {
-        aliasToMeta.set(join.alias, rel.inverseEntityMetadata);
-      }
-    }
-
-    const buildEntity = (
-      alias: string,
-      meta: EntityMetadata,
-      row: any,
-    ): any => {
-      const obj: any = {};
-
-      for (const col of meta.columns) {
-        const key = `${alias}_${col.propertyName}`;
-        let val = row[key];
-
-        if (col.type === 'simple-json' && typeof val === 'string') {
-          try {
-            val = JSON.parse(val);
-          } catch {
-            val = null;
-          }
-        }
-        const BOOLEAN_TYPES = ['boolean', 'bool', 'tinyint'];
-
-        if (
-          typeof val === 'number' &&
-          BOOLEAN_TYPES.includes(col.type as string) &&
-          (col.type !== 'tinyint' ||
-            col.width === 1 ||
-            /^is[A-Z]/.test(col.propertyName))
-        ) {
-          val = Boolean(val);
-        }
-
-        obj[col.propertyName] = val;
-      }
-
-      // Chỉ init quan hệ nếu có join
-      const childJoins = childJoinMap.get(alias) || [];
-      for (const { propertyPath } of childJoins) {
-        const rel = meta.relations.find((r) => r.propertyName === propertyPath);
-        if (!rel) continue;
-
-        if (
-          rel.relationType === 'one-to-many' ||
-          rel.relationType === 'many-to-many'
-        ) {
-          obj[rel.propertyName] = [];
-        } else {
-          obj[rel.propertyName] = null;
-        }
-      }
-
-      return obj;
-    };
-
-    const processAlias = (
-      alias: string,
-      meta: EntityMetadata,
-      row: any,
-      entityMap: Map<string, any>,
-    ): any => {
-      const id = row[keyOf(alias)];
-      if (id == null) return null;
-
-      const entityKey = `${alias}_${id}`;
-      if (entityMap.has(entityKey)) return entityMap.get(entityKey);
-
-      const obj = buildEntity(alias, meta, row);
-      entityMap.set(entityKey, obj);
-
-      const children = childJoinMap.get(alias);
-      if (children) {
-        for (const { alias: childAlias, propertyPath } of children) {
-          const childMeta = aliasToMeta.get(childAlias);
-          const childEntity = processAlias(
-            childAlias,
-            childMeta!,
-            row,
-            entityMap,
-          );
-          if (!childEntity) continue;
-
-          const rel = meta.relations.find(
-            (r) => r.propertyName === propertyPath,
-          );
-          if (!rel) continue;
-
-          if (
-            rel.relationType === 'one-to-many' ||
-            rel.relationType === 'many-to-many'
-          ) {
-            const arr = obj[propertyPath] || [];
-            if (!arr.find((i: any) => i.id === childEntity.id)) {
-              arr.push(childEntity);
-            }
-            obj[propertyPath] = arr;
-          } else {
-            obj[propertyPath] = childEntity;
-          }
-        }
-      }
-
-      return obj;
-    };
-
-    for (const row of rows) {
-      const id = row[keyOf(rootAlias)];
-      if (id == null) continue;
-
-      if (!grouped.has(id)) {
-        const entityMap = new Map<string, any>();
-        const rootEntity = processAlias(rootAlias, rootMeta, row, entityMap);
-        grouped.set(id, rootEntity);
-      }
-    }
-
-    return Array.from(grouped.values());
+      return { field: s, direction: 'ASC' as const };
+    });
   }
 }
