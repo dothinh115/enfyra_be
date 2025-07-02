@@ -140,7 +140,7 @@
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
             { "name": "method", "type": "varchar", "isSystem": true },
-            { "name": "logic", "type": "text", "isSystem":true },
+            { "name": "logic", "type": "code", "isSystem":true },
             { "name": "description", "type": "text", "isSystem": true }
         ],
         "relations": [
@@ -153,7 +153,7 @@
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
             { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "isUnique":true },
-            { "name": "handler", "type": "text", "isNullable": false, "isSystem": true },
+            { "name": "handler", "type": "code", "isNullable": false, "isSystem": true },
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "priority", "type": "int", "isNullable": true, "isSystem": true, "defaultValue": 0 },
             { "name": "description", "type": "text", "isSystem": true }
@@ -169,8 +169,8 @@
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
             { "name": "name", "type": "varchar", "isSystem": true },
-            { "name": "preHook", "type": "text", "isNullable": true, "isSystem": true },
-            { "name": "afterHook", "type": "text", "isNullable": true, "isSystem": true },
+            { "name": "preHook", "type": "code", "isNullable": true, "isSystem": true },
+            { "name": "afterHook", "type": "code", "isNullable": true, "isSystem": true },
             { "name": "priority", "type": "int", "isNullable": true, "isSystem": true, "defaultValue": 0 },
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "description", "type": "text", "isSystem": true }

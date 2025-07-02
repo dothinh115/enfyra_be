@@ -26,7 +26,7 @@ export function addColumnToClass({
     const dbType =
       col.type === 'date'
         ? 'timestamp'
-        : col.type === 'richtext'
+        : col.type === 'richtext' || col.type === 'code'
           ? 'text'
           : col.type;
 
@@ -44,6 +44,7 @@ export function addColumnToClass({
         (col.type === 'number' && isNaN(Number(col.defaultValue)));
 
       if (invalidDefault) {
+        // skip invalid default value
       } else if (col.defaultValue === 'now') {
         opts.push(`default: () => "now()"`);
       } else {
@@ -82,7 +83,7 @@ export function addColumnToClass({
       ? col.enumValues.map((v) => `'${v}'`).join(' | ')
       : col.type === 'date'
         ? 'Date'
-        : col.type === 'richtext'
+        : col.type === 'richtext' || col.type === 'code'
           ? 'string'
           : helpers.dbTypeToTSType(col.type);
 

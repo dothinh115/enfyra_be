@@ -183,8 +183,15 @@ async function writeEntitiesFromSnapshot() {
         });
         usedImports.add('PrimaryGeneratedColumn');
       } else {
+        const dbType =
+          col.type === 'date'
+            ? 'timestamp'
+            : col.type === 'richtext' || col.type === 'code'
+              ? 'text'
+              : col.type;
+
         const opts = [
-          `type: '${col.type === 'date' ? 'timestamp' : col.type}'`,
+          `type: '${dbType}'`,
           `nullable: ${col.isNullable === false ? 'false' : 'true'}`,
         ];
 
@@ -233,7 +240,12 @@ async function writeEntitiesFromSnapshot() {
 
       classDeclaration.addProperty({
         name: col.name,
-        type: col.type === 'date' ? 'Date' : dbTypeToTSType(col.type),
+        type:
+          col.type === 'date'
+            ? 'Date'
+            : col.type === 'richtext' || col.type === 'code'
+              ? 'string'
+              : dbTypeToTSType(col.type),
         decorators,
       });
     }
