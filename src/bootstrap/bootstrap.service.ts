@@ -47,7 +47,7 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   async onApplicationBootstrap() {
-    return;
+    // return;
     try {
       await this.waitForDatabaseConnection();
     } catch (err) {
@@ -67,6 +67,7 @@ export class BootstrapService implements OnApplicationBootstrap {
       await this.defaultDataService.insertDefaultUserIfEmpty();
       await this.defaultDataService.createDefaultRoutes();
       await this.defaultDataService.insertDefaultHook();
+      await this.defaultDataService.insertDefaultPermissionMap();
       await this.metadataSyncService.syncAll();
 
       settingRepo = this.dataSourceService.getRepository('setting_definition');

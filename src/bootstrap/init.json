@@ -10,12 +10,6 @@
     },
     "defaultSetting": {
         "isInit": false,
-        "actionPermissionValue": {
-            "GET": "read",
-            "POST": "create",
-            "PATCH": "update",
-            "DELETE": "delete"
-        },
         "isSystem":true,
         "projectName": "Enfyra CMS",
         "projectDescription": "Description for Enfyra CMS"
@@ -104,6 +98,24 @@
             "isEnabled": true,
             "afterHook": "$ctx.$data = {statusCode: $ctx.$statusCode,...$ctx.$data,message: 'Success'}",
             "name": "Default response"
+        }
+    ],
+    "defaultPermissionMap": [
+        {
+            "method": "GET",
+            "action": "read"
+        },
+        {
+            "method": "POST",
+            "action": "create"
+        },
+        {
+            "method": "PATCH",
+            "action": "update"
+        },
+        {
+            "method": "DELETE",
+            "action": "delete"
         }
     ]
 }

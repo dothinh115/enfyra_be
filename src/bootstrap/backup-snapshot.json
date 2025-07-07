@@ -82,12 +82,10 @@
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true }, 
             { "name": "isInit", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
-            { "name": "actionPermissionValue", "type": "simple-json", "isSystem": true},
             { "name": "projectName", "type": "varchar", "isSystem": true },
             { "name": "projectDescription", "type": "text", "isSystem": true },
             { "name": "projectUrl", "type": "varchar", "isSystem": true }
         ],
-            
         "relations": []
     },
     "route_definition": {
@@ -201,6 +199,19 @@
             { "name": "schema", "type": "simple-json", "isNullable": false, "isSystem": true },
             { "name": "description", "type": "text", "isSystem": true },
             { "name": "hash", "type": "text", "isSystem": true }
+        ]
+    },
+    "route_permission_map": {
+        "name": "route_permission_map",
+        "uniques": [["method", "action"]],
+        "isSystem": true,
+        "columns": [
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "method", "type": "varchar", "isNullable": false, "isSystem": true },
+            { "name": "action", "type": "varchar", "isNullable": false, "isSystem": true }
+        ],
+        "relations": [
+            { "propertyName": "setting", "type": "many-to-one", "targetTable": "setting_definition", "isSystem": true, "inversePropertyName": "actionPermissionValue" }
         ]
     }
 }

@@ -4,7 +4,6 @@ import {
   Injectable,
   UnauthorizedException,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY, GLOBAL_SETTINGS_KEY } from '../utils/constant';
@@ -33,25 +32,27 @@ export class RoleGuard implements CanActivate {
     if (req.user.isRootAdmin) return true;
 
     let methodMap = await this.redisLockService.get(GLOBAL_SETTINGS_KEY);
+
     if (!methodMap) {
       methodMap = await this.getPermissionMap();
-      await this.redisLockService.acquire(
-        GLOBAL_SETTINGS_KEY,
-        methodMap,
-        60000,
-      );
+      await this.redisLockService.acquire(GLOBAL_SETTINGS_KEY, methodMap, 5000);
     }
+    const action = methodMap.filter((map: any) => map.method === req.method);
 
-    const action = methodMap[req.method];
+    if (!action.length) return false;
 
-    if (!action)
-      throw new NotFoundException(`Không có quyền cho method ${req.method}`);
+    if (!req.routeData?.routePermissions) return false;
 
-    const canPass = req.routeData.routePermissions.find(
+    const currentUserPermission = req.routeData.routePermissions.find(
       (permission: any) => permission.role.id === req.user.role.id,
     );
+    if (!currentUserPermission) return false;
+
+    const canPass = action.some((item: any) =>
+      currentUserPermission.actions.includes(item.action),
+    );
     if (!canPass) {
-      throw new ForbiddenException();
+      return false;
     }
 
     return true;
@@ -60,7 +61,10 @@ export class RoleGuard implements CanActivate {
   async getPermissionMap() {
     const settingDefRepo =
       this.dataSourceService.getRepository('setting_definition');
-    const settings: any = await settingDefRepo.findOneBy({});
+    const settings: any = await settingDefRepo.findOne({
+      where: {},
+      relations: ['actionPermissionValue'],
+    });
     return settings?.actionPermissionValue || {};
   }
 }

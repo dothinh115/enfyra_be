@@ -123,4 +123,54 @@ export class DefaultDataService {
       this.logger.debug(`Bảng 'hook_definition' đã có dữ liệu.`);
     }
   }
+
+  async insertDefaultPermissionMap(): Promise<void> {
+    const permissionRepo = this.dataSourceService.getRepository(
+      'route_permission_map',
+    );
+    const settingRepo =
+      this.dataSourceService.getRepository('setting_definition');
+
+    const setting: any = await settingRepo.findOne({
+      where: {},
+    });
+    if (!setting) {
+      this.logger.warn(
+        `⚠️ Không tìm thấy bản ghi nào trong 'setting_definition'. Không thể tạo route_permission_mapping.`,
+      );
+      return;
+    }
+
+    const defaultPermissions = initJson.defaultPermissionMap || [];
+
+    for (const perm of defaultPermissions) {
+      const exists = await permissionRepo.findOne({
+        where: {
+          method: perm.method,
+          action: perm.action,
+          setting: { id: setting.id },
+        },
+        relations: ['setting'],
+      });
+
+      if (exists) {
+        this.logger.debug(
+          `⏩ Permission [${perm.method} - ${perm.action}] đã tồn tại.`,
+        );
+        continue;
+      }
+
+      const newPerm = permissionRepo.create({
+        method: perm.method,
+        action: perm.action,
+        setting: setting,
+        isSystem: true,
+      });
+
+      await permissionRepo.save(newPerm);
+      this.logger.log(
+        `✅ Tạo permission [${perm.method} - ${perm.action}] thành công.`,
+      );
+    }
+  }
 }
