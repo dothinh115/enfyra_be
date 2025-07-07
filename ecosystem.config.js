@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'dynamiq-app',
+      name: 'enfyra-app',
       script: 'dist/main.js',
       instances: '3',
       exec_mode: 'cluster',

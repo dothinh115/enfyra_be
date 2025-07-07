@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Request } from 'express';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
@@ -26,7 +20,6 @@ export class DynamicService {
     },
   ) {
     const logs: any[] = [];
-    const timeoutMs = 3000;
 
     req.routeData.context.$logs = (...args: any[]) => {
       logs.push(...args);

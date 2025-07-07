@@ -72,7 +72,7 @@ async function ensureDatabaseExists() {
     Number(process.env.DB_PORT) || (DB_TYPE === 'postgres' ? 5432 : 3306);
   const DB_USERNAME = process.env.DB_USERNAME || 'root';
   const DB_PASSWORD = process.env.DB_PASSWORD || '';
-  const DB_NAME = process.env.DB_NAME || 'dynamiq';
+  const DB_NAME = process.env.DB_NAME || 'enfyra';
 
   const tempDataSource = new DataSource({
     type: DB_TYPE as 'mysql',
@@ -344,7 +344,7 @@ async function main() {
   const DB_PORT = parseInt(process.env.DB_PORT || '3306');
   const DB_USERNAME = process.env.DB_USERNAME || 'root';
   const DB_PASSWORD = process.env.DB_PASSWORD || '';
-  const DB_NAME = process.env.DB_NAME || 'dynamiq';
+  const DB_NAME = process.env.DB_NAME || 'enfyra';
 
   await ensureDatabaseExists();
 

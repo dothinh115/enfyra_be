@@ -81,9 +81,8 @@ export class DynamicRepoService {
   async create(body: any) {
     try {
       if (this.tableName === 'table_definition') {
+        body.isSystem = false;
         const table: any = await this.tableHandlerService.createTable(body);
-        await this.routeCacheService.reloadRouteCache();
-
         return await this.find({
           where: {
             id: {
@@ -101,9 +100,8 @@ export class DynamicRepoService {
           },
         },
       });
-      if (this.tableName === 'route_definition') {
-        await this.routeCacheService.reloadRouteCache();
-      }
+
+      await this.reload();
       return result;
     } catch (error) {
       console.log('❌ Lỗi trong dynamic repo:', error);
@@ -120,6 +118,7 @@ export class DynamicRepoService {
       });
 
       if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
+      this.protectSystemRecord(exists);
       if (this.tableName === 'table_definition') {
         const table: any = await this.tableHandlerService.updateTable(
           +id,
@@ -133,13 +132,6 @@ export class DynamicRepoService {
           },
         });
       }
-      if (
-        this.tableName === 'route_definition' &&
-        exists.isSystem &&
-        !body.isEnabled
-      ) {
-        throw new Error(`Can't disable system route`);
-      }
       await this.repo.save({
         ...exists,
         ...body,
@@ -152,9 +144,8 @@ export class DynamicRepoService {
           },
         },
       });
-      if (this.tableName === 'route_definition') {
-        await this.routeCacheService.reloadRouteCache();
-      }
+
+      await this.reload();
       return result;
     } catch (error) {
       console.log('❌ Lỗi trong dynamic repo:', error);
@@ -166,7 +157,7 @@ export class DynamicRepoService {
     try {
       if (this.tableName === 'table_definition') {
         await this.tableHandlerService.delete(+id);
-        await this.routeCacheService.reloadRouteCache();
+
         return 'Success';
       }
       const exists = await this.repo.findOne({
@@ -175,16 +166,34 @@ export class DynamicRepoService {
         },
       });
       if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
+      this.protectSystemRecord(exists);
       const repo = this.dataSourceService.getRepository(this.tableName);
 
       await repo.delete(id);
-      if (this.tableName === 'route_definition') {
-        await this.routeCacheService.reloadRouteCache();
-      }
+      await this.reload();
       return `Delete successfully!`;
     } catch (error) {
       console.log('❌ Lỗi trong dynamic repo:', error);
       throw new BadRequestException(error.message);
+    }
+  }
+
+  private async reload() {
+    if (
+      [
+        'table_definition',
+        'route_definition',
+        'middleware_definition',
+        'hook_definition',
+      ].includes(this.tableName)
+    ) {
+      await this.routeCacheService.reloadRouteCache();
+    }
+  }
+
+  private protectSystemRecord(record: any) {
+    if (record.isSystem) {
+      throw new BadRequestException(`System record cannot be modified!`);
     }
   }
 }

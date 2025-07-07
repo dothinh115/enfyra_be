@@ -3,7 +3,7 @@
         "name": "Admin"
     },
     "defaultUser": {
-        "email": "dynamiq@admin.com",
+        "email": "enfyra@admin.com",
         "password": "1234",
         "isRootAdmin": true,
         "isSystem":true
@@ -17,8 +17,8 @@
             "DELETE": "delete"
         },
         "isSystem":true,
-        "projectName": "Dynamiq CMS",
-        "projectDescription": "Description for Dynamiq CMS"
+        "projectName": "Enfyra CMS",
+        "projectDescription": "Description for Enfyra CMS"
     },
     "defaultRoute": [
         {

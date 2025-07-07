@@ -47,7 +47,7 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   async onApplicationBootstrap() {
-    // return;
+    return;
     try {
       await this.waitForDatabaseConnection();
     } catch (err) {
