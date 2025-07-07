@@ -36,7 +36,7 @@ export class HandlerExecutorService {
         if (msg.type === 'call') {
           try {
             const { parent, method } = resolvePath(ctx, msg.path);
-
+            if (typeof parent[method] !== 'function') return;
             const result = await parent[method](...msg.args);
             child.send({
               type: 'call_result',
@@ -44,14 +44,12 @@ export class HandlerExecutorService {
               result,
             });
           } catch (err) {
-            if (!err.message.includes('.toJSON')) {
-              child.send({
-                type: 'call_result',
-                callId: msg.callId,
-                error: true,
-                errorResponse: err.response,
-              });
-            }
+            child.send({
+              type: 'call_result',
+              callId: msg.callId,
+              error: true,
+              errorResponse: err.response,
+            });
           }
         }
         if (msg.type === 'done') {

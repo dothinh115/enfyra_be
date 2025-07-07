@@ -202,5 +202,17 @@
             { "name": "description", "type": "text", "isSystem": true },
             { "name": "hash", "type": "text", "isSystem": true }
         ]
+    },
+    "route_permission_mapping": {
+        "name": "route_permission_mapping",
+        "isSystem": true,
+        "columns": [
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "method", "type": "varchar", "isNullable": false, "isSystem": true },
+            { "name": "action", "type": "varchar", "isNullable": false, "isSystem": true }
+        ],
+        "relations": [
+            { "propertyName": "setting", "type": "many-to-one", "targetTable": "setting_definition", "isSystem": true, "inversePropertyName": "actionPermissionValue" }
+        ]
     }
 }

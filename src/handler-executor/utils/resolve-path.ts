@@ -9,8 +9,5 @@ export function resolvePath(obj, path) {
       throw new Error(`Invalid path: ${path}`);
     }
   }
-  if (!parent || typeof parent[method] !== 'function') {
-    throw new Error(`Path ${path} is not a function`);
-  }
   return { parent, method };
 }

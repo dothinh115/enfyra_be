@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { Brackets, EntityMetadata } from 'typeorm';
 
@@ -166,6 +166,7 @@ export class QueryEngine {
       };
     } catch (error) {
       console.log(error);
+      throw error;
     }
   }
 
@@ -803,7 +804,7 @@ export class QueryEngine {
       };
     }
 
-    throw new Error(
+    throw new BadRequestException(
       `Invalid field or relation "${property}" on table "${meta.tableName}"`,
     );
   }
