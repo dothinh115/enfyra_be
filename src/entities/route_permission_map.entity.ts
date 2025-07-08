@@ -1,4 +1,5 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Route_permission_definition } from './route_permission_definition.entity';
 import { Setting_definition } from './setting_definition.entity';
 
 @Entity('route_permission_map')
@@ -10,6 +11,9 @@ export class Route_permission_map {
     action: string;
     @Column({ type: "varchar", nullable: false })
     method: string;
+    @ManyToMany('Route_permission_definition', (rel: any) => rel.actions, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @JoinTable()
+    route_permissions: any;
     @ManyToOne('Setting_definition', (rel: any) => rel.actionPermissionValue, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     setting: any;

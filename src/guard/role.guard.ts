@@ -37,20 +37,20 @@ export class RoleGuard implements CanActivate {
       methodMap = await this.getPermissionMap();
       await this.redisLockService.acquire(GLOBAL_SETTINGS_KEY, methodMap, 5000);
     }
-    const action = methodMap.filter((map: any) => map.method === req.method);
+    const actions = methodMap.filter((map: any) => map.method === req.method);
 
-    if (!action.length) return false;
+    if (!actions.length) return false;
 
     if (!req.routeData?.routePermissions) return false;
 
-    const currentUserPermission = req.routeData.routePermissions.find(
-      (permission: any) => permission.role.id === req.user.role.id,
+    const canPass = req.routeData.routePermissions.find(
+      (permission: any) =>
+        permission?.role?.id === req.user.role.id &&
+        permission.actions.some((action: any) =>
+          actions.some((act: any) => act.action === action.action),
+        ),
     );
-    if (!currentUserPermission) return false;
 
-    const canPass = action.some((item: any) =>
-      currentUserPermission.actions.includes(item.action),
-    );
     if (!canPass) {
       return false;
     }
