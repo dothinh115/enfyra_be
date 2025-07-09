@@ -192,8 +192,12 @@ export class DynamicRepoService {
   }
 
   private protectSystemRecord(record: any) {
-    if (record.isSystem) {
-      throw new BadRequestException(`System record cannot be modified!`);
+    if (
+      this.tableName === 'route_definition' &&
+      record.isSystem &&
+      record.isEnabled === false
+    ) {
+      throw new Error(`Cannot disable system route`);
     }
   }
 }
