@@ -118,7 +118,7 @@ export class DynamicRepoService {
       });
 
       if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
-      this.protectSystemRecord(exists);
+      this.protectSystemRecord(body);
       if (this.tableName === 'table_definition') {
         const table: any = await this.tableHandlerService.updateTable(
           +id,
