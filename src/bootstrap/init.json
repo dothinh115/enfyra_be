@@ -1,20 +1,20 @@
 {
-    "defaultRole": {
+    "role_definition": {
         "name": "Admin"
     },
-    "defaultUser": {
+    "user_definition": {
         "email": "enfyra@admin.com",
         "password": "1234",
         "isRootAdmin": true,
         "isSystem":true
     },
-    "defaultSetting": {
+    "setting_definition": {
         "isInit": false,
         "isSystem":true,
         "projectName": "Enfyra CMS",
         "projectDescription": "Description for Enfyra CMS"
     },
-    "defaultRoute": [
+    "route_definition": [
         {
             "path": "/route_definition",
             "mainTable": "route_definition",
@@ -91,16 +91,23 @@
             "isEnabled": true,
             "isSystem":true,
             "icon":"lucide:route"
+        },
+        {
+            "path": "/route_permission_map",
+            "mainTable": "route_permission_map",
+            "isEnabled": true,
+            "isSystem":true,
+            "icon":"lucide:route"
         }
     ], 
-    "defaultHook": [
+    "hook_definition": [
         {
             "isEnabled": true,
             "afterHook": "$ctx.$data = {statusCode: $ctx.$statusCode,...$ctx.$data,message: 'Success'}",
             "name": "Default response"
         }
     ],
-    "defaultPermissionMap": [
+    "route_permission_map": [
         {
             "method": "GET",
             "action": "read"

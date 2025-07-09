@@ -58,6 +58,7 @@ export class RouteCacheService {
         )
         .leftJoinAndSelect('routePermissions.role', 'role')
         .leftJoinAndSelect('routePermissions.actions', 'actions')
+        .leftJoinAndSelect('route.publishedMethods', 'publishedMethods')
         .where('route.isEnabled = :enabled', { enabled: true })
         .getMany(),
     ]);

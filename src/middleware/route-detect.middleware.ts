@@ -101,6 +101,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
         $req: req,
       };
       const { route, params } = matchedRoute;
+
       req.routeData = {
         ...route,
         handler:
@@ -108,7 +109,9 @@ export class RouteDetectMiddleware implements NestMiddleware {
           null,
         params,
         isPublished:
-          matchedRoute.route.publishedMethods?.includes(req.method) || false,
+          route.publishedMethods?.some(
+            (pubMethod: any) => pubMethod.method === req.method,
+          ) || false,
         context,
       };
     }

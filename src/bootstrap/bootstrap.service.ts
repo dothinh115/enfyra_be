@@ -62,12 +62,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     if (!setting || !setting.isInit) {
       await this.coreInitService.createInitMetadata();
 
-      await this.defaultDataService.insertDefaultSettingIfEmpty();
-      await this.defaultDataService.createDefaultRole();
-      await this.defaultDataService.insertDefaultUserIfEmpty();
-      await this.defaultDataService.createDefaultRoutes();
-      await this.defaultDataService.insertDefaultHook();
-      await this.defaultDataService.insertDefaultPermissionMap();
+      await this.defaultDataService.insertAllDefaultRecords();
       await this.metadataSyncService.syncAll();
 
       settingRepo = this.dataSourceService.getRepository('setting_definition');

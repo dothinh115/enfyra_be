@@ -95,7 +95,6 @@
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
             { "name": "path", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null },
-            { "name": "publishedMethods", "type": "simple-json", "isSystem": true },
             { "name": "isEnabled", "type": "boolean", "isNullable": true, "isSystem": true, "defaultValue": false },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "icon", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": "lucide:route" },
@@ -123,7 +122,6 @@
         "isSystem": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "actions", "type": "simple-json", "isSystem": true },
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
             { "name": "description", "type": "text", "isSystem": true }
         ],
@@ -211,7 +209,9 @@
             { "name": "action", "type": "varchar", "isNullable": false, "isSystem": true }
         ],
         "relations": [
-            { "propertyName": "setting", "type": "many-to-one", "targetTable": "setting_definition", "isSystem": true, "inversePropertyName": "actionPermissionValue" }
+            { "propertyName": "setting", "type": "many-to-one", "targetTable": "setting_definition", "isSystem": true, "inversePropertyName": "actionPermissionValue" },
+            { "propertyName": "route_permissions", "type": "many-to-many", "targetTable": "route_permission_definition", "isSystem": true, "inversePropertyName": "actions" },
+            { "propertyName": "routes", "type": "many-to-many", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "publishedMethods" }
         ]
     }
 }
