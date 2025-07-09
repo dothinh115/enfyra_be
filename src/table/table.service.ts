@@ -25,16 +25,15 @@ export class TableHandlerService {
 
     const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
-    const manager = queryRunner.manager;
+
     try {
       const hasTable = await queryRunner.hasTable(body.name);
-      let result: any = await manager.findOne(tableEntity, {
-        where: {
-          name: body.name,
-        },
+
+      const existing = await dataSource.getRepository(tableEntity).findOne({
+        where: { name: body.name },
       });
-      if (hasTable && result) {
+
+      if (hasTable && existing) {
         throw new Error(`Bảng ${body.name} đã tồn tại!`);
       }
 
@@ -59,21 +58,21 @@ export class TableHandlerService {
 
       validateUniquePropertyNames(body.columns || [], body.relations || []);
 
-      // Tạo entity từ dữ liệu đã được xử lý
-      const createTableEntity = manager.create(tableEntity, body);
+      const result = await dataSource
+        .getRepository(tableEntity)
+        .save(dataSource.getRepository(tableEntity).create(body));
 
-      result = await manager.save(tableEntity, createTableEntity);
-      await queryRunner.commitTransaction();
       await this.afterEffect({ entityName: result.name, type: 'create' });
+
       const routeDefRepo =
         this.dataSourceService.getRepository('route_definition');
       await routeDefRepo.save({
         path: `/${result.name}`,
         mainTable: result.id,
       });
+
       return result;
     } catch (error) {
-      await queryRunner.rollbackTransaction();
       console.error(error.stack || error.message || error);
       throw new Error(`Error: "${error.message}"` || 'Unknown error');
     } finally {
@@ -83,10 +82,7 @@ export class TableHandlerService {
 
   async updateTable(id: number, body: CreateTableDto) {
     const dataSource = this.dataSourceService.getDataSource();
-    const queryRunner = dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    const manager = queryRunner.manager;
+
     const tableEntity =
       this.dataSourceService.entityClassMap.get('table_definition');
     const columnEntity =
@@ -94,8 +90,16 @@ export class TableHandlerService {
     const relationEntity = this.dataSourceService.entityClassMap.get(
       'relation_definition',
     );
+
+    const queryRunner = dataSource.createQueryRunner();
+    await queryRunner.connect(); // chỉ dùng để đảm bảo access DB
+
     try {
-      const exists: any = await manager.findOne(tableEntity, {
+      const tableRepo = dataSource.getRepository(tableEntity);
+      const columnRepo = dataSource.getRepository(columnEntity);
+      const relationRepo = dataSource.getRepository(relationEntity);
+
+      const exists: any = await tableRepo.findOne({
         where: { id },
         relations: ['columns', 'relations'],
       });
@@ -103,8 +107,11 @@ export class TableHandlerService {
       if (!exists) {
         throw new Error(`Table ${body.name} không tồn tại.`);
       }
+
       if (!body.columns?.some((col) => col.isPrimary)) {
-        throw new Error(`Table must contains id column with isPrimary = true!`);
+        throw new Error(
+          `Table must contain an id column with isPrimary = true!`,
+        );
       }
 
       validateUniquePropertyNames(body.columns || [], body.relations || []);
@@ -116,23 +123,26 @@ export class TableHandlerService {
       );
 
       if (deletedColumnIds.length) {
-        await manager.delete(columnEntity, deletedColumnIds);
+        await columnRepo.delete(deletedColumnIds);
       }
       if (deletedRelationIds.length) {
-        await manager.delete(relationEntity, deletedRelationIds);
+        await relationRepo.delete(deletedRelationIds);
       }
 
-      const result = await manager.save(tableEntity, body);
-      await queryRunner.commitTransaction();
-      await this.afterEffect({ entityName: result.name, type: 'update' });
+      const result = await tableRepo.save(
+        tableRepo.create({
+          ...body,
+          id: exists.id,
+        }),
+      );
 
+      await this.afterEffect({ entityName: result.name, type: 'update' });
       return result;
     } catch (error) {
-      await queryRunner.rollbackTransaction();
       console.error(error.stack || error.message || error);
       throw new Error(`Error: "${error.message}"` || 'Unknown error');
     } finally {
-      await queryRunner.release();
+      await queryRunner.release(); // vẫn cần release để cleanup
     }
   }
 

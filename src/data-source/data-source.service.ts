@@ -22,17 +22,19 @@ export class DataSourceService implements OnModuleInit {
 
   async reloadDataSource() {
     this.logger.log('🔁 Chuẩn bị reload DataSource');
-    if (this.dataSource?.isInitialized) {
-      await this.dataSource.destroy();
-      this.clearMetadata();
-    }
-    this.logger.debug('✅ Destroy DataSource cũ thành công!');
 
     try {
       const entities = await this.commonService.loadDynamicEntities(entityDir);
-      this.dataSource = createDataSource(entities);
-      await this.dataSource.initialize();
+      const newDataSource = createDataSource(entities);
+      await newDataSource.initialize();
       this.logger.debug('✅ ReInit DataSource thành công!');
+
+      if (this.dataSource?.isInitialized) {
+        await this.dataSource.destroy();
+        this.clearMetadata();
+        this.logger.debug('✅ Destroy DataSource cũ thành công!');
+      }
+      this.dataSource = newDataSource;
       entities.forEach((entityClass) => {
         const name = this.getTableNameFromEntity(entityClass);
         this.entityClassMap.set(name, entityClass);
