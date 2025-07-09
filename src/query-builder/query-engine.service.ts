@@ -157,12 +157,12 @@ export class QueryEngine {
             filterCount,
           },
         }),
-        // debug: {
-        //   sql: qb.getSql(),
-        //   select: selectArr,
-        //   join: joinArr,
-        //   log: this.log,
-        // },
+        debug: {
+          sql: qb.getSql(),
+          select: selectArr,
+          join: joinArr,
+          log: this.log,
+        },
       };
     } catch (error) {
       console.log(error);
@@ -476,35 +476,42 @@ export class QueryEngine {
       operator: 'AND' | 'OR',
     ) => {
       if (!f || typeof f !== 'object') return;
-
       if (Array.isArray(f)) {
-        for (const item of f) {
+        for (const item of f)
           walk(item, path, currentMeta, currentAlias, operator);
-        }
         return;
       }
 
       for (const key in f) {
+        const val = f[key];
+
         if (['and', 'or'].includes(key)) {
-          const nextOp: 'AND' | 'OR' = key === 'and' ? 'AND' : 'OR';
-          walk(f[key], path, currentMeta, currentAlias, nextOp);
-        } else if (key === '_not') {
+          walk(
+            val,
+            path,
+            currentMeta,
+            currentAlias,
+            key === 'and' ? 'AND' : 'OR',
+          );
+          continue;
+        }
+
+        if (key === '_not') {
           const subParts = this.walkFilter({
-            filter: f[key],
+            filter: val,
             currentMeta,
             currentAlias,
             operator: 'AND',
             path,
           });
           subParts.parts.forEach((p) => {
-            parts.push({
-              operator,
-              sql: `NOT (${p.sql})`,
-              params: p.params,
-            });
+            parts.push({ operator, sql: `NOT (${p.sql})`, params: p.params });
             this.log.push(`[${operator}] NOT (${p.sql})`);
           });
-        } else if (!OPERATORS.includes(key)) {
+          continue;
+        }
+
+        if (!OPERATORS.includes(key)) {
           const found = this.lookupFieldOrRelation(currentMeta, key);
           const newPath = [...path, key];
 
@@ -513,174 +520,248 @@ export class QueryEngine {
               .getDataSource()
               .getMetadata(found.type);
             const nextAlias = `${currentAlias}_${key}`;
-            const val = f[key];
 
-            if (typeof val === 'object') {
+            if (
+              typeof val === 'object' &&
+              !Object.keys(val).some((k) => OPERATORS.includes(k))
+            ) {
               walk(val, newPath, nextMeta, nextAlias, operator);
+            } else {
+              walk(val, newPath, currentMeta, currentAlias, operator);
             }
           } else {
-            const val = f[key];
             if (typeof val === 'object') {
               walk(val, newPath, currentMeta, currentAlias, operator);
             }
           }
-        } else {
-          const lastField = path[path.length - 1];
-          const found = this.lookupFieldOrRelation(currentMeta, lastField);
+          continue;
+        }
 
-          const paramKey = `p${paramIndex++}`;
-          const param = {};
-          let sql = '';
+        const lastField = path[path.length - 1];
+        const found = this.lookupFieldOrRelation(currentMeta, lastField);
 
-          if (found.kind === 'field') {
-            const fieldType = found.type;
-            const parsedValue = this.parseValue(fieldType, f[key]);
+        const paramKey = `p${paramIndex++}`;
+        const param = {};
+        let sql = '';
 
-            if (key === '_eq') {
+        if (found.kind === 'field') {
+          const fieldType = found.type;
+          const parsedValue = this.parseValue(fieldType, val);
+
+          switch (key) {
+            case '_eq':
               sql = `${currentAlias}.${lastField} = :${paramKey}`;
               param[paramKey] = parsedValue;
-            } else if (key === '_between') {
+              break;
+            case '_neq':
+              sql = `${currentAlias}.${lastField} != :${paramKey}`;
+              param[paramKey] = parsedValue;
+              break;
+            case '_gt':
+              sql = `${currentAlias}.${lastField} > :${paramKey}`;
+              param[paramKey] = parsedValue;
+              break;
+            case '_gte':
+              sql = `${currentAlias}.${lastField} >= :${paramKey}`;
+              param[paramKey] = parsedValue;
+              break;
+            case '_lt':
+              sql = `${currentAlias}.${lastField} < :${paramKey}`;
+              param[paramKey] = parsedValue;
+              break;
+            case '_lte':
+              sql = `${currentAlias}.${lastField} <= :${paramKey}`;
+              param[paramKey] = parsedValue;
+              break;
+            case '_between': {
               const p1 = `p${paramIndex++}`;
               const p2 = `p${paramIndex++}`;
               sql = `${currentAlias}.${lastField} BETWEEN :${p1} AND :${p2}`;
-              param[p1] = this.parseValue(fieldType, f[key][0]);
-              param[p2] = this.parseValue(fieldType, f[key][1]);
-            } else if (key === '_is_null') {
-              sql = `${currentAlias}.${lastField} IS ${f[key] ? '' : 'NOT '}NULL`;
-            } else if (key === '_contains') {
+              param[p1] = this.parseValue(fieldType, val[0]);
+              param[p2] = this.parseValue(fieldType, val[1]);
+              break;
+            }
+            case '_is_null':
+              sql = `${currentAlias}.${lastField} IS ${val ? '' : 'NOT '}NULL`;
+              break;
+            case '_contains':
               sql = `lower(unaccent(${currentAlias}.${lastField})) LIKE CONCAT('%', lower(unaccent(:${paramKey})), '%')`;
               param[paramKey] = parsedValue;
-            } else if (key === '_starts_with') {
+              break;
+            case '_starts_with':
               sql = `lower(unaccent(${currentAlias}.${lastField})) LIKE CONCAT(lower(unaccent(:${paramKey})), '%')`;
               param[paramKey] = parsedValue;
-            } else if (key === '_ends_with') {
+              break;
+            case '_ends_with':
               sql = `lower(unaccent(${currentAlias}.${lastField})) LIKE CONCAT('%', lower(unaccent(:${paramKey})))`;
               param[paramKey] = parsedValue;
-            } else if (key === '_in') {
-              sql = `EXISTS (SELECT 1 FROM ${currentAlias} sub WHERE sub.${lastField} IN (:...${paramKey}))`;
-              param[paramKey] = Array.isArray(f[key])
-                ? f[key].map((v) => this.parseValue(fieldType, v))
-                : [this.parseValue(fieldType, f[key])];
-            } else if (key === '_neq') {
-              sql = `${currentAlias}.${lastField} != :${paramKey}`;
-              param[paramKey] = parsedValue;
-            } else if (key === '_gt') {
-              sql = `${currentAlias}.${lastField} > :${paramKey}`;
-              param[paramKey] = parsedValue;
-            } else if (key === '_gte') {
-              sql = `${currentAlias}.${lastField} >= :${paramKey}`;
-              param[paramKey] = parsedValue;
-            } else if (key === '_lt') {
-              sql = `${currentAlias}.${lastField} < :${paramKey}`;
-              param[paramKey] = parsedValue;
-            } else if (key === '_lte') {
-              sql = `${currentAlias}.${lastField} <= :${paramKey}`;
-              param[paramKey] = parsedValue;
-            } else if (key === '_not_in') {
-              sql = `${currentAlias}.${lastField} NOT IN (:...${paramKey})`;
-              param[paramKey] = Array.isArray(f[key])
-                ? f[key].map((v) => this.parseValue(fieldType, v))
-                : [this.parseValue(fieldType, f[key])];
-            } else {
-              throw new Error(`Unknown operator '${key}'`);
-            }
-          } else if (found.kind === 'relation') {
-            const joinColumn = found.joinColumn || 'id';
-            const joinColMeta = currentMeta.columns.find(
-              (c) => c.propertyName === joinColumn,
-            );
-            const joinColType = joinColMeta
-              ? String(joinColMeta.type)
-              : 'unknown';
-            const parsedValue = this.parseValue(joinColType, f[key]);
+              break;
+            default:
+              throw new BadRequestException(
+                `Operator '${key}' is not supported on field '${lastField}'`,
+              );
+          }
+        } else if (found.kind === 'relation') {
+          const {
+            joinColumn,
+            inverseJoinColumn,
+            relationType,
+            joinTableName,
+            isMany,
+          } = found;
 
-            if (key === '_eq') {
+          const joinColMeta = currentMeta.columns.find(
+            (c) => c.propertyName === joinColumn,
+          );
+          const joinColType = joinColMeta
+            ? String(joinColMeta.type)
+            : 'unknown';
+
+          let values: any[];
+
+          if (Array.isArray(val)) {
+            values = val;
+          } else if (typeof val === 'string') {
+            try {
+              const parsed = JSON.parse(val);
+              values = Array.isArray(parsed) ? parsed : [parsed];
+            } catch {
+              values = val.includes(',') ? val.split(',') : [val];
+            }
+          } else {
+            values = [val];
+          }
+
+          const parsedValues = values.map((v) => {
+            if (
+              joinColType === 'unknown' &&
+              (typeof v === 'number' ||
+                (typeof v === 'string' && !isNaN(Number(v))))
+            ) {
+              return Number(v);
+            }
+            return this.parseValue(joinColType, v);
+          });
+
+          switch (key) {
+            case '_eq':
               sql = `${currentAlias}.${joinColumn} = :${paramKey}`;
-              param[paramKey] = parsedValue;
-            } else if (key === '_in') {
-              sql = `EXISTS (SELECT 1 FROM ${currentAlias} sub WHERE sub.${joinColumn} IN (:...${paramKey}))`;
-              param[paramKey] = Array.isArray(f[key])
-                ? f[key].map((v) => this.parseValue(joinColType, v))
-                : [this.parseValue(joinColType, f[key])];
-            } else if (key === '_count') {
-              if (!found.isMany) {
-                throw new Error(
-                  `Invalid _count on relation '${lastField}' — only applicable for one-to-many or many-to-many`,
-                );
+              param[paramKey] = parsedValues[0];
+              break;
+            case '_in':
+              if (relationType === 'many-to-many' && joinTableName) {
+                sql = `
+                EXISTS (
+                  SELECT 1 FROM ${joinTableName} sub
+                  WHERE sub.${inverseJoinColumn} IN (:...${paramKey})
+                    AND sub.${joinColumn} = ${currentAlias}.id
+                )
+              `.trim();
+              } else {
+                sql = `${currentAlias}.${joinColumn} IN (:...${paramKey})`;
+              }
+              param[paramKey] = parsedValues;
+              break;
+            case '_count': {
+              if (!isMany) {
+                throw new Error(`_count only supported on to-many relations`);
               }
 
-              const opKey = Object.keys(f[key])[0];
-              const opVal = f[key][opKey];
+              const opKey = Object.keys(val)[0];
+              const opVal = val[opKey];
               const countParamKey = `p${paramIndex++}`;
               const subAlias = `${currentAlias}_${lastField}_sub`;
 
-              let havingSql = '';
-
-              if (opKey === '_eq') {
-                havingSql = `HAVING COUNT(*) = :${countParamKey}`;
-              } else if (opKey === '_gt') {
-                havingSql = `HAVING COUNT(*) > :${countParamKey}`;
-              } else if (opKey === '_lt') {
-                havingSql = `HAVING COUNT(*) < :${countParamKey}`;
-              } else {
-                throw new Error(`Unsupported _count operator '${opKey}'`);
+              let having = '';
+              switch (opKey) {
+                case '_eq':
+                  having = `HAVING COUNT(*) = :${countParamKey}`;
+                  break;
+                case '_gt':
+                  having = `HAVING COUNT(*) > :${countParamKey}`;
+                  break;
+                case '_lt':
+                  having = `HAVING COUNT(*) < :${countParamKey}`;
+                  break;
+                case '_gte':
+                  having = `HAVING COUNT(*) >= :${countParamKey}`;
+                  break;
+                case '_lte':
+                  having = `HAVING COUNT(*) <= :${countParamKey}`;
+                  break;
+                default:
+                  throw new Error(`Unsupported _count operator '${opKey}'`);
               }
 
               param[countParamKey] = Number(opVal);
 
-              sql = `
-              EXISTS (
-                SELECT 1
-                FROM ${found.type} ${subAlias}
-                WHERE ${subAlias}.${found.inverseJoinColumn} = ${currentAlias}.${joinColumn}
-                ${havingSql}
-              )
-            `.trim();
-            } else if (key === '_eq_set') {
-              if (!found.isMany) {
-                throw new Error(
-                  `Invalid _eq_set on relation '${lastField}' — only applicable for one-to-many or many-to-many`,
-                );
+              if (relationType === 'many-to-many' && joinTableName) {
+                sql = `
+                EXISTS (
+                  SELECT 1
+                  FROM ${joinTableName} ${subAlias}
+                  WHERE ${subAlias}.${joinColumn} = ${currentAlias}.id
+                  ${having}
+                )
+              `.trim();
+              } else {
+                sql = `
+                EXISTS (
+                  SELECT 1
+                  FROM ${found.type} ${subAlias}
+                  WHERE ${subAlias}.${inverseJoinColumn} = ${currentAlias}.${joinColumn}
+                  ${having}
+                )
+              `.trim();
+              }
+              break;
+            }
+
+            case '_eq_set': {
+              if (!isMany)
+                throw new Error(`_eq_set only supported on to-many relations`);
+              const countParamKey = `p${paramIndex++}`;
+              const subAlias = `${currentAlias}_${lastField}_sub`;
+              if (relationType === 'many-to-many' && joinTableName) {
+                sql = `
+      EXISTS (
+        SELECT 1 FROM ${joinTableName} ${subAlias}
+        WHERE ${subAlias}.${joinColumn} = ${currentAlias}.id
+          AND ${subAlias}.${inverseJoinColumn} IN (:...${countParamKey})
+        GROUP BY ${currentAlias}.id
+        HAVING COUNT(DISTINCT ${subAlias}.${inverseJoinColumn}) = ${parsedValues.length}
+      )
+    `.trim();
+              } else {
+                sql = `
+      EXISTS (
+        SELECT 1 FROM ${found.type} ${subAlias}
+        WHERE ${subAlias}.${inverseJoinColumn} = ${currentAlias}.${joinColumn}
+          AND ${subAlias}.id IN (:...${countParamKey})
+        GROUP BY ${currentAlias}.${joinColumn}
+        HAVING COUNT(DISTINCT ${subAlias}.id) = ${parsedValues.length}
+      )
+    `.trim();
               }
 
-              const values = Array.isArray(f[key]) ? f[key] : [f[key]];
-              const countParamKey = `p${paramIndex++}`;
-
-              sql = `
-              EXISTS (
-                SELECT 1
-                FROM ${found.type} ${currentAlias}_${lastField}_sub
-                WHERE ${currentAlias}_${lastField}_sub.${found.inverseJoinColumn} = ${currentAlias}.${joinColumn}
-                  AND ${currentAlias}_${lastField}_sub.${found.inverseJoinColumn} IN (:...${countParamKey})
-                GROUP BY ${currentAlias}.${joinColumn}
-                HAVING COUNT(DISTINCT ${currentAlias}_${lastField}_sub.${found.inverseJoinColumn}) = ${values.length}
-              )
-            `.trim();
-
-              param[countParamKey] = values.map((v) =>
-                this.parseValue(joinColType, v),
-              );
-            } else {
-              throw new Error(`Unsupported operator '${key}' for relation`);
+              param[countParamKey] = parsedValues;
+              break;
             }
+            default:
+              throw new Error(
+                `Unsupported operator '${key}' for relation '${lastField}'`,
+              );
           }
-
-          parts.push({
-            operator,
-            sql,
-            params: param,
-          });
-
-          this.log.push(`[${operator}] ${sql}`);
         }
+
+        parts.push({ operator, sql, params: param });
+        this.log.push(`[${operator}] ${sql}`);
       }
     };
 
     walk(filter, path, currentMeta, currentAlias, operator);
 
-    return {
-      parts,
-    };
+    return { parts };
   }
 
   private resolvePathWithJoin({
@@ -766,8 +847,8 @@ export class QueryEngine {
         joinColumn: string;
         inverseJoinColumn: string;
         isMany: boolean;
+        joinTableName?: string; // 👈 THÊM DÒNG NÀY
       } {
-    // Check relation FIRST
     const relation = meta.relations.find(
       (rel) => rel.propertyName === property,
     );
@@ -783,6 +864,11 @@ export class QueryEngine {
       const isMany =
         relationType === 'one-to-many' || relationType === 'many-to-many';
 
+      const joinTableName =
+        relationType === 'many-to-many'
+          ? relation.joinTableName // 👈 TypeORM cung cấp bảng trung gian
+          : undefined;
+
       return {
         kind: 'relation',
         propertyName: relation.propertyName,
@@ -791,10 +877,11 @@ export class QueryEngine {
         joinColumn,
         inverseJoinColumn,
         isMany,
+        ...(joinTableName ? { joinTableName } : {}),
       };
     }
 
-    // Then check field
+    // Field fallback
     const column = meta.columns.find((col) => col.propertyName === property);
     if (column) {
       return {
