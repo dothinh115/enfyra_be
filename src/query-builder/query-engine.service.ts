@@ -157,12 +157,12 @@ export class QueryEngine {
             filterCount,
           },
         }),
-        debug: {
-          sql: qb.getSql(),
-          select: selectArr,
-          join: joinArr,
-          log: this.log,
-        },
+        // debug: {
+        //   sql: qb.getSql(),
+        //   select: selectArr,
+        //   join: joinArr,
+        //   log: this.log,
+        // },
       };
     } catch (error) {
       console.log(error);
