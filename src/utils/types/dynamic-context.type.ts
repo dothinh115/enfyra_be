@@ -20,6 +20,10 @@ export type TDynamicContext = {
   $result?: any;
   $data?: any;
   $statusCode?: number;
+  share?: {
+    $data?: any;
+    [key: string]: any;
+  };
 };
 
 export type TGqlDynamicContext = {
@@ -38,4 +42,8 @@ export type TGqlDynamicContext = {
   };
   $result?: any;
   $data?: any;
+  share?: {
+    $data?: any;
+    [key: string]: any;
+  };
 };

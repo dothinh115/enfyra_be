@@ -35,15 +35,15 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
             if (!hook.afterHook) continue;
             try {
               const code = hook.afterHook;
-              req.routeData.context.$data = req.routeData.context.$data ?? data;
-              req.routeData.context.$statusCode = context
+              req.routeData.context.share.$data = data;
+              req.routeData.context.share.$statusCode = context
                 .switchToHttp()
                 .getResponse().statusCode;
               await this.handlerExecurtorService.run(
                 code,
                 req.routeData.context,
               );
-              data = req.routeData.context.$data;
+              data = req.routeData.context.share.$data;
             } catch (error) {
               throw error;
             }

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { RedisLockService } from './redis-lock.service';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { GLOBAL_ROUTES_KEY } from '../utils/constant';
 
 @Injectable()
@@ -26,8 +26,9 @@ export class RouteCacheService {
         order: { priority: 'ASC' },
       }),
       hookRepo.find({
-        where: { isEnabled: true, route: null },
+        where: { isEnabled: true, route: IsNull() },
         order: { priority: 'ASC' },
+        relations: ['permissionMap', 'route'],
       }),
       routeDefRepo
         .createQueryBuilder('route')
@@ -47,7 +48,10 @@ export class RouteCacheService {
             enabled: true,
           },
         )
+        .leftJoinAndSelect('hooks.permissionMap', 'hooks_permissionMap')
+        .leftJoinAndSelect('hooks.route', 'hooks_route')
         .leftJoinAndSelect('route.handlers', 'handlers')
+        .leftJoinAndSelect('handlers.permissionMap', 'handlers_permissionMap')
         .leftJoinAndSelect(
           'route.routePermissions',
           'routePermissions',

@@ -34,7 +34,6 @@ export class DynamicService {
       }
 
       const scriptCode = userHandler || defaultHandler;
-
       const result = await this.handlerExecutorService.run(
         scriptCode,
         req.routeData.context,

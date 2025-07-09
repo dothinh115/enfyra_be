@@ -55,9 +55,13 @@ export class HandlerExecutorService {
         if (msg.type === 'done') {
           isDone = true;
           child.removeAllListeners();
-          for (const key of Object.keys(msg.ctx)) {
-            ctx[key] = msg.ctx[key];
+          if (msg.ctx.share) {
+            ctx.share = {
+              ...(ctx.share && { ...ctx.share }),
+              ...msg.ctx.share,
+            };
           }
+
           clearTimeout(timeout);
           await pool.release(child);
           resolve(msg.data);

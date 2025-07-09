@@ -99,15 +99,30 @@ export class RouteDetectMiddleware implements NestMiddleware {
         $user: req.user ?? undefined,
         $repos: dynamicFindMap,
         $req: req,
+        share: {},
       };
       const { route, params } = matchedRoute;
+
+      const filteredHooks = route.hooks.filter((hook: any) => {
+        const isGlobalHook =
+          !hook.route &&
+          (!hook.permissionMap || hook.permissionMap.method === method);
+        const isLocalHook =
+          hook.route?.id === route.id &&
+          hook.permissionMap &&
+          hook.permissionMap.method === method;
+
+        return isGlobalHook || isLocalHook;
+      });
 
       req.routeData = {
         ...route,
         handler:
-          route.handlers.find((handler) => handler.method === method)?.logic ??
-          null,
+          route.handlers.find(
+            (handler) => handler.permissionMap.method === method,
+          )?.logic ?? null,
         params,
+        hooks: filteredHooks,
         isPublished:
           route.publishedMethods?.some(
             (pubMethod: any) => pubMethod.method === req.method,
