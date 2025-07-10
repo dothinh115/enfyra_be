@@ -74,7 +74,7 @@ export class RouteCacheService {
       route.middlewares = [...globalMiddlewares, ...route.middlewares];
     });
 
-    await this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 5000);
+    await this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 15000);
     return routes;
   }
 
