@@ -103,7 +103,7 @@
     "hook_definition": [
         {
             "isEnabled": true,
-            "afterHook": "$ctx.$data = {statusCode: $ctx.$statusCode,...$ctx.$data,message: 'Success'}",
+            "afterHook": "$ctx.share.$data = {statusCode: $ctx.share.$statusCode,...$ctx.share.$data,message: 'Success'}",
             "name": "Default response"
         }
     ],
