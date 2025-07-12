@@ -69,6 +69,7 @@ export class TableHandlerService {
       await routeDefRepo.save({
         path: `/${result.name}`,
         mainTable: result.id,
+        isEnabled: true,
       });
 
       return result;
