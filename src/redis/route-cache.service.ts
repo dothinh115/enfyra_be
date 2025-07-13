@@ -28,7 +28,7 @@ export class RouteCacheService {
       hookRepo.find({
         where: { isEnabled: true, route: IsNull() },
         order: { priority: 'ASC' },
-        relations: ['permissionMap', 'route'],
+        relations: ['method', 'route'],
       }),
       routeDefRepo
         .createQueryBuilder('route')
@@ -48,10 +48,10 @@ export class RouteCacheService {
             enabled: true,
           },
         )
-        .leftJoinAndSelect('hooks.permissionMap', 'hooks_permissionMap')
+        .leftJoinAndSelect('hooks.method', 'hooks_method')
         .leftJoinAndSelect('hooks.route', 'hooks_route')
         .leftJoinAndSelect('route.handlers', 'handlers')
-        .leftJoinAndSelect('handlers.permissionMap', 'handlers_permissionMap')
+        .leftJoinAndSelect('handlers.method', 'handlers_method')
         .leftJoinAndSelect(
           'route.routePermissions',
           'routePermissions',
@@ -61,7 +61,7 @@ export class RouteCacheService {
           },
         )
         .leftJoinAndSelect('routePermissions.role', 'role')
-        .leftJoinAndSelect('routePermissions.actions', 'actions')
+        .leftJoinAndSelect('routePermissions.methods', 'methods')
         .leftJoinAndSelect('route.publishedMethods', 'publishedMethods')
         .where('route.isEnabled = :enabled', { enabled: true })
         .getMany(),

@@ -69,7 +69,7 @@ export class DefaultDataService {
         records = records.filter(Boolean); // bỏ undefined
       }
 
-      if (tableName === 'route_permission_map') {
+      if (tableName === 'method_definition') {
         const settingRepo =
           this.dataSourceService.getRepository('setting_definition');
         const setting = await settingRepo.findOne({ where: {} });

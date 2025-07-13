@@ -1,9 +1,9 @@
 import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Route_permission_map } from './route_permission_map.entity';
+import { Method_definition } from './method_definition.entity';
 import { Route_definition } from './route_definition.entity';
 
 @Entity('route_handler_definition')
-@Unique(['permissionMap', 'route'])
+@Unique(['method', 'route'])
 export class Route_handler_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
@@ -12,9 +12,9 @@ export class Route_handler_definition {
     @Column({ type: "text", nullable: true })
     logic: string;
     @Index()
-    @ManyToOne('Route_permission_map', (rel: any) => rel.handlers, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Method_definition', (rel: any) => rel.handlers, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
-    permissionMap: any;
+    method: any;
     @Index()
     @ManyToOne('Route_definition', (rel: any) => rel.handlers, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()

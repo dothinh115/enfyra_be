@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Route_permission_map } from './route_permission_map.entity';
+import { Method_definition } from './method_definition.entity';
 
 @Entity('setting_definition')
 export class Setting_definition {
@@ -15,8 +15,8 @@ export class Setting_definition {
     projectName: string;
     @Column({ type: "varchar", nullable: true })
     projectUrl: string;
-    @OneToMany('Route_permission_map', (rel: any) => rel.setting, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-    actionPermissionValue: any;
+    @OneToMany('Method_definition', (rel: any) => rel.setting, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    methods: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

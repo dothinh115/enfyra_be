@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, ManyToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Role_definition } from './role_definition.entity';
 import { Route_definition } from './route_definition.entity';
-import { Route_permission_map } from './route_permission_map.entity';
+import { Method_definition } from './method_definition.entity';
 
 @Entity('route_permission_definition')
 export class Route_permission_definition {
@@ -19,8 +19,8 @@ export class Route_permission_definition {
     @ManyToOne('Route_definition', (rel: any) => rel.routePermissions, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     route: any;
-    @ManyToMany('Route_permission_map', (rel: any) => rel.route_permissions, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
-    actions: any;
+    @ManyToMany('Method_definition', (rel: any) => rel.route_permissions, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    methods: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

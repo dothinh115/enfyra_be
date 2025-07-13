@@ -93,15 +93,22 @@
             "icon":"lucide:route"
         },
         {
-            "path": "/route_permission_map",
-            "mainTable": "route_permission_map",
+            "path": "/method_definition",
+            "mainTable": "method_definition",
+            "isEnabled": true,
+            "isSystem":true,
+            "icon":"lucide:route"
+        },
+        {
+            "path": "/hook_definition",
+            "mainTable": "hook_definition",
             "isEnabled": true,
             "isSystem":true,
             "icon":"lucide:route"
         },
         {
             "path": "/route_handler_definition",
-            "mainTable": "route_permission_map",
+            "mainTable": "route_handler_definition",
             "isEnabled": true,
             "isSystem":true,
             "icon":"lucide:route"
@@ -114,7 +121,7 @@
             "name": "Default response"
         }
     ],
-    "route_permission_map": [
+    "method_definition": [
         {
             "method": "GET",
             "action": "read"

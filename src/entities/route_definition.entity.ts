@@ -4,7 +4,7 @@ import { Route_permission_definition } from './route_permission_definition.entit
 import { Route_handler_definition } from './route_handler_definition.entity';
 import { Middleware_definition } from './middleware_definition.entity';
 import { Hook_definition } from './hook_definition.entity';
-import { Route_permission_map } from './route_permission_map.entity';
+import { Method_definition } from './method_definition.entity';
 
 @Entity('route_definition')
 @Unique(['mainTable', 'path'])
@@ -36,7 +36,7 @@ export class Route_definition {
     middlewares: any;
     @OneToMany('Hook_definition', (rel: any) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     hooks: any;
-    @ManyToMany('Route_permission_map', (rel: any) => rel.routes, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToMany('Method_definition', (rel: any) => rel.routes, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     publishedMethods: any;
     @CreateDateColumn()
     createdAt: Date;

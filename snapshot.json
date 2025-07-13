@@ -132,16 +132,16 @@
     },
     "route_handler_definition": {
         "name": "route_handler_definition",
-        "uniques": [["route", "permissionMap"]],
+        "uniques": [["route", "method"]],
         "isSystem": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "logic", "type": "code", "isSystem":true },
+            { "name": "logic", "type": "code", "isSystem":true, "isNullable": false },
             { "name": "description", "type": "text", "isSystem": true }
         ],
         "relations": [
             { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "handlers", "isIndex": true },
-            { "propertyName": "permissionMap", "type": "many-to-one", "targetTable": "route_permission_map", "isSystem": true, "inversePropertyName": "handlers", "isIndex": true }
+            { "propertyName": "method", "type": "many-to-one", "targetTable": "method_definition", "isSystem": true, "inversePropertyName": "handlers", "isIndex": true }
 
         ]
     },
@@ -175,7 +175,7 @@
         ],
         "relations": [
             { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "hooks", "isIndex": true },
-            { "propertyName": "permissionMap", "type": "many-to-one", "targetTable": "route_permission_map", "isSystem": true, "inversePropertyName": "hooks", "isIndex": true }
+            { "propertyName": "method", "type": "many-to-one", "targetTable": "method_definition", "isSystem": true, "inversePropertyName": "hooks", "isIndex": true }
         ]
     },
     "session_definition": {
@@ -200,18 +200,16 @@
             { "name": "hash", "type": "text", "isSystem": true }
         ]
     },
-    "route_permission_map": {
-        "name": "route_permission_map",
-        "uniques": [["method", "action"]],
+    "method_definition": {
+        "name": "method_definition",
         "isSystem": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "method", "type": "varchar", "isNullable": false, "isSystem": true },
-            { "name": "action", "type": "varchar", "isNullable": false, "isSystem": true }
+            { "name": "method", "type": "varchar", "isNullable": false, "isSystem": true }
         ],
         "relations": [
-            { "propertyName": "setting", "type": "many-to-one", "targetTable": "setting_definition", "isSystem": true, "inversePropertyName": "actionPermissionValue" },
-            { "propertyName": "route_permissions", "type": "many-to-many", "targetTable": "route_permission_definition", "isSystem": true, "inversePropertyName": "actions" },
+            { "propertyName": "setting", "type": "many-to-one", "targetTable": "setting_definition", "isSystem": true, "inversePropertyName": "methods" },
+            { "propertyName": "route_permissions", "type": "many-to-many", "targetTable": "route_permission_definition", "isSystem": true, "inversePropertyName": "methods" },
             { "propertyName": "routes", "type": "many-to-many", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "publishedMethods" }
         ]
     }
