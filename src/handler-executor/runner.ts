@@ -1,4 +1,7 @@
-import { buildFunctionProxy } from './utils/build-fn-proxy';
+import {
+  buildCallableFunctionProxy,
+  buildFunctionProxy,
+} from './utils/build-fn-proxy';
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
@@ -26,7 +29,7 @@ process.on('message', async (msg: any) => {
     }
     ctx.$errors = buildFunctionProxy('$errors');
     ctx.$helpers = buildFunctionProxy('$helpers');
-
+    ctx.$logs = buildCallableFunctionProxy('$logs');
     try {
       const asyncFn = new AsyncFunction(
         '$ctx',

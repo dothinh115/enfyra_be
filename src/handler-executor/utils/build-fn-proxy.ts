@@ -22,6 +22,19 @@ export function buildFunctionProxy(prefixPath) {
   );
 }
 
+export function buildCallableFunctionProxy(path) {
+  return async (...args) => {
+    const callId = `call_${++callCounter}`;
+    process.send({
+      type: 'call',
+      callId,
+      path,
+      args,
+    });
+    return await waitForParentResponse(callId);
+  };
+}
+
 function waitForParentResponse(callId) {
   return new Promise((resolve, reject) => {
     pendingCalls.set(callId, { resolve, reject });

@@ -185,6 +185,7 @@ export class DynamicRepoService {
         'route_definition',
         'middleware_definition',
         'hook_definition',
+        'route_handler_definition',
       ].includes(this.tableName)
     ) {
       await this.routeCacheService.reloadRouteCache();

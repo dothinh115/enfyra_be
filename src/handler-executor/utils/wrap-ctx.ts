@@ -51,6 +51,7 @@ export function wrapCtx(
           authorization: val.headers?.['authorization'],
           'user-agent': val.headers?.['user-agent'],
         },
+        user: val.user ?? null,
       };
       continue;
     }
