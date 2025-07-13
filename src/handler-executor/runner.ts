@@ -47,10 +47,11 @@ process.on('message', async (msg: any) => {
         ctx,
       });
     } catch (error) {
+      console.log(error.message);
       process.send({
         type: 'error',
         error: {
-          message: error.errorResponse?.message,
+          message: error.errorResponse?.message ?? error.message,
           stack: error.errorResponse?.stack,
           name: error.errorResponse?.name,
           statusCode: error.errorResponse?.statusCode,
