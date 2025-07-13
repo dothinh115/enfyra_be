@@ -99,7 +99,12 @@ export class RouteDetectMiddleware implements NestMiddleware {
         $user: req.user ?? undefined,
         $repos: dynamicFindMap,
         $req: req,
-        share: {},
+        share: {
+          $logs: [],
+        },
+      };
+      context.$logs = (...args: any[]) => {
+        context.share.$logs.push(...args);
       };
       const { route, params } = matchedRoute;
 

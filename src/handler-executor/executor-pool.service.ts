@@ -9,7 +9,9 @@ export class ExecutorPoolService implements OnModuleInit {
   async onModuleInit() {
     const factory = {
       async create() {
-        const child = fork(path.resolve(__dirname, 'runner.js'));
+        const child = fork(path.resolve(__dirname, 'runner.js'), {
+          execArgv: ['--max-old-space-size=128'],
+        });
         console.log('[ExecutorPool] Spawn child', child.pid);
         return child;
       },

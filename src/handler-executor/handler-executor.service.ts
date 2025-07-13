@@ -12,6 +12,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ExecutorPoolService } from './executor-pool.service';
+import { merge } from 'lodash';
 
 @Injectable()
 export class HandlerExecutorService {
@@ -56,10 +57,7 @@ export class HandlerExecutorService {
           isDone = true;
           child.removeAllListeners();
           if (msg.ctx.share) {
-            ctx.share = {
-              ...(ctx.share && { ...ctx.share }),
-              ...msg.ctx.share,
-            };
+            ctx.share = merge({}, ctx.share, msg.ctx.share);
           }
 
           clearTimeout(timeout);

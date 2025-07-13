@@ -19,12 +19,6 @@ export class DynamicService {
       user: any;
     },
   ) {
-    const logs: any[] = [];
-
-    req.routeData.context.$logs = (...args: any[]) => {
-      logs.push(...args);
-    };
-
     try {
       const userHandler = req.routeData.handler?.trim();
       const defaultHandler = this.getDefaultHandler(req.method);
@@ -40,7 +34,7 @@ export class DynamicService {
         7000,
       );
 
-      return logs.length ? { result, logs } : result;
+      return result;
     } catch (error) {
       this.logger.error('❌ Lỗi khi chạy handler:', error.message);
       this.logger.debug(error.stack);

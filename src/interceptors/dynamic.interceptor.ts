@@ -22,7 +22,23 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
         if (!hook.preHook) continue;
         try {
           const code = hook.preHook;
-          await this.handlerExecurtorService.run(code, req.routeData.context);
+          const result = await this.handlerExecurtorService.run(
+            code,
+            req.routeData.context,
+          );
+
+          if (result !== undefined) {
+            const statusCode = req.routeData.context.share?.$statusCode ?? 200;
+            const res = context.switchToHttp().getResponse();
+            res
+              .status(statusCode)
+              .json(
+                req.routeData.context.share.$logs.length
+                  ? { result, logs: req.routeData.context.share.$logs }
+                  : result,
+              );
+            return new Observable();
+          }
         } catch (error) {
           throw error;
         }
@@ -49,7 +65,9 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
             }
           }
         }
-        return data;
+        return req.routeData.context.share.$logs.length
+          ? { result: data, logs: req.routeData.context.share.$logs }
+          : data;
       }),
     );
   }
