@@ -223,4 +223,37 @@ export class CommonService {
     };
     return map[type] || 'many-to-one';
   }
+
+  assertNoSystemFlagDeep(arr: any[], path = 'root') {
+    if (!Array.isArray(arr)) return;
+
+    for (let i = 0; i < arr.length; i++) {
+      const item = arr[i];
+      const currentPath = `${path}[${i}]`;
+
+      if (item?.isSystem === true) {
+        throw new Error(
+          `Không được tạo mới ${currentPath} với isSystem = true`,
+        );
+      }
+
+      // Duyệt sâu để kiểm tra nested object
+      this.assertNoSystemFlagDeepRecursive(item, currentPath);
+    }
+  }
+
+  private assertNoSystemFlagDeepRecursive(obj: any, path = 'root') {
+    if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; i++) {
+        this.assertNoSystemFlagDeepRecursive(obj[i], `${path}[${i}]`);
+      }
+    } else if (typeof obj === 'object' && obj !== null) {
+      if ('isSystem' in obj && obj.isSystem === true) {
+        throw new Error(`Không được chứa isSystem = true tại ${path}`);
+      }
+      for (const key of Object.keys(obj)) {
+        this.assertNoSystemFlagDeepRecursive(obj[key], `${path}.${key}`);
+      }
+    }
+  }
 }

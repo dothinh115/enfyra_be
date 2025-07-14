@@ -93,7 +93,7 @@ export class TableHandlerService {
     );
 
     const queryRunner = dataSource.createQueryRunner();
-    await queryRunner.connect(); // chỉ dùng để đảm bảo access DB
+    await queryRunner.connect();
 
     try {
       const tableRepo = dataSource.getRepository(tableEntity);
@@ -109,6 +109,7 @@ export class TableHandlerService {
         throw new Error(`Table ${body.name} không tồn tại.`);
       }
 
+      // Validation cơ bản: phải có 1 primary key
       if (!body.columns?.some((col) => col.isPrimary)) {
         throw new Error(
           `Table must contain an id column with isPrimary = true!`,
@@ -117,19 +118,79 @@ export class TableHandlerService {
 
       validateUniquePropertyNames(body.columns || [], body.relations || []);
 
-      const deletedColumnIds = getDeletedIds(exists.columns, body.columns);
-      const deletedRelationIds = getDeletedIds(
-        exists.relations,
-        body.relations,
-      );
+      // 🚨 Nếu là bảng hệ thống, bảo vệ nghiêm ngặt
+      if (exists.isSystem) {
+        // 1. Không được xoá column/relation hệ thống
+        const deletedColumnIds = getDeletedIds(exists.columns, body.columns);
+        const deletedRelationIds = getDeletedIds(
+          exists.relations,
+          body.relations,
+        );
 
-      if (deletedColumnIds.length) {
-        await columnRepo.delete(deletedColumnIds);
-      }
-      if (deletedRelationIds.length) {
-        await relationRepo.delete(deletedRelationIds);
+        if (deletedColumnIds.length > 0) {
+          const deletedNames = exists.columns
+            .filter((c) => deletedColumnIds.includes(c.id))
+            .map((c) => c.name);
+          throw new Error(
+            `Không được xoá column hệ thống: ${deletedNames.join(', ')}`,
+          );
+        }
+
+        if (deletedRelationIds.length > 0) {
+          const deletedNames = exists.relations
+            .filter((r) => deletedRelationIds.includes(r.id))
+            .map((r) => r.propertyName);
+          throw new Error(
+            `Không được xoá relation hệ thống: ${deletedNames.join(', ')}`,
+          );
+        }
+
+        // 2. Không được sửa field bảng ngoài description
+        const forbiddenTableFields = Object.keys(body).filter(
+          (k) => !['description', 'columns', 'relations'].includes(k),
+        );
+        if (forbiddenTableFields.length > 0) {
+          throw new Error(
+            `Không được sửa bảng hệ thống: ${forbiddenTableFields.join(', ')}`,
+          );
+        }
+
+        // 3. Không được sửa column gốc
+        for (const oldCol of exists.columns) {
+          const updated = body.columns.find((c) => c.id === oldCol.id);
+          if (!updated) continue; // Đã xử lý xoá ở trên
+          const safeKeys = ['description', 'isSystem', 'id']; // bỏ qua
+          const changed = Object.keys(updated).some((key) => {
+            if (safeKeys.includes(key)) return false;
+            return JSON.stringify(updated[key]) !== JSON.stringify(oldCol[key]);
+          });
+          if (changed) {
+            throw new Error(`Không được sửa column hệ thống: ${oldCol.name}`);
+          }
+        }
+
+        // 4. Không được sửa relation gốc
+        for (const oldRel of exists.relations) {
+          const updated = body.relations.find((r) => r.id === oldRel.id);
+          if (!updated) continue;
+          const safeKeys = ['description', 'isSystem', 'id'];
+          const changed = Object.keys(updated).some((key) => {
+            if (safeKeys.includes(key)) return false;
+            return JSON.stringify(updated[key]) !== JSON.stringify(oldRel[key]);
+          });
+          if (changed) {
+            throw new Error(
+              `Không được sửa relation hệ thống: ${oldRel.propertyName}`,
+            );
+          }
+        }
+
+        // 5. Không được nhồi isSystem = true trong bản ghi mới
+        this.commonService.assertNoSystemFlagDeep(body.columns, 'columns');
+        this.commonService.assertNoSystemFlagDeep(body.relations, 'relations');
       }
 
+      // Nếu qua được tất cả check —> tiến hành cập nhật
       const result = await tableRepo.save(
         tableRepo.create({
           ...body,
@@ -137,13 +198,14 @@ export class TableHandlerService {
         }),
       );
 
+      // Gọi afterEffect để reload schema
       await this.afterEffect({ entityName: result.name, type: 'update' });
       return result;
     } catch (error) {
       console.error(error.stack || error.message || error);
       throw new Error(`Error: "${error.message}"` || 'Unknown error');
     } finally {
-      await queryRunner.release(); // vẫn cần release để cleanup
+      await queryRunner.release();
     }
   }
 

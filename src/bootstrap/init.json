@@ -118,25 +118,30 @@
         {
             "isEnabled": true,
             "afterHook": "$ctx.share.$data = {statusCode: $ctx.share.$statusCode,...$ctx.share.$data,message: 'Success'}",
-            "name": "Default response"
+            "name": "Default response",
+            "isSystem":true
         }
     ],
     "method_definition": [
         {
             "method": "GET",
-            "action": "read"
+            "action": "read",
+            "isSystem":true
         },
         {
             "method": "POST",
-            "action": "create"
+            "action": "create",
+            "isSystem":true
         },
         {
             "method": "PATCH",
-            "action": "update"
+            "action": "update",
+            "isSystem":true
         },
         {
             "method": "DELETE",
-            "action": "delete"
+            "action": "delete",
+            "isSystem":true
         }
     ]
 }

@@ -71,8 +71,7 @@
             { "name": "email", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null },
             { "name": "password", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null, "isHidden": true },
             { "name": "isRootAdmin", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false, "isUpdatable": false },
-            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
-            { "name": "description", "type": "text", "isSystem": true }
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false }
         ]
     },
     "setting_definition": {
@@ -171,7 +170,8 @@
             { "name": "afterHook", "type": "code", "isNullable": true, "isSystem": true },
             { "name": "priority", "type": "int", "isNullable": true, "isSystem": true, "defaultValue": 0 },
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
-            { "name": "description", "type": "text", "isSystem": true }
+            { "name": "description", "type": "text", "isSystem": true },
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false }
         ],
         "relations": [
             { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "hooks", "isIndex": true },
@@ -205,7 +205,8 @@
         "isSystem": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "method", "type": "varchar", "isNullable": false, "isSystem": true }
+            { "name": "method", "type": "varchar", "isNullable": false, "isSystem": true },
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false }
         ],
         "relations": [
             { "propertyName": "setting", "type": "many-to-one", "targetTable": "setting_definition", "isSystem": true, "inversePropertyName": "methods" },

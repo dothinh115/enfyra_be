@@ -24,7 +24,6 @@ import { RedisPubSubService } from './redis/redis-pubsub.service';
 import { SchemaStateService } from './schema/schema-state.service';
 import { SchemaLockGuard } from './guard/schema-lock.guard';
 import { SqlFunctionService } from './sql/sql-function.service';
-import { SystemRecordProtectGuard } from './guard/system-record-protect.guard';
 import { MetadataSyncService } from './metadata/metadata-sync.service';
 import { SchemaHistoryService } from './metadata/schema-history.service';
 import { BootstrapModule } from './bootstrap/bootstrap.module';
@@ -91,7 +90,6 @@ import { SystemProtectionService } from './dynamic-repo/system-protection.servic
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RoleGuard },
-    { provide: APP_GUARD, useClass: SystemRecordProtectGuard },
     { provide: APP_INTERCEPTOR, useClass: DynamicInterceptor },
     { provide: APP_INTERCEPTOR, useClass: HideFieldInterceptor },
   ],

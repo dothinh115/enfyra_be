@@ -9,6 +9,8 @@ import { Hook_definition } from './hook_definition.entity';
 export class Method_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
+    @Column({ type: "boolean", nullable: false, default: false })
+    isSystem: boolean;
     @Column({ type: "varchar", nullable: false })
     method: string;
     @ManyToMany('Route_permission_definition', (rel: any) => rel.methods, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })

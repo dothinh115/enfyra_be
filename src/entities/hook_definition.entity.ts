@@ -12,6 +12,8 @@ export class Hook_definition {
     description: string;
     @Column({ type: "boolean", nullable: false, default: false })
     isEnabled: boolean;
+    @Column({ type: "boolean", nullable: false, default: false })
+    isSystem: boolean;
     @Column({ type: "varchar", nullable: true })
     name: string;
     @Column({ type: "text", nullable: true })
