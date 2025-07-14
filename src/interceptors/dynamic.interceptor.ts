@@ -66,7 +66,7 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
           }
         }
         return req.routeData.context.share.$logs.length
-          ? { result: data, logs: req.routeData.context.share.$logs }
+          ? { ...data, logs: req.routeData.context.share.$logs }
           : data;
       }),
     );

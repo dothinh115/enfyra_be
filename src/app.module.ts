@@ -35,6 +35,7 @@ import { DynamicInterceptor } from './interceptors/dynamic.interceptor';
 import { HandlerExecutorModule } from './handler-executor/hanler-executor.module';
 import { RouteCacheService } from './redis/route-cache.service';
 import { ParseQueryMiddleware } from './middleware/parse-query.middleware';
+import { SystemProtectionService } from './dynamic-repo/system-protection.service';
 
 @Global()
 @Module({
@@ -85,6 +86,7 @@ import { ParseQueryMiddleware } from './middleware/parse-query.middleware';
     MetadataSyncService,
     SchemaHistoryService,
     RouteCacheService,
+    SystemProtectionService,
     { provide: APP_GUARD, useClass: SchemaLockGuard },
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
@@ -103,6 +105,7 @@ import { ParseQueryMiddleware } from './middleware/parse-query.middleware';
     MetadataSyncService,
     SchemaHistoryService,
     RouteCacheService,
+    SystemProtectionService,
   ],
 })
 export class AppModule implements NestModule {

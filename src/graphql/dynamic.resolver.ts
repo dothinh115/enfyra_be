@@ -16,6 +16,7 @@ import { DataSourceService } from '../data-source/data-source.service';
 import { GLOBAL_ROUTES_KEY } from '../utils/constant';
 import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
 import { RouteCacheService } from '../redis/route-cache.service';
+import { SystemProtectionService } from '../dynamic-repo/system-protection.service';
 
 @Injectable()
 export class DynamicResolver {
@@ -28,6 +29,7 @@ export class DynamicResolver {
     private dataSourceService: DataSourceService,
     private handlerExecutorService: HandlerExecutorService,
     private routeCacheService: RouteCacheService,
+    private systemProtectionService: SystemProtectionService,
   ) {}
 
   async dynamicResolver(
@@ -70,6 +72,7 @@ export class DynamicResolver {
           ...(args.sort && { sort: args.sort }),
           ...(args.aggregate && { aggregate: args.aggregate }),
           routeCacheService: this.routeCacheService,
+          systemProtectionService: this.systemProtectionService,
         });
 
         await dynamicRepo.init();

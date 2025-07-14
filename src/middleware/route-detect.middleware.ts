@@ -14,6 +14,7 @@ import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { RedisLockService } from '../redis/redis-lock.service';
 import { QueryEngine } from '../query-builder/query-engine.service';
 import { RouteCacheService } from '../redis/route-cache.service';
+import { SystemProtectionService } from '../dynamic-repo/system-protection.service';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
@@ -25,6 +26,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private tableHandlerService: TableHandlerService,
     private redisLockService: RedisLockService,
     private routeCacheService: RouteCacheService,
+    private systemProtectionService: SystemProtectionService,
   ) {}
 
   async use(req: any, res: any, next: (error?: any) => void) {
@@ -66,6 +68,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
               aggregate: req.query.aggregate,
             }),
             routeCacheService: this.routeCacheService,
+            systemProtectionService: this.systemProtectionService,
           });
           await dynamicRepo.init();
           const name =

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { TableHandlerService } from '../table/table.service';
 import { QueryEngine } from '../query-builder/query-engine.service';
 import { RouteCacheService } from '../redis/route-cache.service';
+import { SystemProtectionService } from './system-protection.service';
 
 export class DynamicRepoService {
   private fields: string;
@@ -19,6 +20,8 @@ export class DynamicRepoService {
   private repo: Repository<any>;
   private tableHandlerService: TableHandlerService;
   private routeCacheService: RouteCacheService;
+  private systemProtectionService: SystemProtectionService;
+
   constructor({
     fields = '',
     filter = {},
@@ -32,6 +35,7 @@ export class DynamicRepoService {
     sort,
     aggregate = {},
     routeCacheService,
+    systemProtectionService,
   }: {
     fields: string;
     filter: any;
@@ -41,10 +45,11 @@ export class DynamicRepoService {
     queryEngine: QueryEngine;
     dataSourceService: DataSourceService;
     tableHandlerService: TableHandlerService;
-    meta?: 'filterCount' | 'totalCount' | '*' | undefined;
+    meta?: 'filterCount' | 'totalCount' | '*';
     sort?: string | string[];
     aggregate: any;
     routeCacheService: RouteCacheService;
+    systemProtectionService: SystemProtectionService;
   }) {
     this.fields = fields;
     this.filter = filter;
@@ -58,6 +63,7 @@ export class DynamicRepoService {
     this.sort = sort;
     this.aggregate = aggregate;
     this.routeCacheService = routeCacheService;
+    this.systemProtectionService = systemProtectionService;
   }
 
   async init() {
@@ -65,7 +71,7 @@ export class DynamicRepoService {
   }
 
   async find(opt: { where?: any }) {
-    const result = await this.queryEngine.find({
+    return this.queryEngine.find({
       fields: this.fields,
       filter: opt?.where || this.filter,
       page: this.page,
@@ -75,105 +81,94 @@ export class DynamicRepoService {
       sort: this.sort,
       aggregate: this.aggregate,
     });
-    return result;
   }
 
   async create(body: any) {
     try {
+      this.systemProtectionService.assertSystemSafe({
+        operation: 'create',
+        tableName: this.tableName,
+        data: body,
+        existing: undefined,
+        relatedRoute: undefined,
+      });
+
       if (this.tableName === 'table_definition') {
         body.isSystem = false;
         const table: any = await this.tableHandlerService.createTable(body);
-        return await this.find({
-          where: {
-            id: {
-              _eq: table.id,
-            },
-          },
-        });
+        return await this.find({ where: { id: { _eq: table.id } } });
       }
-      const created: any = await this.repo.save(body);
 
-      const result = await this.find({
-        where: {
-          id: {
-            _eq: created.id,
-          },
-        },
-      });
+      const created = await this.repo.save(body);
+      const result = await this.find({ where: { id: { _eq: created.id } } });
 
       await this.reload();
       return result;
     } catch (error) {
-      console.log('❌ Lỗi trong dynamic repo:', error);
+      console.error('❌ Error in create():', error);
       throw new BadRequestException(error.message);
     }
   }
 
   async update(id: string | number, body: any) {
     try {
-      const exists = await this.repo.findOne({
-        where: {
-          id,
-        },
-      });
+      const exists = await this.repo.findOne({ where: { id } });
+      if (!exists) throw new BadRequestException(`Record ${id} not found`);
 
-      if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
-      this.protectSystemRecord(body);
-      if (this.tableName === 'table_definition') {
-        const table: any = await this.tableHandlerService.updateTable(
-          +id,
-          body,
-        );
-        return this.find({
-          where: {
-            id: {
-              _eq: table.id,
-            },
-          },
-        });
+      let relatedRoute = undefined;
+      if (this.tableName === 'route_handler_definition') {
+        const routeRepo =
+          this.dataSourceService.getRepository('route_definition');
+        relatedRoute = await routeRepo.findOne({ where: { id: exists.route } });
       }
-      await this.repo.save({
-        ...exists,
-        ...body,
+
+      this.systemProtectionService.assertSystemSafe({
+        operation: 'update',
+        tableName: this.tableName,
+        data: body,
+        existing: exists,
+        relatedRoute,
       });
 
-      const result = await this.find({
-        where: {
-          id: {
-            _eq: exists.id,
-          },
-        },
-      });
+      if (this.tableName === 'table_definition') {
+        const table = await this.tableHandlerService.updateTable(+id, body);
+        return this.find({ where: { id: { _eq: table.id } } });
+      }
 
+      await this.repo.save({ ...exists, ...body });
+
+      const result = await this.find({ where: { id: { _eq: exists.id } } });
       await this.reload();
       return result;
     } catch (error) {
-      console.log('❌ Lỗi trong dynamic repo:', error);
+      console.error('❌ Error in update():', error);
       throw new BadRequestException(error.message);
     }
   }
 
   async delete(id: string | number) {
     try {
+      const exists = await this.repo.findOne({ where: { id } });
+      if (!exists) throw new BadRequestException(`Record ${id} not found`);
+
+      this.systemProtectionService.assertSystemSafe({
+        operation: 'delete',
+        tableName: this.tableName,
+        data: {},
+        existing: exists,
+        relatedRoute: undefined,
+      });
+
       if (this.tableName === 'table_definition') {
         await this.tableHandlerService.delete(+id);
-
         return 'Success';
       }
-      const exists = await this.repo.findOne({
-        where: {
-          id,
-        },
-      });
-      if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
-      this.protectSystemRecord(exists);
-      const repo = this.dataSourceService.getRepository(this.tableName);
 
-      await repo.delete(id);
+      await this.repo.delete(id);
       await this.reload();
-      return `Delete successfully!`;
+      return 'Delete successfully!';
     } catch (error) {
-      console.log('❌ Lỗi trong dynamic repo:', error);
+      console.error('❌ Error in delete():', error);
       throw new BadRequestException(error.message);
     }
   }
@@ -189,16 +184,6 @@ export class DynamicRepoService {
       ].includes(this.tableName)
     ) {
       await this.routeCacheService.reloadRouteCache();
-    }
-  }
-
-  private protectSystemRecord(record: any) {
-    if (
-      this.tableName === 'route_definition' &&
-      record.isSystem &&
-      record.isEnabled === false
-    ) {
-      throw new Error(`Cannot disable system route`);
     }
   }
 }
