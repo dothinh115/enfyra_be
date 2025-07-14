@@ -231,7 +231,10 @@ export class CommonService {
       const item = arr[i];
       const currentPath = `${path}[${i}]`;
 
-      if (item?.isSystem === true) {
+      if (
+        item?.isSystem === true &&
+        (item?.id === undefined || item?.id === null)
+      ) {
         throw new Error(
           `Không được tạo mới ${currentPath} với isSystem = true`,
         );

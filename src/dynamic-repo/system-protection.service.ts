@@ -54,5 +54,9 @@ export class SystemProtectionService {
         'Không được thao tác handler trên route hệ thống (cấm cả tạo và sửa)',
       );
     }
+
+    if (operation === 'create') {
+      this.commonService.assertNoSystemFlagDeep([data]);
+    }
   }
 }
