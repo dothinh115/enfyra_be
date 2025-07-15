@@ -547,7 +547,7 @@ export class QueryEngine {
         if (found.kind === 'field') {
           const fieldType = found.type;
           const parsedValue = this.parseValue(fieldType, val);
-
+          const collation = 'utf8mb4_general_ci';
           switch (key) {
             case '_eq':
               sql = `${currentAlias}.${lastField} = :${paramKey}`;
@@ -585,15 +585,17 @@ export class QueryEngine {
               sql = `${currentAlias}.${lastField} IS ${val ? '' : 'NOT '}NULL`;
               break;
             case '_contains':
-              sql = `lower(unaccent(${currentAlias}.${lastField})) LIKE CONCAT('%', lower(unaccent(:${paramKey})), '%')`;
+              sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT('%', lower(unaccent(:${paramKey})) COLLATE ${collation}, '%')`;
               param[paramKey] = parsedValue;
               break;
+
             case '_starts_with':
-              sql = `lower(unaccent(${currentAlias}.${lastField})) LIKE CONCAT(lower(unaccent(:${paramKey})), '%')`;
+              sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT(lower(unaccent(:${paramKey})) COLLATE ${collation}, '%')`;
               param[paramKey] = parsedValue;
               break;
+
             case '_ends_with':
-              sql = `lower(unaccent(${currentAlias}.${lastField})) LIKE CONCAT('%', lower(unaccent(:${paramKey})))`;
+              sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT('%', lower(unaccent(:${paramKey})) COLLATE ${collation})`;
               param[paramKey] = parsedValue;
               break;
             default:
