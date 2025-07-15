@@ -58,5 +58,9 @@ export class SystemProtectionService {
     if (operation === 'create') {
       this.commonService.assertNoSystemFlagDeep([data]);
     }
+
+    if (operation === 'delete' && existing?.isSystem) {
+      throw new Error('Không được xoá bản ghi hệ thống!');
+    }
   }
 }
