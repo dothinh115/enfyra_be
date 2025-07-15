@@ -9,7 +9,7 @@ export class Route_handler_definition {
     id: number;
     @Column({ type: "text", nullable: true })
     description: string;
-    @Column({ type: "text", nullable: false })
+    @Column({ type: "text", nullable: true })
     logic: string;
     @Index()
     @ManyToOne('Method_definition', (rel: any) => rel.handlers, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })

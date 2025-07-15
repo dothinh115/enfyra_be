@@ -231,31 +231,29 @@ export class CommonService {
       const item = arr[i];
       const currentPath = `${path}[${i}]`;
 
-      if (
-        item?.isSystem === true &&
-        (item?.id === undefined || item?.id === null)
-      ) {
+      // 🚨 Nếu là record mới (chưa có id) mà isSystem = true → báo lỗi
+      if (!item?.id && item?.isSystem === true) {
         throw new Error(
           `Không được tạo mới ${currentPath} với isSystem = true`,
         );
       }
 
-      // Duyệt sâu để kiểm tra nested object
+      // Tiếp tục kiểm tra các nested object
       this.assertNoSystemFlagDeepRecursive(item, currentPath);
     }
   }
 
-  private assertNoSystemFlagDeepRecursive(obj: any, path = 'root') {
-    if (Array.isArray(obj)) {
-      for (let i = 0; i < obj.length; i++) {
-        this.assertNoSystemFlagDeepRecursive(obj[i], `${path}[${i}]`);
-      }
-    } else if (typeof obj === 'object' && obj !== null) {
-      if ('isSystem' in obj && obj.isSystem === true) {
-        throw new Error(`Không được chứa isSystem = true tại ${path}`);
-      }
-      for (const key of Object.keys(obj)) {
-        this.assertNoSystemFlagDeepRecursive(obj[key], `${path}.${key}`);
+  assertNoSystemFlagDeepRecursive(obj: any, path = 'root') {
+    if (!obj || typeof obj !== 'object') return;
+
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      const currentPath = `${path}.${key}`;
+
+      if (Array.isArray(val)) {
+        this.assertNoSystemFlagDeep(val, currentPath);
+      } else if (typeof val === 'object') {
+        this.assertNoSystemFlagDeepRecursive(val, currentPath);
       }
     }
   }

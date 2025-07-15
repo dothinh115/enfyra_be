@@ -6,6 +6,7 @@ import { SchemaReloadService } from '../schema/schema-reload.service';
 import { CommonService } from '../common/common.service';
 import { validateUniquePropertyNames } from './utils/duplicate-field-check';
 import { getDeletedIds } from './utils/get-deleted-ids';
+import { isEqual, omit, pick } from 'lodash';
 
 @Injectable()
 export class TableHandlerService {
@@ -109,7 +110,6 @@ export class TableHandlerService {
         throw new Error(`Table ${body.name} không tồn tại.`);
       }
 
-      // Validation cơ bản: phải có 1 primary key
       if (!body.columns?.some((col) => col.isPrimary)) {
         throw new Error(
           `Table must contain an id column with isPrimary = true!`,
@@ -118,9 +118,9 @@ export class TableHandlerService {
 
       validateUniquePropertyNames(body.columns || [], body.relations || []);
 
-      // 🚨 Nếu là bảng hệ thống, bảo vệ nghiêm ngặt
+      // 🚨 Nếu là bảng hệ thống → cần bảo vệ nghiêm ngặt
       if (exists.isSystem) {
-        // 1. Không được xoá column/relation hệ thống
+        // ✅ Không được xoá column/relation hệ thống
         const deletedColumnIds = getDeletedIds(exists.columns, body.columns);
         const deletedRelationIds = getDeletedIds(
           exists.relations,
@@ -145,52 +145,98 @@ export class TableHandlerService {
           );
         }
 
-        // 2. Không được sửa field bảng ngoài description
-        const forbiddenTableFields = Object.keys(body).filter(
-          (k) => !['description', 'columns', 'relations'].includes(k),
+        // ✅ Không được giảm số lượng column/relation system
+        const originalSystemCols = exists.columns.filter((c) => c.isSystem);
+        const afterSystemCols = (body.columns || []).filter(
+          (c) => c.id && originalSystemCols.some((o) => o.id === c.id),
         );
-        if (forbiddenTableFields.length > 0) {
+        if (afterSystemCols.length < originalSystemCols.length) {
           throw new Error(
-            `Không được sửa bảng hệ thống: ${forbiddenTableFields.join(', ')}`,
+            `Số lượng column hệ thống bị thiếu: từ ${originalSystemCols.length} xuống còn ${afterSystemCols.length}`,
           );
         }
 
-        // 3. Không được sửa column gốc
-        for (const oldCol of exists.columns) {
+        const originalSystemRels = exists.relations.filter((r) => r.isSystem);
+        const afterSystemRels = (body.relations || []).filter(
+          (r) => r.id && originalSystemRels.some((o) => o.id === r.id),
+        );
+        if (afterSystemRels.length < originalSystemRels.length) {
+          throw new Error(
+            `Số lượng relation hệ thống bị thiếu: từ ${originalSystemRels.length} xuống còn ${afterSystemRels.length}`,
+          );
+        }
+
+        // ✅ Không được sửa field bảng ngoài description
+        const allowedTableKeys = ['description', 'columns', 'relations'];
+        const ignoredKeys = ['id', 'createdAt', 'updatedAt'];
+
+        const changedFields = Object.keys(body).filter((key) => {
+          if (allowedTableKeys.includes(key)) return false;
+          if (ignoredKeys.includes(key)) return false;
+          return !isEqual(body[key], exists[key]);
+        });
+
+        if (changedFields.length > 0) {
+          throw new Error(
+            `Không được sửa bảng hệ thống: ${changedFields.join(', ')}`,
+          );
+        }
+
+        // ✅ Không được sửa column gốc (chỉ cho phép sửa description)
+        for (const oldCol of exists.columns.filter((c) => c.isSystem)) {
           const updated = body.columns.find((c) => c.id === oldCol.id);
-          if (!updated) continue; // Đã xử lý xoá ở trên
-          const safeKeys = ['description', 'isSystem', 'id']; // bỏ qua
-          const changed = Object.keys(updated).some((key) => {
-            if (safeKeys.includes(key)) return false;
-            return JSON.stringify(updated[key]) !== JSON.stringify(oldCol[key]);
-          });
-          if (changed) {
+          if (!updated) continue;
+
+          const ignored = [
+            'id',
+            'description',
+            'createdAt',
+            'updatedAt',
+            'isSystem',
+            'table',
+          ];
+
+          const oldClean = omit(oldCol, ignored);
+          const newClean = omit(updated, ignored);
+
+          if (!isEqual(newClean, oldClean)) {
             throw new Error(`Không được sửa column hệ thống: ${oldCol.name}`);
           }
         }
 
-        // 4. Không được sửa relation gốc
-        for (const oldRel of exists.relations) {
+        // ✅ Không được sửa relation gốc (chỉ cho phép sửa description)
+        for (const oldRel of exists.relations.filter((r) => r.isSystem)) {
           const updated = body.relations.find((r) => r.id === oldRel.id);
           if (!updated) continue;
-          const safeKeys = ['description', 'isSystem', 'id'];
-          const changed = Object.keys(updated).some((key) => {
-            if (safeKeys.includes(key)) return false;
-            return JSON.stringify(updated[key]) !== JSON.stringify(oldRel[key]);
-          });
-          if (changed) {
+
+          const ignored = [
+            'id',
+            'description',
+            'createdAt',
+            'updatedAt',
+            'isSystem',
+          ];
+
+          const keysToCompare = Object.keys(oldRel).filter(
+            (k) => !ignored.includes(k),
+          );
+
+          const oldClean = pick(oldRel, keysToCompare);
+          const newClean = pick(updated, keysToCompare);
+
+          if (!isEqual(newClean, oldClean)) {
             throw new Error(
               `Không được sửa relation hệ thống: ${oldRel.propertyName}`,
             );
           }
         }
 
-        // 5. Không được nhồi isSystem = true trong bản ghi mới
+        // ✅ Không được tạo mới column/relation có isSystem = true
         this.commonService.assertNoSystemFlagDeep(body.columns, 'columns');
         this.commonService.assertNoSystemFlagDeep(body.relations, 'relations');
       }
 
-      // Nếu qua được tất cả check —> tiến hành cập nhật
+      // ✅ Qua được tất cả check → thực hiện cập nhật
       const result = await tableRepo.save(
         tableRepo.create({
           ...body,
@@ -198,7 +244,6 @@ export class TableHandlerService {
         }),
       );
 
-      // Gọi afterEffect để reload schema
       await this.afterEffect({ entityName: result.name, type: 'update' });
       return result;
     } catch (error) {

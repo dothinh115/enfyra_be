@@ -17,7 +17,7 @@
             { "name": "isUpdatable", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
             { "name": "isHidden", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "isIndex", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
-            { "name": "description", "type": "text", "isSystem": true },
+            { "name": "description", "type": "richtext", "isSystem": true },
             { "name": "placeholder", "type": "text", "isSystem": true }
         ],
         "relations": [
@@ -135,7 +135,7 @@
         "isSystem": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "logic", "type": "code", "isSystem":true, "isNullable": false },
+            { "name": "logic", "type": "code", "isSystem":true, "isNullable": true },
             { "name": "description", "type": "text", "isSystem": true }
         ],
         "relations": [
