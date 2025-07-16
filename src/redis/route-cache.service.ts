@@ -32,12 +32,6 @@ export class RouteCacheService {
       }),
       routeDefRepo
         .createQueryBuilder('route')
-        .leftJoinAndSelect(
-          'route.middlewares',
-          'middlewares',
-          'middlewares.isEnabled = :enabled',
-          { enabled: true },
-        )
         .leftJoinAndSelect('route.mainTable', 'mainTable')
         .leftJoinAndSelect('route.targetTables', 'targetTables')
         .leftJoinAndSelect(
@@ -69,9 +63,7 @@ export class RouteCacheService {
 
     routes.forEach((route: any) => {
       route.hooks?.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
-      route.middlewares?.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
       route.hooks = [...globalHooks, ...route.hooks];
-      route.middlewares = [...globalMiddlewares, ...route.middlewares];
     });
 
     await this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 15000);

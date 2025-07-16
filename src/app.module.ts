@@ -17,7 +17,6 @@ import { AuthModule } from './auth/auth.module';
 import { RoleGuard } from './guard/role.guard';
 import { MeModule } from './me/me.module';
 import { RouteDetectMiddleware } from './middleware/route-detect.middleware';
-import { DynamicMiddleware } from './middleware/dynamic.middleware';
 import { NotFoundDetectGuard } from './guard/not-found-detect.guard';
 import { SchemaReloadService } from './schema/schema-reload.service';
 import { RedisPubSubService } from './redis/redis-pubsub.service';
@@ -44,7 +43,6 @@ import { SystemProtectionService } from './dynamic-repo/system-protection.servic
       envFilePath: path.resolve(__dirname, '../.env'),
     }),
     TableModule,
-    DatabaseModule,
     CommonModule,
     DataSourceModule,
     AutoModule,
@@ -110,6 +108,5 @@ export class AppModule implements NestModule {
   async configure(consumer: MiddlewareConsumer) {
     consumer.apply(ParseQueryMiddleware).forRoutes('*');
     consumer.apply(RouteDetectMiddleware).forRoutes('*');
-    consumer.apply(DynamicMiddleware).forRoutes('*');
   }
 }

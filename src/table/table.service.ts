@@ -19,7 +19,7 @@ export class TableHandlerService {
     private commonService: CommonService,
   ) {}
 
-  async createTable(body: CreateTableDto) {
+  async createTable(body: any) {
     const dataSource = this.dataSourceService.getDataSource();
     const tableEntity =
       this.dataSourceService.entityClassMap.get('table_definition');
@@ -58,8 +58,13 @@ export class TableHandlerService {
       }
 
       validateUniquePropertyNames(body.columns || [], body.relations || []);
+      if (body.isSystem) {
+        throw new Error(`Không được phép tạo bảng hệ thống (isSystem: true)`);
+      }
+      this.commonService.assertNoSystemFlagDeep(body.columns, 'columns');
+      this.commonService.assertNoSystemFlagDeep(body.relations, 'relations');
 
-      const result = await dataSource
+      const result: any = await dataSource
         .getRepository(tableEntity)
         .save(dataSource.getRepository(tableEntity).create(body));
 

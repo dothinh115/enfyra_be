@@ -27,8 +27,14 @@ export class HandlerExecutorService {
     return new Promise(async (resolve, reject) => {
       const child = await pool.acquire();
       const timeout = setTimeout(async () => {
+        if (isDone) return;
+        isDone = true;
         child.removeAllListeners();
-        await pool.release(child);
+        try {
+          child.kill();
+        } catch (e) {
+          console.warn('Failed to kill child on timeout', e);
+        }
         reject(new Error('Timeout'));
       }, timeoutMs);
 

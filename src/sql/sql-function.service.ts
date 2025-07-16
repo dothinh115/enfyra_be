@@ -1,12 +1,13 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { DataSourceService } from '../data-source/data-source.service';
 
 @Injectable()
-export class SqlFunctionService implements OnModuleInit {
-  constructor(private dataSource: DataSource) {}
+export class SqlFunctionService implements OnApplicationBootstrap {
+  constructor(private dataSourceService: DataSourceService) {}
 
-  async onModuleInit() {
-    const dbType = this.dataSource.options.type;
+  async onApplicationBootstrap() {
+    const dataSource = this.dataSourceService.getDataSource();
+    const dbType = dataSource.options.type;
 
     if (dbType === 'mysql') {
       const exists = await this.functionExists('unaccent');
@@ -17,7 +18,7 @@ export class SqlFunctionService implements OnModuleInit {
         console.log('ℹ️ MySQL function unaccent() already exists');
       }
     } else if (dbType === 'postgres') {
-      await this.dataSource.query(`CREATE EXTENSION IF NOT EXISTS unaccent;`);
+      await dataSource.query(`CREATE EXTENSION IF NOT EXISTS unaccent;`);
       console.log('✅ Postgres: unaccent extension ready');
     } else {
       console.warn(`⚠️ Unsupported DB_TYPE for unaccent: ${dbType}`);
@@ -25,7 +26,9 @@ export class SqlFunctionService implements OnModuleInit {
   }
 
   private async functionExists(name: string): Promise<boolean> {
-    const result = await this.dataSource.query(
+    const dataSource = this.dataSourceService.getDataSource();
+
+    const result = await dataSource.query(
       `SELECT ROUTINE_NAME FROM information_schema.ROUTINES WHERE ROUTINE_TYPE='FUNCTION' AND ROUTINE_SCHEMA=DATABASE() AND ROUTINE_NAME = ?`,
       [name],
     );
@@ -33,11 +36,13 @@ export class SqlFunctionService implements OnModuleInit {
   }
 
   private async createUnaccentFunction() {
-    await this.dataSource.query(`
+    const dataSource = this.dataSourceService.getDataSource();
+
+    await dataSource.query(`
       DROP FUNCTION IF EXISTS unaccent;
     `);
 
-    await this.dataSource.query(`
+    await dataSource.query(`
       CREATE FUNCTION unaccent(input TEXT) RETURNS TEXT
       DETERMINISTIC
       BEGIN

@@ -25,7 +25,7 @@ export class SystemProtectionService {
         throw new Error('Không được disable route hệ thống');
       }
 
-      const lockedFields = ['path', 'mainTable', 'alias', 'icon'];
+      const lockedFields = ['path', 'mainTable'];
       const changed = lockedFields.filter((key) => {
         return key in data && !isEqual(data[key], existing[key]);
       });

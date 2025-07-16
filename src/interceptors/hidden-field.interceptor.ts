@@ -5,12 +5,13 @@ import {
   CallHandler,
 } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
-import { DataSource, EntityMetadata } from 'typeorm';
+import { EntityMetadata } from 'typeorm';
 import { HIDDEN_FIELD_KEY } from '../utils/constant';
+import { DataSourceService } from '../data-source/data-source.service';
 
 @Injectable()
 export class HideFieldInterceptor implements NestInterceptor {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private dataSourceService: DataSourceService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(map((data) => this.sanitizeDeep(data)));
@@ -59,8 +60,10 @@ export class HideFieldInterceptor implements NestInterceptor {
   }
 
   private findMatchingEntityMetas(obj: any): EntityMetadata[] {
-    return this.dataSource.entityMetadatas.filter((meta) =>
-      meta.columns.every((col) => col.propertyName in obj),
-    );
+    return this.dataSourceService
+      .getDataSource()
+      .entityMetadatas.filter((meta) =>
+        meta.columns.every((col) => col.propertyName in obj),
+      );
   }
 }
