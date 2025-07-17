@@ -14,17 +14,9 @@ export class RouteCacheService {
   async loadAndCacheRoutes() {
     const routeDefRepo: Repository<any> =
       this.dataSourceService.getRepository('route_definition');
-
-    const middlewareRepo = this.dataSourceService.getRepository(
-      'middleware_definition',
-    );
     const hookRepo = this.dataSourceService.getRepository('hook_definition');
 
-    const [globalMiddlewares, globalHooks, routes] = await Promise.all([
-      middlewareRepo.find({
-        where: { isEnabled: true, route: null },
-        order: { priority: 'ASC' },
-      }),
+    const [globalHooks, routes] = await Promise.all([
       hookRepo.find({
         where: { isEnabled: true, route: IsNull() },
         order: { priority: 'ASC' },
