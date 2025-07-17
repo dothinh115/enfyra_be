@@ -209,6 +209,7 @@ export class QueryEngine {
       for (let i = 0; i < path.length; i++) {
         const segment = path[i];
         const found = this.lookupFieldOrRelation(currentMeta, segment);
+        if (!found || found.kind !== 'relation') return;
 
         if (found.kind === 'relation') {
           parentAlias = currentAlias;
@@ -264,6 +265,7 @@ export class QueryEngine {
         rootAlias,
         addJoin,
       });
+      if (!res) return;
 
       if (res.lastField.kind === 'field') {
         selectSet.add(`${res.alias}.${res.lastField.propertyName}`);
@@ -318,6 +320,7 @@ export class QueryEngine {
         rootAlias,
         addJoin,
       });
+      if (!res) return;
 
       for (const col of res.lastMeta.columns) {
         // Nếu tồn tại relation trùng tên thì bỏ qua (vì alias này là relation, ko phải column thật)
@@ -389,6 +392,7 @@ export class QueryEngine {
         } else if (!OPERATORS.includes(key)) {
           const path = [...basePath, key];
           const found = this.lookupFieldOrRelation(currentMeta, key);
+          if (!found) continue;
 
           if (found.kind === 'relation') {
             const result = addJoin(path);
@@ -436,6 +440,7 @@ export class QueryEngine {
         rootAlias,
         addJoin,
       });
+      if (!res) continue;
 
       if (res.lastField.kind === 'field') {
         sortArr.push({
@@ -513,6 +518,8 @@ export class QueryEngine {
 
         if (!OPERATORS.includes(key)) {
           const found = this.lookupFieldOrRelation(currentMeta, key);
+          if (!found) continue;
+
           const newPath = [...path, key];
 
           if (found.kind === 'relation') {
@@ -539,6 +546,7 @@ export class QueryEngine {
 
         const lastField = path[path.length - 1];
         const found = this.lookupFieldOrRelation(currentMeta, lastField);
+        if (!found) continue;
 
         const paramKey = `p${paramIndex++}`;
         const param = {};
@@ -794,6 +802,7 @@ export class QueryEngine {
     for (let i = 0; i < path.length; i++) {
       const segment = path[i];
       const found = this.lookupFieldOrRelation(currentMeta, segment);
+      if (!found) return undefined;
 
       if (found.kind === 'field') {
         if (i !== path.length - 1) {
@@ -867,9 +876,7 @@ export class QueryEngine {
         relationType === 'one-to-many' || relationType === 'many-to-many';
 
       const joinTableName =
-        relationType === 'many-to-many'
-          ? relation.joinTableName // 👈 TypeORM cung cấp bảng trung gian
-          : undefined;
+        relationType === 'many-to-many' ? relation.joinTableName : undefined;
 
       return {
         kind: 'relation',
@@ -893,9 +900,10 @@ export class QueryEngine {
       };
     }
 
-    throw new BadRequestException(
-      `Invalid field or relation "${property}" on table "${meta.tableName}"`,
-    );
+    // throw new BadRequestException(
+    //   `Invalid field or relation "${property}" on table "${meta.tableName}"`,
+    // );
+    return undefined;
   }
 
   private parseValue(fieldType: string, value: any): any {
