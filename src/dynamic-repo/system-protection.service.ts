@@ -62,5 +62,36 @@ export class SystemProtectionService {
     if (operation === 'delete' && existing?.isSystem) {
       throw new Error('Không được xoá bản ghi hệ thống!');
     }
+
+    // === 3. hook_definition ===
+    if (tableName === 'hook_definition') {
+      if (operation === 'create') {
+        if (data?.isSystem) {
+          throw new Error('Không được phép tạo hook hệ thống');
+        }
+      }
+
+      if (operation === 'update' && existing?.isSystem) {
+        const allowedFields = ['description', 'createdAt', 'updatedAt'];
+        console.log(data, existing);
+        const changedDisallowedFields = Object.keys(data).filter((key) => {
+          if (!(key in existing)) return false; // field mới, ko xét
+          const isChanged = !isEqual(data[key], existing[key]);
+          if (isChanged) {
+            console.log(`[SystemProtection] FIELD CHANGED: ${key}`, {
+              newValue: JSON.stringify(data[key]),
+              oldValue: JSON.stringify(existing[key]),
+            });
+          }
+          return isChanged && !allowedFields.includes(key); // chỉ chặn nếu thay đổi và không nằm trong danh sách cho phép
+        });
+
+        if (changedDisallowedFields.length > 0) {
+          throw new Error(
+            `Không được sửa hook hệ thống (chỉ cho phép cập nhật 'description'): ${changedDisallowedFields.join(', ')}`,
+          );
+        }
+      }
+    }
   }
 }
