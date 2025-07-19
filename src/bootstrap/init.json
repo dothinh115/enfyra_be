@@ -114,14 +114,6 @@
             "icon":"lucide:route"
         }
     ], 
-    "hook_definition": [
-        {
-            "isEnabled": true,
-            "afterHook": "$ctx.share.$data = {statusCode: $ctx.share.$statusCode,...$ctx.share.$data,message: 'Success'}",
-            "name": "Default response",
-            "isSystem":true
-        }
-    ],
     "method_definition": [
         {
             "method": "GET",
@@ -142,6 +134,30 @@
             "method": "DELETE",
             "action": "delete",
             "isSystem":true
+        }
+    ],
+    "hook_definition": [
+        {
+            "isEnabled": true,
+            "afterHook": "$ctx.$share.$data = { statusCode: $ctx.$share.$statusCode, ...$ctx.$share.$data, message: 'Success'}",
+            "name": "Default response",
+            "isSystem":true
+        },
+        {
+            "isEnabled": true,
+            "preHook": "if ($ctx.$body.password) { $ctx.$body.password = await $ctx.$helpers.$bcrypt.hash($ctx.$body.password);}",
+            "name": "User definition hash password (POST)",
+            "isSystem":true,
+            "route": "/user_definition",
+            "method": "POST"
+        },
+        {
+            "isEnabled": true,
+            "preHook": "if ($ctx.$body.password) { $ctx.$body.password = await $ctx.$helpers.$bcrypt.hash($ctx.$body.password);}",
+            "name": "User definition hash password (PATCH)",
+            "isSystem":true,
+            "route": "/user_definition",
+            "method": "PATCH"
         }
     ]
 }

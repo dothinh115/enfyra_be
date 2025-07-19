@@ -85,6 +85,58 @@ export class DefaultDataService {
         }));
       }
 
+      if (tableName === 'hook_definition') {
+        const routeRepo =
+          this.dataSourceService.getRepository('route_definition');
+        const methodRepo =
+          this.dataSourceService.getRepository('method_definition');
+
+        records = await Promise.all(
+          records.map(async (hook: any) => {
+            const transformedHook = { ...hook };
+
+            if (hook.route && typeof hook.route === 'string') {
+              const rawPath = hook.route;
+              const pathsToTry = Array.from(
+                new Set([
+                  rawPath,
+                  rawPath.startsWith('/') ? rawPath.slice(1) : '/' + rawPath,
+                ]),
+              );
+
+              const route = await routeRepo.findOne({
+                where: pathsToTry.map((p) => ({ path: p })),
+              });
+
+              if (!route) {
+                this.logger.warn(
+                  `⚠️ Không tìm thấy route '${hook.route}' cho hook '${hook.name}', bỏ qua.`,
+                );
+                return null;
+              }
+              transformedHook.route = route;
+            }
+
+            if (hook.method && typeof hook.method === 'string') {
+              const method = await methodRepo.findOne({
+                where: { method: hook.method },
+              });
+              if (!method) {
+                this.logger.warn(
+                  `⚠️ Không tìm thấy method '${hook.method}' cho hook '${hook.name}', bỏ qua.`,
+                );
+                return null;
+              }
+              transformedHook.method = method;
+            }
+
+            return transformedHook;
+          }),
+        );
+
+        records = records.filter(Boolean);
+      }
+
       const created = repo.create(records);
       await repo.save(created);
       this.logger.log(

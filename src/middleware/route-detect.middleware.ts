@@ -96,9 +96,13 @@ export class RouteDetectMiddleware implements NestMiddleware {
         },
         $logs(...args) {},
         $helpers: {
-          $jwt: (payload: any, ext: string) =>
-            this.jwtService.sign(payload, { expiresIn: ext }),
-          $bcrypt: this.bcryptService,
+          $jwt: (payload: any, exp: string) =>
+            this.jwtService.sign(payload, { expiresIn: exp }),
+          $bcrypt: {
+            hash: async (plain: string) => await this.bcryptService.hash(plain),
+            compare: async (p: string, h: string) =>
+              await this.bcryptService.compare(p, h),
+          },
         },
         $params: matchedRoute.params ?? {},
         $query: req.query ?? {},
@@ -112,6 +116,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
       context.$logs = (...args: any[]) => {
         context.$share.$logs.push(...args);
       };
+
       const { route, params } = matchedRoute;
 
       const filteredHooks = route.hooks.filter((hook: any) => {
@@ -147,7 +152,10 @@ export class RouteDetectMiddleware implements NestMiddleware {
       : [(r) => r.path];
 
     for (const route of routes) {
-      const paths = [route.path, ...matchers.map((fn) => fn(route))];
+      const paths = [route.path, ...matchers.map((fn) => fn(route))].map(
+        (p) => '/' + p.replace(/^\/+/, ''),
+      );
+
       for (const routePath of paths) {
         const matched = this.commonService.isRouteMatched({
           routePath,
