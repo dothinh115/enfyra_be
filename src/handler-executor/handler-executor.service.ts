@@ -43,7 +43,6 @@ export class HandlerExecutorService {
         if (msg.type === 'call') {
           try {
             const { parent, method } = resolvePath(ctx, msg.path);
-            console.log(msg);
             if (typeof parent[method] !== 'function') return;
             const result = await parent[method](...msg.args);
             child.send({

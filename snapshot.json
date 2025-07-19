@@ -68,7 +68,7 @@
         "isSystem": true,
         "columns": [
             { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "email", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null },
+            { "name": "email", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null, "unique": true },
             { "name": "password", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null, "isHidden": true },
             { "name": "isRootAdmin", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false, "isUpdatable": false },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false }
