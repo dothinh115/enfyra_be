@@ -28,12 +28,12 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
           );
 
           if (result !== undefined) {
-            const statusCode = req.routeData.context.share?.$statusCode ?? 200;
+            const statusCode = req.routeData.context.$share?.$statusCode ?? 200;
             const res = context.switchToHttp().getResponse();
             res
               .status(statusCode)
               .json(
-                req.routeData.context.share.$logs.length
+                req.routeData.context.$share.$logs.length
                   ? { result, logs: req.routeData.context.share.$logs }
                   : result,
               );
@@ -51,22 +51,22 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
             if (!hook.afterHook) continue;
             try {
               const code = hook.afterHook;
-              req.routeData.context.share.$data = data;
-              req.routeData.context.share.$statusCode = context
+              req.routeData.context.$share.$data = data;
+              req.routeData.context.$share.$statusCode = context
                 .switchToHttp()
                 .getResponse().statusCode;
               await this.handlerExecurtorService.run(
                 code,
                 req.routeData.context,
               );
-              data = req.routeData.context.share.$data;
+              data = req.routeData.context.$share.$data;
             } catch (error) {
               throw error;
             }
           }
         }
-        return req.routeData.context.share.$logs.length
-          ? { ...data, logs: req.routeData.context.share.$logs }
+        return req.routeData.context.$share.$logs.length
+          ? { ...data, logs: req.routeData.context.$share.$logs }
           : data;
       }),
     );

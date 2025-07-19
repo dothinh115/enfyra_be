@@ -1,5 +1,5 @@
 import { Brackets, EntityMetadata } from 'typeorm';
-import { walkFilter } from '../query-builder/utils/walk-filter';
+import { walkFilter } from '../query-engine/utils/walk-filter';
 
 function createMockQB() {
   const calls: any[] = [];

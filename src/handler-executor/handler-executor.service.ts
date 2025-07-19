@@ -19,7 +19,7 @@ export class HandlerExecutorService {
   constructor(private executorPoolService: ExecutorPoolService) {}
   async run(
     code: string,
-    ctx: TDynamicContext | TGqlDynamicContext,
+    ctx: TDynamicContext,
     timeoutMs = 5000,
   ): Promise<any> {
     const pool = this.executorPoolService.getPool();
@@ -62,8 +62,12 @@ export class HandlerExecutorService {
         if (msg.type === 'done') {
           isDone = true;
           child.removeAllListeners();
-          if (msg.ctx.share) {
-            ctx.share = merge({}, ctx.share, msg.ctx.share);
+          if (msg.ctx.$share) {
+            ctx.$share = merge({}, ctx.$share, msg.ctx.$share);
+          }
+
+          if (msg.ctx.$body) {
+            ctx.$body = merge({}, ctx.$body, msg.ctx.$body);
           }
 
           clearTimeout(timeout);

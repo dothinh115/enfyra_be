@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { Repository } from 'typeorm';
 import { TableHandlerService } from '../table/table.service';
-import { QueryEngine } from '../query-builder/query-engine.service';
+import { QueryEngine } from '../query-engine/query-engine.service';
 import { RouteCacheService } from '../redis/route-cache.service';
 import { SystemProtectionService } from './system-protection.service';
 

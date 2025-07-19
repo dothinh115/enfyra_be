@@ -8,7 +8,7 @@ import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TGqlDynamicContext } from '../utils/types/dynamic-context.type';
 import { convertFieldNodesToFieldPicker } from './utils/field-string-convertor';
 import { TableHandlerService } from '../table/table.service';
-import { QueryEngine } from '../query-builder/query-engine.service';
+import { QueryEngine } from '../query-engine/query-engine.service';
 import { throwGqlError } from './utils/throw-error';
 import { RedisLockService } from '../redis/redis-lock.service';
 import { JwtService } from '@nestjs/jwt';
@@ -86,7 +86,7 @@ export class DynamicResolver {
 
     const dynamicFindMap = Object.fromEntries(dynamicFindEntries);
 
-    const handlerCtx: TGqlDynamicContext = {
+    const handlerCtx: any = {
       $errors: {
         throw400: (msg: string) => {
           throwGqlError('400', msg);

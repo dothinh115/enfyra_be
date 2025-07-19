@@ -12,9 +12,10 @@ import { TableHandlerService } from '../table/table.service';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { RedisLockService } from '../redis/redis-lock.service';
-import { QueryEngine } from '../query-builder/query-engine.service';
+import { QueryEngine } from '../query-engine/query-engine.service';
 import { RouteCacheService } from '../redis/route-cache.service';
 import { SystemProtectionService } from '../dynamic-repo/system-protection.service';
+import { BcryptService } from '../auth/bcrypt.service';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
@@ -27,6 +28,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private redisLockService: RedisLockService,
     private routeCacheService: RouteCacheService,
     private systemProtectionService: SystemProtectionService,
+    private bcryptService: BcryptService,
   ) {}
 
   async use(req: any, res: any, next: (error?: any) => void) {
@@ -94,20 +96,21 @@ export class RouteDetectMiddleware implements NestMiddleware {
         },
         $logs(...args) {},
         $helpers: {
-          jwt: (payload: any, ext: string) =>
+          $jwt: (payload: any, ext: string) =>
             this.jwtService.sign(payload, { expiresIn: ext }),
+          $bcrypt: this.bcryptService,
         },
         $params: matchedRoute.params ?? {},
         $query: req.query ?? {},
         $user: req.user ?? undefined,
         $repos: dynamicFindMap,
         $req: req,
-        share: {
+        $share: {
           $logs: [],
         },
       };
       context.$logs = (...args: any[]) => {
-        context.share.$logs.push(...args);
+        context.$share.$logs.push(...args);
       };
       const { route, params } = matchedRoute;
 

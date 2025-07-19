@@ -3,7 +3,7 @@ import { Request } from 'express';
 import { DataSourceService } from '../data-source/data-source.service';
 import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
 import { TableHandlerService } from '../table/table.service';
-import { QueryEngine } from '../query-builder/query-engine.service';
+import { QueryEngine } from '../query-engine/query-engine.service';
 import { RouteCacheService } from '../redis/route-cache.service';
 import { SystemProtectionService } from '../dynamic-repo/system-protection.service';
 

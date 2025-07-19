@@ -28,7 +28,7 @@ import { SchemaHistoryService } from './metadata/schema-history.service';
 import { BootstrapModule } from './bootstrap/bootstrap.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { GraphqlModule } from './graphql/graphql.module';
-import { QueryEngineModule } from './query-builder/query-engine.module';
+import { QueryEngineModule } from './query-engine/query-engine.module';
 import { DynamicInterceptor } from './interceptors/dynamic.interceptor';
 import { HandlerExecutorModule } from './handler-executor/hanler-executor.module';
 import { RouteCacheService } from './redis/route-cache.service';
