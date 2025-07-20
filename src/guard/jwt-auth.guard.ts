@@ -25,6 +25,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         repo.currentUser = user;
       }
     }
+    if (req.routeData) {
+      req.routeData.context.$user = user;
+    }
     return user;
   }
 }

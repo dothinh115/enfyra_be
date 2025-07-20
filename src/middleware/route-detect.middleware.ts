@@ -117,7 +117,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
       context.$logs = (...args: any[]) => {
         context.$share.$logs.push(...args);
       };
-
       const { route, params } = matchedRoute;
 
       const filteredHooks = route.hooks.filter((hook: any) => {

@@ -6,7 +6,7 @@ import { Role_definition } from './role_definition.entity';
 export class User_definition {
     @PrimaryGeneratedColumn('uuid')
     id: string;
-    @Column({ type: "varchar", nullable: false })
+    @Column({ type: "varchar", nullable: false, unique: true })
     email: string;
     @Column({ type: "boolean", nullable: false, default: false, update: false })
     isRootAdmin: boolean;
