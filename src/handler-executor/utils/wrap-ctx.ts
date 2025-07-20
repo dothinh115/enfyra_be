@@ -64,6 +64,11 @@ export function wrapCtx(
       continue;
     }
 
+    if (key === '$user') {
+      wrapped[key] = toPlainSafe(val); // Giữ nguyên Date ở đây
+      continue;
+    }
+
     if (typeof val === 'function') {
       wrapped[key] = {
         __type: 'function',
@@ -76,4 +81,32 @@ export function wrapCtx(
   }
 
   return wrapped;
+}
+
+// ✅ Giữ lại Date, bỏ function/symbol, chống vòng lặp
+function toPlainSafe(obj: any, seen = new WeakSet()): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (seen.has(obj)) return '[Circular]';
+  seen.add(obj);
+
+  // Giữ nguyên Date object
+  if (obj instanceof Date) return obj;
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => toPlainSafe(item, seen));
+  }
+
+  const plain: Record<string, any> = {};
+  for (const key of Object.keys(obj)) {
+    const value = obj[key];
+    if (typeof value === 'function' || typeof value === 'symbol') {
+      continue;
+    }
+    try {
+      plain[key] = toPlainSafe(value, seen);
+    } catch {
+      continue;
+    }
+  }
+  return plain;
 }
