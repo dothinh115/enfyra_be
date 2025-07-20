@@ -21,6 +21,7 @@ export class DynamicRepoService {
   private tableHandlerService: TableHandlerService;
   private routeCacheService: RouteCacheService;
   private systemProtectionService: SystemProtectionService;
+  private currentUser: any;
 
   constructor({
     fields = '',
@@ -36,6 +37,7 @@ export class DynamicRepoService {
     aggregate = {},
     routeCacheService,
     systemProtectionService,
+    currentUser,
   }: {
     fields: string;
     filter: any;
@@ -50,6 +52,7 @@ export class DynamicRepoService {
     aggregate: any;
     routeCacheService: RouteCacheService;
     systemProtectionService: SystemProtectionService;
+    currentUser: any;
   }) {
     this.fields = fields;
     this.filter = filter;
@@ -64,6 +67,7 @@ export class DynamicRepoService {
     this.aggregate = aggregate;
     this.routeCacheService = routeCacheService;
     this.systemProtectionService = systemProtectionService;
+    this.currentUser = currentUser;
   }
 
   async init() {
@@ -115,6 +119,7 @@ export class DynamicRepoService {
         data: body,
         existing: null,
         relatedRoute,
+        currentUser: this.currentUser,
       });
 
       if (this.tableName === 'table_definition') {
@@ -146,6 +151,7 @@ export class DynamicRepoService {
         data: body,
         existing: exists,
         relatedRoute,
+        currentUser: this.currentUser,
       });
 
       if (this.tableName === 'table_definition') {
@@ -179,6 +185,7 @@ export class DynamicRepoService {
         data: {},
         existing: exists,
         relatedRoute,
+        currentUser: this.currentUser,
       });
 
       if (this.tableName === 'table_definition') {

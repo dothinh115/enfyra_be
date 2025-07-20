@@ -71,6 +71,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
             }),
             routeCacheService: this.routeCacheService,
             systemProtectionService: this.systemProtectionService,
+            currentUser: null,
           });
           await dynamicRepo.init();
           const name =

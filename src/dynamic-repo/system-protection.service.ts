@@ -35,12 +35,14 @@ export class SystemProtectionService {
     data,
     existing,
     relatedRoute,
+    currentUser,
   }: {
     operation: 'create' | 'update' | 'delete';
     tableName: string;
     data: any;
     existing?: any;
     relatedRoute?: any;
+    currentUser?: any;
   }) {
     const relationFields = this.getRelationFields(tableName);
     const dataWithoutRelations = this.stripRelations(data, relationFields);
@@ -51,7 +53,6 @@ export class SystemProtectionService {
 
     // === 1. route_definition ===
     if (tableName === 'route_definition' && existing?.isSystem) {
-      // ✅ Chỉ được phép thay đổi các field sau:
       const allowedFields = [
         'description',
         'createdAt',
@@ -74,7 +75,6 @@ export class SystemProtectionService {
         );
       }
 
-      // ❌ Không được thay đổi danh sách handlers
       if ('handlers' in data) {
         const oldIds = (existing.handlers || []).map((h: any) => h.id).sort();
         const newIds = (data.handlers || []).map((h: any) => h.id).sort();
@@ -97,7 +97,7 @@ export class SystemProtectionService {
       );
     }
 
-    // === 3. Kiểm tra khi tạo mới: không gán isSystem = true
+    // === 3. Tạo mới — không được gán isSystem
     if (operation === 'create') {
       this.commonService.assertNoSystemFlagDeep([data]);
     }
@@ -127,6 +127,44 @@ export class SystemProtectionService {
           throw new Error(
             `Không được sửa hook hệ thống (chỉ cho phép cập nhật 'description'): ${changedDisallowedFields.join(', ')}`,
           );
+        }
+      }
+    }
+
+    // === 6. user_definition — bảo vệ root admin
+    if (tableName === 'user_definition') {
+      const isTargetRoot = existing?.isRootAdmin === true;
+
+      if (operation === 'delete' && isTargetRoot) {
+        throw new Error('Không được xoá user Root Admin');
+      }
+
+      if (operation === 'update') {
+        if (
+          'isRootAdmin' in data &&
+          data.isRootAdmin !== existing?.isRootAdmin
+        ) {
+          throw new Error('Không được chỉnh sửa isRootAdmin');
+        }
+
+        const isSelf = currentUser?.id === existing?.id;
+
+        if (isTargetRoot && !isSelf) {
+          throw new Error('Chỉ Root Admin mới được sửa chính họ');
+        }
+
+        if (isSelf) {
+          const allowedFields = ['email', 'password'];
+          const changedDisallowed = Object.keys(data).filter((k) => {
+            const isChanged = k in existing && !isEqual(data[k], existing[k]);
+            return isChanged && !allowedFields.includes(k);
+          });
+
+          if (changedDisallowed.length > 0) {
+            throw new Error(
+              `Root Admin chỉ được sửa các trường: ${allowedFields.join(', ')}. Vi phạm: ${changedDisallowed.join(', ')}`,
+            );
+          }
         }
       }
     }

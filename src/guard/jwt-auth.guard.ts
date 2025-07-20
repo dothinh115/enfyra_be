@@ -10,13 +10,21 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   // Đè logic quăng lỗi mặc định của auth guard
   handleRequest(err: any, user: any, info: any, context: any, status?: any) {
     const req = context.switchToHttp().getRequest();
-    // Nếu không có token hoặc token không hợp lệ, trả về null thay vì quăng lỗi
+
     if (err || !user) {
       req.user = null;
       return null;
     }
-    //đưa payload vào req
+
+    // Gán user vào request
     req.user = user;
+
+    // Gán user vào dynamic repo nếu có
+    if (req.routeData?.context?.$repos) {
+      for (const repo of Object.values(req.routeData?.context?.$repos) as any) {
+        repo.currentUser = user;
+      }
+    }
     return user;
   }
 }

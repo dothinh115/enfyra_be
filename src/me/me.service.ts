@@ -39,6 +39,7 @@ export class MeService {
       }),
       routeCacheService: this.routeCacheService,
       systemProtectionService: this.systemProtectionService,
+      currentUser: req.user,
     });
     await repo.init();
     return repo.find(req.user.id);
@@ -66,6 +67,7 @@ export class MeService {
       }),
       routeCacheService: this.routeCacheService,
       systemProtectionService: this.systemProtectionService,
+      currentUser: req.user,
     });
     return await repo.update(req.user.id, body);
   }

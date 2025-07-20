@@ -73,6 +73,7 @@ export class DynamicResolver {
           ...(args.aggregate && { aggregate: args.aggregate }),
           routeCacheService: this.routeCacheService,
           systemProtectionService: this.systemProtectionService,
+          currentUser: user,
         });
 
         await dynamicRepo.init();
