@@ -154,7 +154,7 @@ export class SystemProtectionService {
         }
 
         if (isSelf) {
-          const allowedFields = ['email', 'password'];
+          const allowedFields = ['email', 'password', 'createdAt', 'updatedAt'];
           const changedDisallowed = Object.keys(data).filter((k) => {
             const isChanged = k in existing && !isEqual(data[k], existing[k]);
             return isChanged && !allowedFields.includes(k);
