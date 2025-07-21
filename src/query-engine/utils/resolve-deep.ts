@@ -81,5 +81,5 @@ export async function resolveDeepRelations(options: {
     }),
   );
 
-  return metaDeep;
+  return Object.keys(metaDeep).length ? metaDeep : undefined;
 }

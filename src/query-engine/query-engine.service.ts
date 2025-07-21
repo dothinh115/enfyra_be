@@ -157,7 +157,6 @@ export class QueryEngine {
         deep,
         log: this.log,
       });
-      console.log(meta, metaDeep);
       return {
         data: rows,
         ...((meta || metaDeep) && {
