@@ -14,7 +14,7 @@ export class Hook_definition {
     isEnabled: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
     isSystem: boolean;
-    @Column({ type: "varchar", nullable: true })
+    @Column({ type: "varchar", nullable: false })
     name: string;
     @Column({ type: "text", nullable: true })
     preHook: string;

@@ -112,27 +112,30 @@
             "isEnabled": true,
             "isSystem":true,
             "icon":"lucide:route"
+        },
+        {
+            "path": "/route_permission_definition",
+            "mainTable": "route_permission_definition",
+            "isEnabled": true,
+            "isSystem":true,
+            "icon":"lucide:route"
         }
     ], 
     "method_definition": [
         {
             "method": "GET",
-            "action": "read",
             "isSystem":true
         },
         {
             "method": "POST",
-            "action": "create",
             "isSystem":true
         },
         {
             "method": "PATCH",
-            "action": "update",
             "isSystem":true
         },
         {
             "method": "DELETE",
-            "action": "delete",
             "isSystem":true
         }
     ],
