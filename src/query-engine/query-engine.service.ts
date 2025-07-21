@@ -148,7 +148,7 @@ export class QueryEngine {
 
       if (limit) qb.take(limit);
       if (page && limit) qb.skip((page - 1) * limit);
-
+      console.log(qb.getSql());
       const rows = await qb.getMany();
       const metaDeep = await resolveDeepRelations({
         queryEngine: this,
@@ -157,7 +157,7 @@ export class QueryEngine {
         deep,
         log: this.log,
       });
-
+      console.log(meta, metaDeep);
       return {
         data: rows,
         ...((meta || metaDeep) && {

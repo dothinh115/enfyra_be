@@ -21,6 +21,8 @@ const OPERATORS = [
   '_ends_with',
 ];
 
+const AGG_KEYS = ['_count', '_sum', '_avg', '_min', '_max'];
+
 export function walkFilter({
   filter,
   currentMeta,
@@ -41,6 +43,15 @@ export function walkFilter({
   const parts: { operator: 'AND' | 'OR'; sql: string; params: any }[] = [];
   let paramIndex = 1;
 
+  const operatorMap: Record<string, string> = {
+    _eq: '=',
+    _neq: '!=',
+    _gt: '>',
+    _gte: '>=',
+    _lt: '<',
+    _lte: '<=',
+  };
+
   const walk = (
     f: any,
     path: string[],
@@ -58,13 +69,13 @@ export function walkFilter({
     for (const key in f) {
       const val = f[key];
 
-      if (['and', 'or'].includes(key)) {
+      if (['_and', '_or'].includes(key)) {
         walk(
           val,
           path,
           currentMeta,
           currentAlias,
-          key === 'and' ? 'AND' : 'OR',
+          key === '_and' ? 'AND' : 'OR',
         );
         continue;
       }
@@ -94,6 +105,152 @@ export function walkFilter({
           const nextMeta = currentMeta.connection.getMetadata(found.type);
           const nextAlias = `${currentAlias}_${key}`;
 
+          const isAggregate =
+            typeof val === 'object' &&
+            Object.keys(val).some((k) => AGG_KEYS.includes(k));
+
+          if (isAggregate) {
+            console.log(`[Relation] 📦 Found aggregate on '${key}' =`, val);
+
+            const inverse = nextMeta.relations.find(
+              (r) => r.inverseEntityMetadata.name === currentMeta.name,
+            );
+            const foreignKey = inverse?.joinColumns?.[0]?.databaseName;
+            if (!foreignKey) {
+              console.log(`[Relation] ❌ Cannot find foreign key`);
+              continue;
+            }
+
+            for (const aggKey of AGG_KEYS) {
+              const aggVal = val[aggKey];
+              if (!aggVal) continue;
+
+              if (aggKey === '_count') {
+                if (!aggVal || typeof aggVal !== 'object') {
+                  console.log(`[Aggregate] ❌ Invalid _count block`);
+                  continue;
+                }
+                for (const op in aggVal) {
+                  const opSymbol = operatorMap[op];
+                  if (!opSymbol) {
+                    console.log(
+                      `[Aggregate] ❌ Unsupported _count operator: ${op}`,
+                    );
+                    continue;
+                  }
+
+                  let parsedValue;
+                  try {
+                    parsedValue = parseValue('number', aggVal[op]);
+                  } catch {
+                    console.log(
+                      `[Aggregate] ❌ Invalid value for _count.${op}:`,
+                      aggVal[op],
+                    );
+                    continue;
+                  }
+
+                  const paramKey = `p${paramIndex++}`;
+                  const subquery = `(SELECT COUNT(*) FROM ${nextMeta.tableName} WHERE ${nextMeta.tableName}.${foreignKey} = ${currentAlias}.id)`;
+                  const sql = `${subquery} ${opSymbol} :${paramKey}`;
+                  console.log(`[Aggregate] ✅ SQL = ${sql}`);
+                  parts.push({
+                    operator,
+                    sql,
+                    params: { [paramKey]: parsedValue },
+                  });
+                }
+              } else {
+                for (const field in aggVal) {
+                  const ops = aggVal[field];
+                  if (typeof ops !== 'object') {
+                    console.log(
+                      `[Aggregate] ❌ Invalid block: ${aggKey}.${field}`,
+                    );
+                    continue;
+                  }
+
+                  const fieldMeta = nextMeta.columns.find(
+                    (c) => c.propertyName === field,
+                  );
+                  if (!fieldMeta) {
+                    console.log(
+                      `[Aggregate] ❌ Unknown field in ${nextMeta.name}:`,
+                      field,
+                    );
+                    continue;
+                  }
+
+                  const rawType = fieldMeta.type;
+                  const fieldType =
+                    typeof rawType === 'string'
+                      ? rawType
+                      : rawType.name.toLowerCase();
+
+                  for (const op in ops) {
+                    const opSymbol = operatorMap[op];
+                    if (!opSymbol) {
+                      console.log(
+                        `[Aggregate] ❌ Unsupported operator: ${aggKey}.${field}.${op}`,
+                      );
+                      continue;
+                    }
+
+                    let parsedValue;
+                    try {
+                      parsedValue = parseValue(fieldType, ops[op]);
+                    } catch {
+                      console.log(
+                        `[Aggregate] ❌ Cannot parse value for ${aggKey}.${field}.${op}:`,
+                        ops[op],
+                      );
+                      continue;
+                    }
+
+                    if (
+                      parsedValue === null ||
+                      (typeof parsedValue === 'number' && isNaN(parsedValue))
+                    ) {
+                      console.log(
+                        `[Aggregate] ❌ Invalid parsed value for ${aggKey}.${field}.${op}`,
+                      );
+                      continue;
+                    }
+
+                    let sqlFunc = '';
+                    switch (aggKey) {
+                      case '_sum':
+                        sqlFunc = 'SUM';
+                        break;
+                      case '_avg':
+                        sqlFunc = 'AVG';
+                        break;
+                      case '_min':
+                        sqlFunc = 'MIN';
+                        break;
+                      case '_max':
+                        sqlFunc = 'MAX';
+                        break;
+                      default:
+                        continue;
+                    }
+
+                    const subquery = `(SELECT ${sqlFunc}(${nextMeta.tableName}.${field}) FROM ${nextMeta.tableName} WHERE ${nextMeta.tableName}.${foreignKey} = ${currentAlias}.id)`;
+                    const paramKey = `p${paramIndex++}`;
+                    const sql = `${subquery} ${opSymbol} :${paramKey}`;
+                    console.log(`[Aggregate] ✅ SQL = ${sql}`);
+                    parts.push({
+                      operator,
+                      sql,
+                      params: { [paramKey]: parsedValue },
+                    });
+                  }
+                }
+              }
+            }
+            continue;
+          }
+
           if (
             typeof val === 'object' &&
             !Object.keys(val).some((k) => OPERATORS.includes(k))
@@ -102,6 +259,7 @@ export function walkFilter({
           } else {
             walk(val, newPath, currentMeta, currentAlias, operator);
           }
+          continue;
         } else {
           if (typeof val === 'object') {
             walk(val, newPath, currentMeta, currentAlias, operator);
@@ -122,6 +280,7 @@ export function walkFilter({
         const fieldType = found.type;
         const parsedValue = parseValue(fieldType, val);
         const collation = 'utf8mb4_general_ci';
+
         switch (key) {
           case '_eq':
             sql = `${currentAlias}.${lastField} = :${paramKey}`;
@@ -162,12 +321,10 @@ export function walkFilter({
             sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT('%', lower(unaccent(:${paramKey})) COLLATE ${collation}, '%')`;
             param[paramKey] = parsedValue;
             break;
-
           case '_starts_with':
             sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT(lower(unaccent(:${paramKey})) COLLATE ${collation}, '%')`;
             param[paramKey] = parsedValue;
             break;
-
           case '_ends_with':
             sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT('%', lower(unaccent(:${paramKey})) COLLATE ${collation})`;
             param[paramKey] = parsedValue;

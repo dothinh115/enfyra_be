@@ -1,4 +1,5 @@
 import { EntityMetadata } from 'typeorm';
+import { RelationMetadata } from 'typeorm/metadata/RelationMetadata';
 
 export function lookupFieldOrRelation(
   meta: EntityMetadata,
@@ -14,6 +15,7 @@ export function lookupFieldOrRelation(
       inverseJoinColumn: string;
       isMany: boolean;
       joinTableName?: string;
+      relationMeta: RelationMetadata;
     }
   | undefined {
   const relation = meta.relations.find((rel) => rel.propertyName === property);
@@ -40,6 +42,7 @@ export function lookupFieldOrRelation(
       joinColumn,
       inverseJoinColumn,
       isMany,
+      relationMeta: relation,
       ...(joinTableName ? { joinTableName } : {}),
     };
   }
