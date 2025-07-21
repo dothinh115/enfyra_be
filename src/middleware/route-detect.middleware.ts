@@ -52,27 +52,16 @@ export class RouteDetectMiddleware implements NestMiddleware {
           ),
         ]?.map(async (table) => {
           const dynamicRepo = new DynamicRepoService({
-            fields: req.query.fields as string,
-            filter: req.query.filter,
-            page: Number(req.query.page ?? 1),
+            query: req.query,
             tableName: table.name,
-            limit: Number(req.query.limit ?? 10),
             tableHandlerService: this.tableHandlerService,
             dataSourceService: this.dataSourceService,
             queryEngine: this.queryEngine,
-            ...(req.query.meta && {
-              meta: req.query.meta,
-            }),
-            ...(req.query.sort && {
-              sort: req.query.sort,
-            }),
-            ...(req.query.aggregate && {
-              aggregate: req.query.aggregate,
-            }),
             routeCacheService: this.routeCacheService,
             systemProtectionService: this.systemProtectionService,
             currentUser: null,
           });
+
           await dynamicRepo.init();
           const name =
             table.name === matchedRoute.route.mainTable.name

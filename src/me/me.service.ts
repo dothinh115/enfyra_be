@@ -19,56 +19,35 @@ export class MeService {
 
   async find(req: Request & { user: any }) {
     if (!req.user) throw new UnauthorizedException();
+
     const repo = new DynamicRepoService({
-      fields: req.query.fields as string,
-      filter: req.query.filter,
-      page: Number(req.query.page ?? 1),
+      query: req.query,
       tableName: 'user_definition',
-      limit: Number(req.query.limit ?? 10),
       tableHandlerService: this.tableHandlerService,
       dataSourceService: this.dataSourceService,
       queryEngine: this.queryEngine,
-      ...(req.query.meta && {
-        meta: req.query.meta as any,
-      }),
-      ...(req.query.sort && {
-        sort: req.query.sort as string,
-      }),
-      ...(req.query.aggregate && {
-        aggregate: req.query.aggregate,
-      }),
       routeCacheService: this.routeCacheService,
       systemProtectionService: this.systemProtectionService,
       currentUser: req.user,
     });
     await repo.init();
-    return repo.find(req.user.id);
+    return await repo.find({ where: { id: { _eq: req.user.id } } });
   }
 
   async update(body: any, req: Request & { user: any }) {
     if (!req.user) throw new UnauthorizedException();
+
     const repo = new DynamicRepoService({
-      fields: req.query.fields as string,
-      filter: req.query.filter,
-      page: Number(req.query.page ?? 1),
+      query: req.query,
       tableName: 'user_definition',
-      limit: Number(req.query.limit ?? 10),
       tableHandlerService: this.tableHandlerService,
       dataSourceService: this.dataSourceService,
       queryEngine: this.queryEngine,
-      ...(req.query.meta && {
-        meta: req.query.meta as any,
-      }),
-      ...(req.query.sort && {
-        sort: req.query.sort as string,
-      }),
-      ...(req.query.aggregate && {
-        aggregate: req.query.aggregate,
-      }),
       routeCacheService: this.routeCacheService,
       systemProtectionService: this.systemProtectionService,
       currentUser: req.user,
     });
+    await repo.init();
     return await repo.update(req.user.id, body);
   }
 }

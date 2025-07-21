@@ -4,6 +4,7 @@ import { Brackets } from 'typeorm';
 import { parseSortInput } from './utils/parse-sort-input';
 import { walkFilter } from './utils/walk-filter';
 import { buildJoinTree } from './utils/build-join-tree';
+import { resolveDeepRelations } from './utils/resolve-deep';
 
 @Injectable()
 export class QueryEngine {
@@ -20,9 +21,20 @@ export class QueryEngine {
     limit?: number;
     meta?: string;
     aggregate?: any;
+    deep?: Record<string, any>;
   }): Promise<any> {
     try {
-      const { tableName, fields, filter, sort, page, limit, meta } = options;
+      const {
+        tableName,
+        fields,
+        filter,
+        sort,
+        page,
+        limit,
+        meta,
+        deep = {},
+      } = options;
+
       const dataSource = this.dataSourceService.getDataSource();
       const metaData = dataSource.getMetadata(tableName);
 
@@ -38,6 +50,20 @@ export class QueryEngine {
         dataSource,
       });
 
+      const deepKeys = new Set(Object.keys(deep));
+
+      // Không join nếu trùng deep
+      const filteredJoinArr = joinArr.filter(
+        (j) => !deepKeys.has(j.propertyPath),
+      );
+
+      // Không select nếu alias bị join trong deep
+      const filteredSelectArr = selectArr.filter((sel) => {
+        const [alias] = sel.split('.');
+        const matchedJoin = joinArr.find((j) => j.alias === alias);
+        return !(matchedJoin && deepKeys.has(matchedJoin.propertyPath));
+      });
+
       const { parts } = walkFilter({
         filter,
         currentMeta: metaData,
@@ -46,14 +72,14 @@ export class QueryEngine {
 
       const qb = dataSource.createQueryBuilder(metaData.target, tableName);
 
-      for (const join of joinArr) {
+      for (const join of filteredJoinArr) {
         qb.leftJoinAndSelect(
           `${join.parentAlias}.${join.propertyPath}`,
           join.alias,
         );
       }
 
-      qb.select([...selectArr]);
+      qb.select([...filteredSelectArr]);
 
       if (parts.length > 0) {
         qb.where(
@@ -77,12 +103,11 @@ export class QueryEngine {
         );
       }
 
-      // === Xử lý meta ===
+      // === Meta tổng ===
       const metaParts = (meta || '').split(',').map((x) => x.trim());
       let totalCount = 0;
       let filterCount = 0;
 
-      // totalCount = full table
       if (metaParts.includes('totalCount') || metaParts.includes('*')) {
         totalCount = await dataSource
           .createQueryBuilder(metaData.target, tableName)
@@ -90,7 +115,6 @@ export class QueryEngine {
         this.log.push(`+ totalCount = ${totalCount}`);
       }
 
-      // filterCount = sau filter
       if (metaParts.includes('filterCount') || metaParts.includes('*')) {
         const filterQb = dataSource.createQueryBuilder(
           metaData.target,
@@ -122,17 +146,19 @@ export class QueryEngine {
         this.log.push(`+ filterCount = ${filterCount}`);
       }
 
-      // === paging ===
       if (limit) qb.take(limit);
       if (page && limit) qb.skip((page - 1) * limit);
 
       const rows = await qb.getMany();
-      // const rows = this.groupRawResultRecursive(
-      //   rawRows,
-      //   tableName,
-      //   metaData,
-      //   joinArr,
-      // );
+      const metaDeep = await resolveDeepRelations({
+        queryEngine: this,
+        dataSource,
+        tableName,
+        rows,
+        metaData,
+        deep,
+        log: this.log,
+      });
 
       return {
         data: rows,
@@ -140,14 +166,9 @@ export class QueryEngine {
           meta: {
             totalCount,
             filterCount,
+            ...metaDeep,
           },
         }),
-        // debug: {
-        //   sql: qb.getSql(),
-        //   select: selectArr,
-        //   join: joinArr,
-        //   log: this.log,
-        // },
       };
     } catch (error) {
       console.log(error);

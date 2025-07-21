@@ -22,49 +22,48 @@ export class DynamicRepoService {
   private routeCacheService: RouteCacheService;
   private systemProtectionService: SystemProtectionService;
   private currentUser: any;
+  private deep: any;
 
   constructor({
-    fields = '',
-    filter = {},
-    page = 1,
-    limit = 10,
+    query = {},
     tableName,
     queryEngine,
     dataSourceService,
     tableHandlerService,
-    meta,
-    sort,
-    aggregate = {},
     routeCacheService,
     systemProtectionService,
     currentUser,
   }: {
-    fields: string;
-    filter: any;
-    page: number;
-    limit: number;
+    query: Partial<{
+      fields: string;
+      filter: any;
+      page: number;
+      limit: number;
+      meta: 'filterCount' | 'totalCount' | '*';
+      aggregate: any;
+      sort: string | string[];
+      deep: any;
+    }>;
     tableName: string;
     queryEngine: QueryEngine;
     dataSourceService: DataSourceService;
     tableHandlerService: TableHandlerService;
-    meta?: 'filterCount' | 'totalCount' | '*' | undefined;
-    sort?: string | string[];
-    aggregate: any;
     routeCacheService: RouteCacheService;
     systemProtectionService: SystemProtectionService;
     currentUser: any;
   }) {
-    this.fields = fields;
-    this.filter = filter;
-    this.page = page;
-    this.limit = limit;
+    this.fields = query.fields ?? '';
+    this.filter = query.filter ?? {};
+    this.page = query.page ?? 1;
+    this.limit = query.limit ?? 10;
+    this.meta = query.meta;
+    this.sort = query.sort;
+    this.aggregate = query.aggregate ?? {};
+    this.deep = query.deep ?? {};
     this.tableName = tableName;
     this.queryEngine = queryEngine;
     this.dataSourceService = dataSourceService;
     this.tableHandlerService = tableHandlerService;
-    this.meta = meta;
-    this.sort = sort;
-    this.aggregate = aggregate;
     this.routeCacheService = routeCacheService;
     this.systemProtectionService = systemProtectionService;
     this.currentUser = currentUser;
@@ -98,14 +97,15 @@ export class DynamicRepoService {
 
   async find(opt: { where?: any }) {
     return await this.queryEngine.find({
+      tableName: this.tableName,
       fields: this.fields,
       filter: opt?.where || this.filter,
       page: this.page,
       limit: this.limit,
-      tableName: this.tableName,
       meta: this.meta,
       sort: this.sort,
       aggregate: this.aggregate,
+      deep: this.deep,
     });
   }
 

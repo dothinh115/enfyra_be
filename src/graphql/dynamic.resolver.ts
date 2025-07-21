@@ -56,21 +56,24 @@ export class DynamicResolver {
     const fieldPicker = fullFieldPicker
       .filter((f) => f.startsWith('data.'))
       .map((f) => f.replace(/^data\./, ''));
+    const query = {
+      fields: fieldPicker.join(','),
+      filter: args.filter,
+      page: args.page,
+      limit: args.limit,
+      meta: args.meta,
+      sort: args.sort,
+      aggregate: args.aggregate,
+    };
 
     const dynamicFindEntries = await Promise.all(
       [mainTable, ...targetTables]?.map(async (table) => {
         const dynamicRepo = new DynamicRepoService({
-          fields: fieldPicker.join(','),
-          filter: args.filter,
-          page: Number(args.page ?? 1),
+          query,
           tableName: table.name,
-          limit: Number(args.limit ?? 10),
           tableHandlerService: this.tableHandlerService,
           dataSourceService: this.dataSourceService,
           queryEngine: this.queryEngine,
-          ...(args.meta && { meta: args.meta }),
-          ...(args.sort && { sort: args.sort }),
-          ...(args.aggregate && { aggregate: args.aggregate }),
           routeCacheService: this.routeCacheService,
           systemProtectionService: this.systemProtectionService,
           currentUser: user,
