@@ -152,8 +152,6 @@ export class QueryEngine {
       const rows = await qb.getMany();
       const metaDeep = await resolveDeepRelations({
         queryEngine: this,
-        dataSource,
-        tableName,
         rows,
         metaData,
         deep,

@@ -72,6 +72,9 @@
             { "name": "password", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null, "isHidden": true },
             { "name": "isRootAdmin", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false, "isUpdatable": false },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false }
+        ],
+        "relations": [
+            { "propertyName": "role", "type": "many-to-one", "isSystem": true, "targetTable": "role_definition" }
         ]
     },
     "setting_definition": {
@@ -111,9 +114,6 @@
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
             { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null, "isUnique": true },
             { "name": "description", "type": "text", "isSystem": true }
-        ],
-        "relations": [
-            { "propertyName": "users", "type": "one-to-many", "isSystem": true, "targetTable": "user_definition", "inversePropertyName": "role" }
         ]
     },
     "route_permission_definition" : {
