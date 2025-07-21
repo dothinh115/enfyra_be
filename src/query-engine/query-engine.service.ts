@@ -160,10 +160,10 @@ export class QueryEngine {
 
       return {
         data: rows,
-        ...(meta && {
+        ...((meta || metaDeep) && {
           meta: {
-            totalCount,
-            filterCount,
+            ...(totalCount && { totalCount }),
+            ...(filterCount && { filterCount }),
             ...metaDeep,
           },
         }),
