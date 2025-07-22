@@ -123,10 +123,27 @@ export class SystemProtectionService {
           return isChanged && !allowedFields.includes(key);
         });
 
+        // 🧱 Kiểm tra field bất hợp lệ
         if (changedDisallowedFields.length > 0) {
           throw new Error(
             `Không được sửa hook hệ thống (chỉ cho phép cập nhật 'description'): ${changedDisallowedFields.join(', ')}`,
           );
+        }
+
+        // 🔒 Kiểm tra thay đổi route
+        if (
+          data.route?.id &&
+          existing.route?.id &&
+          data.route.id !== existing.route.id
+        ) {
+          throw new Error(`Không được đổi 'route' của hook hệ thống`);
+        }
+
+        // 🔒 Kiểm tra thay đổi methods
+        const oldMethodIds = (existing.methods ?? []).map((m) => m.id).sort();
+        const newMethodIds = (data.methods ?? []).map((m) => m.id).sort();
+        if (!isEqual(oldMethodIds, newMethodIds)) {
+          throw new Error(`Không được đổi 'methods' của hook hệ thống`);
         }
       }
     }
