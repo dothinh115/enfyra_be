@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, ManyToOne, Index, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Route_permission_definition } from './route_permission_definition.entity';
 import { Route_definition } from './route_definition.entity';
 import { Setting_definition } from './setting_definition.entity';
@@ -19,6 +19,7 @@ export class Method_definition {
     @ManyToMany('Route_definition', (rel: any) => rel.publishedMethods, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinTable()
     routes: any;
+    @Index()
     @ManyToOne('Setting_definition', (rel: any) => rel.methods, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     setting: any;

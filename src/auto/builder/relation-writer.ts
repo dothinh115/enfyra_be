@@ -82,7 +82,7 @@ export function addRelationToClass({
 
   classDeclaration.addProperty({
     name: rel.propertyName!,
-    type: propertyType,
+    type: 'any',
     decorators,
   });
 }

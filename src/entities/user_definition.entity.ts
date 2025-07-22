@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { HiddenField } from '../decorators/hidden-field.decorator';
 import { Role_definition } from './role_definition.entity';
 
@@ -15,7 +15,8 @@ export class User_definition {
     @Column({ type: "varchar", nullable: false })
     @HiddenField()
     password: string;
-    @ManyToOne('Role_definition', (rel: any) => rel.users, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @Index()
+    @ManyToOne('Role_definition', { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     role: any;
     @CreateDateColumn()
