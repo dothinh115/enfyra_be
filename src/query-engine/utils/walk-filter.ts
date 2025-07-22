@@ -110,8 +110,6 @@ export function walkFilter({
             Object.keys(val).some((k) => AGG_KEYS.includes(k));
 
           if (isAggregate) {
-            console.log(`[Relation] 📦 Found aggregate on '${key}' =`, val);
-
             const inverse = nextMeta.relations.find(
               (r) => r.inverseEntityMetadata.name === currentMeta.name,
             );
@@ -153,7 +151,6 @@ export function walkFilter({
                   const paramKey = `p${paramIndex++}`;
                   const subquery = `(SELECT COUNT(*) FROM ${nextMeta.tableName} WHERE ${nextMeta.tableName}.${foreignKey} = ${currentAlias}.id)`;
                   const sql = `${subquery} ${opSymbol} :${paramKey}`;
-                  console.log(`[Aggregate] ✅ SQL = ${sql}`);
                   parts.push({
                     operator,
                     sql,
@@ -279,6 +276,9 @@ export function walkFilter({
       if (found.kind === 'field') {
         const fieldType = found.type;
         const parsedValue = parseValue(fieldType, val);
+
+        const isSQLite =
+          currentMeta.connection.driver.options.type === 'sqlite';
         const collation = 'utf8mb4_general_ci';
 
         switch (key) {
@@ -318,15 +318,27 @@ export function walkFilter({
             sql = `${currentAlias}.${lastField} IS ${val ? '' : 'NOT '}NULL`;
             break;
           case '_contains':
-            sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT('%', lower(unaccent(:${paramKey})) COLLATE ${collation}, '%')`;
+            if (isSQLite) {
+              sql = `${currentAlias}.${lastField} LIKE '%' || :${paramKey} || '%'`;
+            } else {
+              sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT('%', lower(unaccent(:${paramKey})) COLLATE ${collation}, '%')`;
+            }
             param[paramKey] = parsedValue;
             break;
           case '_starts_with':
-            sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT(lower(unaccent(:${paramKey})) COLLATE ${collation}, '%')`;
+            if (isSQLite) {
+              sql = `${currentAlias}.${lastField} LIKE :${paramKey} || '%'`;
+            } else {
+              sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT(lower(unaccent(:${paramKey})) COLLATE ${collation}, '%')`;
+            }
             param[paramKey] = parsedValue;
             break;
           case '_ends_with':
-            sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT('%', lower(unaccent(:${paramKey})) COLLATE ${collation})`;
+            if (isSQLite) {
+              sql = `${currentAlias}.${lastField} LIKE '%' || :${paramKey}`;
+            } else {
+              sql = `lower(unaccent(${currentAlias}.${lastField})) COLLATE ${collation} LIKE CONCAT('%', lower(unaccent(:${paramKey})) COLLATE ${collation})`;
+            }
             param[paramKey] = parsedValue;
             break;
           default:

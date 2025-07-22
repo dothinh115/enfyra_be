@@ -52,18 +52,6 @@ export class QueryEngine {
 
       const deepKeys = new Set(Object.keys(deep));
 
-      // Không join nếu trùng deep
-      const filteredJoinArr = joinArr.filter(
-        (j) => !deepKeys.has(j.propertyPath),
-      );
-
-      // Không select nếu alias bị join trong deep
-      const filteredSelectArr = selectArr.filter((sel) => {
-        const [alias] = sel.split('.');
-        const matchedJoin = joinArr.find((j) => j.alias === alias);
-        return !(matchedJoin && deepKeys.has(matchedJoin.propertyPath));
-      });
-
       const { parts } = walkFilter({
         filter,
         currentMeta: metaData,
@@ -72,14 +60,14 @@ export class QueryEngine {
 
       const qb = dataSource.createQueryBuilder(metaData.target, tableName);
 
-      for (const join of filteredJoinArr) {
+      for (const join of joinArr) {
         qb.leftJoinAndSelect(
           `${join.parentAlias}.${join.propertyPath}`,
           join.alias,
         );
       }
 
-      qb.select([...filteredSelectArr]);
+      qb.select([...selectArr]);
 
       if (parts.length > 0) {
         qb.where(
@@ -148,7 +136,6 @@ export class QueryEngine {
 
       if (limit) qb.take(limit);
       if (page && limit) qb.skip((page - 1) * limit);
-      console.log(qb.getSql());
       const rows = await qb.getMany();
       const metaDeep = await resolveDeepRelations({
         queryEngine: this,
@@ -161,8 +148,12 @@ export class QueryEngine {
         data: rows,
         ...((meta || metaDeep) && {
           meta: {
-            ...(totalCount && { totalCount }),
-            ...(filterCount && { filterCount }),
+            ...(metaParts.includes('totalCount') || metaParts.includes('*')
+              ? { totalCount }
+              : {}),
+            ...(metaParts.includes('filterCount') || metaParts.includes('*')
+              ? { filterCount }
+              : {}),
             ...metaDeep,
           },
         }),

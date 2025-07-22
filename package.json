@@ -58,6 +58,7 @@
     "qs": "^6.14.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
+    "sqlite3": "^5.1.7",
     "ts-morph": "^26.0.0",
     "typeorm": "^0.3.24",
     "yargs": "^18.0.0"
