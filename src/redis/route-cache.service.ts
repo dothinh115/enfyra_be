@@ -20,7 +20,7 @@ export class RouteCacheService {
       hookRepo.find({
         where: { isEnabled: true, route: IsNull() },
         order: { priority: 'ASC' },
-        relations: ['method', 'route'],
+        relations: ['methods', 'route'],
       }),
       routeDefRepo
         .createQueryBuilder('route')
@@ -34,7 +34,7 @@ export class RouteCacheService {
             enabled: true,
           },
         )
-        .leftJoinAndSelect('hooks.method', 'hooks_method')
+        .leftJoinAndSelect('hooks.methods', 'hooks_method')
         .leftJoinAndSelect('hooks.route', 'hooks_route')
         .leftJoinAndSelect('route.handlers', 'handlers')
         .leftJoinAndSelect('handlers.method', 'handlers_method')

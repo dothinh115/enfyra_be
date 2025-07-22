@@ -35,13 +35,8 @@ export function addRelationToClass({
     usedEntityImports.add(target);
   }
 
-  const propertyType = ['many-to-many', 'one-to-many'].includes(rel.type)
-    ? `${target}[]`
-    : target;
-
   const decorators = [];
 
-  // ✅ Tự động index với many-to-one và one-to-one (không nghịch)
   const shouldAddIndex =
     rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse);
   if (shouldAddIndex) {

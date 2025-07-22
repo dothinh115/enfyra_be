@@ -149,18 +149,10 @@
         {
             "isEnabled": true,
             "preHook": "if ($ctx.$body.password) { $ctx.$body.password = await $ctx.$helpers.$bcrypt.hash($ctx.$body.password);}",
-            "name": "User definition hash password (POST)",
+            "name": "User definition hash password",
             "isSystem":true,
             "route": "/user_definition",
-            "method": "POST"
-        },
-        {
-            "isEnabled": true,
-            "preHook": "if ($ctx.$body.password) { $ctx.$body.password = await $ctx.$helpers.$bcrypt.hash($ctx.$body.password);}",
-            "name": "User definition hash password (PATCH)",
-            "isSystem":true,
-            "route": "/user_definition",
-            "method": "PATCH"
+            "methods": ["POST", "PATCH"]
         }
     ]
 }

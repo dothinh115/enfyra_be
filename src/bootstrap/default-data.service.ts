@@ -95,6 +95,7 @@ export class DefaultDataService {
           records.map(async (hook: any) => {
             const transformedHook = { ...hook };
 
+            // Mapping route
             if (hook.route && typeof hook.route === 'string') {
               const rawPath = hook.route;
               const pathsToTry = Array.from(
@@ -117,17 +118,24 @@ export class DefaultDataService {
               transformedHook.route = route;
             }
 
-            if (hook.method && typeof hook.method === 'string') {
-              const method = await methodRepo.findOne({
-                where: { method: hook.method },
+            // ✅ Mapping methods (many-to-many)
+            if (hook.methods && Array.isArray(hook.methods)) {
+              const methodEntities = await methodRepo.find({
+                where: hook.methods.map((m: string) => ({ method: m })),
               });
-              if (!method) {
+
+              if (methodEntities.length !== hook.methods.length) {
+                const notFound = hook.methods.filter(
+                  (m: string) =>
+                    !methodEntities.find((me: any) => me.method === m),
+                );
                 this.logger.warn(
-                  `⚠️ Không tìm thấy method '${hook.method}' cho hook '${hook.name}', bỏ qua.`,
+                  `⚠️ Không tìm thấy method(s) '${notFound.join(', ')}' cho hook '${hook.name}', bỏ qua.`,
                 );
                 return null;
               }
-              transformedHook.method = method;
+
+              transformedHook.methods = methodEntities;
             }
 
             return transformedHook;

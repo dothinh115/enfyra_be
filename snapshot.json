@@ -158,7 +158,7 @@
         ],
         "relations": [
             { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "hooks" },
-            { "propertyName": "method", "type": "many-to-one", "targetTable": "method_definition", "isSystem": true, "inversePropertyName": "hooks" }
+            { "propertyName": "methods", "type": "many-to-many", "targetTable": "method_definition", "isSystem": true, "inversePropertyName": "hooks" }
         ]
     },
     "session_definition": {
