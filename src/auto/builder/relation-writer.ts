@@ -41,9 +41,9 @@ export function addRelationToClass({
 
   const decorators = [];
 
+  // ✅ Tự động index với many-to-one và one-to-one (không nghịch)
   const shouldAddIndex =
-    rel.isIndex &&
-    (rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse));
+    rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse);
   if (shouldAddIndex) {
     decorators.push({ name: 'Index', arguments: [] });
     usedImports.add('Index');
@@ -82,7 +82,7 @@ export function addRelationToClass({
 
   classDeclaration.addProperty({
     name: rel.propertyName!,
-    type: 'any',
+    type: propertyType,
     decorators,
   });
 }

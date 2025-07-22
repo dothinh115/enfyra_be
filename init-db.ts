@@ -288,11 +288,10 @@ async function writeEntitiesFromSnapshot() {
 
       const decorators: any[] = [];
 
-      if (
-        rel.isIndex &&
-        ['many-to-one', 'one-to-one'].includes(rel.type) &&
-        !isInverse
-      ) {
+      const shouldAddIndex =
+        ['many-to-one', 'one-to-one'].includes(rel.type) && !isInverse;
+
+      if (shouldAddIndex) {
         decorators.push({ name: 'Index', arguments: [] });
         usedImports.add('Index');
       }

@@ -7,8 +7,8 @@ import {
   DataSource,
 } from 'typeorm';
 import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
-import { QueryEngine } from './query-engine/query-engine.service';
-import { DataSourceService } from './data-source/data-source.service';
+import { QueryEngine } from '../query-engine/query-engine.service';
+import { DataSourceService } from '../data-source/data-source.service';
 
 @Entity('user')
 class User {

@@ -21,7 +21,7 @@
             { "name": "placeholder", "type": "text", "isSystem": true }
         ],
         "relations": [
-            { "propertyName": "table", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "inversePropertyName": "columns", "isInverseEager": true, "isIndex": true }
+            { "propertyName": "table", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "inversePropertyName": "columns", "isInverseEager": true }
         ]
     },
     "relation_definition": 
@@ -38,13 +38,12 @@
             { "name": "isNullable", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "isInverseEager", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
-            { "name": "isIndex", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "description", "type": "text", "isSystem": true }
 
         ],
         "relations": [
-            { "propertyName": "sourceTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "inversePropertyName": "relations", "isInverseEager": true, "isIndex": true },
-            { "propertyName": "targetTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "isIndex": true }
+            { "propertyName": "sourceTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "inversePropertyName": "relations", "isInverseEager": true },
+            { "propertyName": "targetTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true }
         ]
 
     },
@@ -104,7 +103,7 @@
         ],
         "relations": [
             { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isSystem": true, "isEager": true },
-            { "propertyName": "mainTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "isNullable": false, "isIndex": true }
+            { "propertyName": "mainTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "isNullable": false }
         ]
     },
     "role_definition": {
@@ -125,8 +124,8 @@
             { "name": "description", "type": "text", "isSystem": true }
         ],
         "relations": [
-            { "propertyName": "role", "type": "many-to-one", "isSystem": true, "targetTable": "role_definition", "inversePropertyName": "routePermissions", "isIndex": true },
-            { "propertyName": "route", "type": "many-to-one", "isSystem": true, "targetTable": "route_definition", "inversePropertyName": "routePermissions", "isIndex": true } 
+            { "propertyName": "role", "type": "many-to-one", "isSystem": true, "targetTable": "role_definition", "inversePropertyName": "routePermissions" },
+            { "propertyName": "route", "type": "many-to-one", "isSystem": true, "targetTable": "route_definition", "inversePropertyName": "routePermissions" } 
         ]
     },
     "route_handler_definition": {
@@ -139,8 +138,8 @@
             { "name": "description", "type": "text", "isSystem": true }
         ],
         "relations": [
-            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "handlers", "isIndex": true, "isNullable": false },
-            { "propertyName": "method", "type": "many-to-one", "targetTable": "method_definition", "isSystem": true, "inversePropertyName": "handlers", "isIndex": true, "isNullable": false }
+            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "handlers", "isNullable": false },
+            { "propertyName": "method", "type": "many-to-one", "targetTable": "method_definition", "isSystem": true, "inversePropertyName": "handlers", "isNullable": false }
 
         ]
     },
@@ -158,8 +157,8 @@
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false }
         ],
         "relations": [
-            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "hooks", "isIndex": true },
-            { "propertyName": "method", "type": "many-to-one", "targetTable": "method_definition", "isSystem": true, "inversePropertyName": "hooks", "isIndex": true }
+            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "hooks" },
+            { "propertyName": "method", "type": "many-to-one", "targetTable": "method_definition", "isSystem": true, "inversePropertyName": "hooks" }
         ]
     },
     "session_definition": {
@@ -171,7 +170,7 @@
             { "name": "remember", "type": "boolean", "isSystem": true, "defaultValue": false }
         ],
         "relations": [
-            { "propertyName": "user", "type": "many-to-one", "targetTable": "user_definition", "isSystem": true, "isNullable": false, "isIndex": true }
+            { "propertyName": "user", "type": "many-to-one", "targetTable": "user_definition", "isSystem": true, "isNullable": false }
         ]
     },
     "schema_history": {
