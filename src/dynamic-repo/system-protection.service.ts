@@ -10,11 +10,25 @@ export class SystemProtectionService {
     private dataSourceService: DataSourceService,
   ) {}
 
-  private getRelationFields(tableName: string): string[] {
+  private getAllRelationFieldsWithInverse(tableName: string): string[] {
     try {
       const dataSource = this.dataSourceService.getDataSource();
       const meta = dataSource.getMetadata(tableName);
-      return meta.relations.map((r) => r.propertyName);
+      const relations = meta.relations.map((r) => r.propertyName);
+
+      const inverseRelations: string[] = [];
+      for (const otherMeta of dataSource.entityMetadatas) {
+        for (const r of otherMeta.relations) {
+          if (
+            r.inverseEntityMetadata.name === meta.name &&
+            r.inverseSidePropertyPath
+          ) {
+            inverseRelations.push(r.inverseSidePropertyPath.split('.')[0]);
+          }
+        }
+      }
+
+      return [...new Set([...relations, ...inverseRelations])];
     } catch {
       return [];
     }
@@ -22,11 +36,31 @@ export class SystemProtectionService {
 
   private stripRelations(data: any, relationFields: string[]): any {
     if (!data) return data;
-    const clean = { ...data };
-    for (const field of relationFields) {
-      delete clean[field];
+    const result: any = {};
+    for (const key of Object.keys(data)) {
+      if (!relationFields.includes(key)) {
+        result[key] = data[key];
+      }
     }
-    return clean;
+    return result;
+  }
+
+  private getChangedFields(
+    data: any,
+    existing: any,
+    relationFields: string[],
+  ): string[] {
+    const d = this.stripRelations(data, relationFields);
+    const e = this.stripRelations(existing, relationFields) || {};
+
+    return Object.keys(d).filter((key) => {
+      const isChanged = key in e && !isEqual(d[key], e[key]);
+      return isChanged;
+    });
+  }
+
+  private getAllowedFields(base: string[]): string[] {
+    return [...new Set([...base, 'createdAt', 'updatedAt'])];
   }
 
   assertSystemSafe({
@@ -44,34 +78,22 @@ export class SystemProtectionService {
     relatedRoute?: any;
     currentUser?: any;
   }) {
-    const relationFields = this.getRelationFields(tableName);
-    const dataWithoutRelations = this.stripRelations(data, relationFields);
-    const existingWithoutRelations = this.stripRelations(
-      existing,
-      relationFields,
-    );
+    const relationFields = this.getAllRelationFieldsWithInverse(tableName);
+    const changedFields = this.getChangedFields(data, existing, relationFields);
 
     // === 1. route_definition ===
     if (tableName === 'route_definition' && existing?.isSystem) {
-      const allowedFields = [
+      const allowed = this.getAllowedFields([
         'description',
-        'createdAt',
-        'updatedAt',
         'publishedMethods',
-      ];
-
-      const changedDisallowedFields = Object.keys(dataWithoutRelations).filter(
-        (key) => {
-          const isChanged =
-            key in existingWithoutRelations &&
-            !isEqual(dataWithoutRelations[key], existingWithoutRelations[key]);
-          return isChanged && !allowedFields.includes(key);
-        },
+      ]);
+      const changedDisallowed = changedFields.filter(
+        (key) => !allowed.includes(key),
       );
 
-      if (changedDisallowedFields.length > 0) {
+      if (changedDisallowed.length > 0) {
         throw new Error(
-          `Không được sửa route hệ thống (chỉ cho phép cập nhật: ${allowedFields.join(', ')}): ${changedDisallowedFields.join(', ')}`,
+          `Không được sửa route hệ thống (chỉ cho phép cập nhật: ${allowed.join(', ')}): ${changedDisallowed.join(', ')}`,
         );
       }
 
@@ -97,7 +119,7 @@ export class SystemProtectionService {
       );
     }
 
-    // === 3. Tạo mới — không được gán isSystem
+    // === 3. Chỉ kiểm tra gán isSystem khi tạo mới
     if (operation === 'create') {
       this.commonService.assertNoSystemFlagDeep([data]);
     }
@@ -109,28 +131,22 @@ export class SystemProtectionService {
 
     // === 5. hook_definition ===
     if (tableName === 'hook_definition') {
-      if (operation === 'create') {
-        if (data?.isSystem) {
-          throw new Error('Không được phép tạo hook hệ thống');
-        }
+      if (operation === 'create' && data?.isSystem) {
+        throw new Error('Không được phép tạo hook hệ thống');
       }
 
       if (operation === 'update' && existing?.isSystem) {
-        const allowedFields = ['description', 'createdAt', 'updatedAt'];
-        const changedDisallowedFields = Object.keys(data).filter((key) => {
-          if (!(key in existing)) return false;
-          const isChanged = !isEqual(data[key], existing[key]);
-          return isChanged && !allowedFields.includes(key);
-        });
+        const allowed = this.getAllowedFields(['description']);
+        const changedDisallowedFields = changedFields.filter(
+          (f) => !allowed.includes(f),
+        );
 
-        // 🧱 Kiểm tra field bất hợp lệ
         if (changedDisallowedFields.length > 0) {
           throw new Error(
-            `Không được sửa hook hệ thống (chỉ cho phép cập nhật 'description'): ${changedDisallowedFields.join(', ')}`,
+            `Không được sửa hook hệ thống (chỉ cho phép cập nhật: ${allowed.join(', ')}): ${changedDisallowedFields.join(', ')}`,
           );
         }
 
-        // 🔒 Kiểm tra thay đổi route
         if (
           data.route?.id &&
           existing.route?.id &&
@@ -139,7 +155,6 @@ export class SystemProtectionService {
           throw new Error(`Không được đổi 'route' của hook hệ thống`);
         }
 
-        // 🔒 Kiểm tra thay đổi methods
         const oldMethodIds = (existing.methods ?? []).map((m) => m.id).sort();
         const newMethodIds = (data.methods ?? []).map((m) => m.id).sort();
         if (!isEqual(oldMethodIds, newMethodIds)) {
@@ -171,15 +186,14 @@ export class SystemProtectionService {
         }
 
         if (isSelf) {
-          const allowedFields = ['email', 'password', 'createdAt', 'updatedAt'];
-          const changedDisallowed = Object.keys(data).filter((k) => {
-            const isChanged = k in existing && !isEqual(data[k], existing[k]);
-            return isChanged && !allowedFields.includes(k);
-          });
+          const allowed = this.getAllowedFields(['email', 'password']);
+          const changedDisallowed = changedFields.filter(
+            (k) => !allowed.includes(k),
+          );
 
           if (changedDisallowed.length > 0) {
             throw new Error(
-              `Root Admin chỉ được sửa các trường: ${allowedFields.join(', ')}. Vi phạm: ${changedDisallowed.join(', ')}`,
+              `Root Admin chỉ được sửa các trường: ${allowed.join(', ')}. Vi phạm: ${changedDisallowed.join(', ')}`,
             );
           }
         }
