@@ -127,6 +127,10 @@ export function buildJoinTree({
         rootAlias,
         addJoin,
       });
+      if (!res) {
+        log.push?.(`! Skip select: path not resolved for ${subPath.join('.')}`);
+        continue;
+      }
       selectSet.add(`${res.alias}.id`);
       log.push?.(`+ Add select (relation auto id): ${res.alias}.id`);
     }
