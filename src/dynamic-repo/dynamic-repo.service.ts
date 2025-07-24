@@ -57,7 +57,7 @@ export class DynamicRepoService {
     this.page = query.page ?? 1;
     this.limit = query.limit ?? 10;
     this.meta = query.meta;
-    this.sort = query.sort;
+    this.sort = query.sort ?? 'id';
     this.aggregate = query.aggregate ?? {};
     this.deep = query.deep ?? {};
     this.tableName = tableName;
