@@ -56,16 +56,18 @@ export class DynamicResolver {
     const fieldPicker = fullFieldPicker
       .filter((f) => f.startsWith('data.'))
       .map((f) => f.replace(/^data\./, ''));
+    const metaPicker = fullFieldPicker
+      .filter((f) => f.startsWith('meta.'))
+      .map((f) => f.replace(/^meta\./, ''));
     const query = {
       fields: fieldPicker.join(','),
       filter: args.filter,
       page: args.page,
       limit: args.limit,
-      meta: args.meta,
+      meta: metaPicker.join(',') as any,
       sort: args.sort,
       aggregate: args.aggregate,
     };
-
     const dynamicFindEntries = await Promise.all(
       [mainTable, ...targetTables]?.map(async (table) => {
         const dynamicRepo = new DynamicRepoService({
@@ -180,11 +182,13 @@ export class DynamicResolver {
     if (!user) {
       throwGqlError('401', 'Invalid user');
     }
-
     const canPass =
-      currentRoute.routePermissions?.find(
-        (permission: any) => permission.role.id === user.role.id,
-      ) || user.isRootAdmin;
+      user.isRootAdmin ||
+      currentRoute.routePermissions?.some(
+        (permission: any) =>
+          permission.role?.id === user.role?.id &&
+          permission.methods?.includes('GQL_QUERY'),
+      );
 
     if (!canPass) {
       throwGqlError('403', 'Not allowed');
