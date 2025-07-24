@@ -50,8 +50,6 @@ export class QueryEngine {
         dataSource,
       });
 
-      const deepKeys = new Set(Object.keys(deep));
-
       const { parts } = walkFilter({
         filter,
         currentMeta: metaData,

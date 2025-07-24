@@ -51,7 +51,7 @@ export class SystemProtectionService {
     relationFields: string[],
   ): string[] {
     const d = this.stripRelations(data, relationFields);
-    const e = this.stripRelations(existing, relationFields) || {};
+    const e = this.stripRelations(existing, relationFields);
 
     return Object.keys(d).filter((key) => {
       const isChanged = key in e && !isEqual(d[key], e[key]);
@@ -63,19 +63,69 @@ export class SystemProtectionService {
     return [...new Set([...base, 'createdAt', 'updatedAt'])];
   }
 
-  assertSystemSafe({
+  private async assertRelationSystemRecordsNotRemoved(
+    tableName: string,
+    existingId: any,
+    newData: any,
+  ) {
+    const dataSource = this.dataSourceService.getDataSource();
+    const meta = dataSource.getMetadata(tableName);
+    const relationFields = this.getAllRelationFieldsWithInverse(tableName);
+    if (relationFields.length === 0) return;
+
+    const repo = dataSource.getRepository(meta.target);
+    const existingWithRelations = await repo.findOne({
+      where: { id: existingId },
+      relations: relationFields,
+    });
+
+    if (!existingWithRelations) return;
+
+    for (const field of relationFields) {
+      const oldItems = existingWithRelations[field];
+      const newItems = newData?.[field];
+
+      if (!Array.isArray(oldItems) || !Array.isArray(newItems)) continue;
+
+      const oldSystemRecords = oldItems.filter((i: any) => i?.isSystem);
+      const oldSystemIds = oldSystemRecords.map((r: any) => r.id);
+
+      const newRecordsWithId = newItems.filter((i: any) => i?.id);
+      const newIds = newRecordsWithId.map((i: any) => i.id);
+
+      const newCreatedItems = newItems.filter((i: any) => !i?.id);
+
+      // ❌ 1. Không được xoá record hệ thống cũ
+      for (const id of oldSystemIds) {
+        if (!newIds.includes(id)) {
+          throw new Error(
+            `Không được xoá record hệ thống (id=${id}) trong quan hệ '${field}'`,
+          );
+        }
+      }
+
+      // ❌ 2. Không được tạo mới record hệ thống
+      for (const item of newCreatedItems) {
+        if (item?.isSystem) {
+          throw new Error(
+            `Không được tạo record hệ thống mới trong quan hệ '${field}'`,
+          );
+        }
+      }
+    }
+  }
+
+  async assertSystemSafe({
     operation,
     tableName,
     data,
     existing,
-    relatedRoute,
     currentUser,
   }: {
     operation: 'create' | 'update' | 'delete';
     tableName: string;
     data: any;
     existing?: any;
-    relatedRoute?: any;
     currentUser?: any;
   }) {
     const relationFields = this.getAllRelationFieldsWithInverse(tableName);
@@ -113,13 +163,8 @@ export class SystemProtectionService {
     }
 
     // === 2. route_handler_definition ===
-    if (tableName === 'route_handler_definition' && relatedRoute?.isSystem) {
-      throw new Error(
-        'Không được thao tác handler trên route hệ thống (cấm cả tạo và sửa)',
-      );
-    }
 
-    // === 3. Chỉ kiểm tra gán isSystem khi tạo mới
+    // === 3. Tạo mới — không được gán isSystem
     if (operation === 'create') {
       this.commonService.assertNoSystemFlagDeep([data]);
     }
@@ -129,7 +174,16 @@ export class SystemProtectionService {
       throw new Error('Không được xoá bản ghi hệ thống!');
     }
 
-    // === 5. hook_definition ===
+    // === 5. Kiểm tra relation hệ thống khi patch
+    if (operation === 'update' && existing?.isSystem) {
+      await this.assertRelationSystemRecordsNotRemoved(
+        tableName,
+        existing.id,
+        data,
+      );
+    }
+
+    // === 6. hook_definition
     if (tableName === 'hook_definition') {
       if (operation === 'create' && data?.isSystem) {
         throw new Error('Không được phép tạo hook hệ thống');
@@ -163,7 +217,7 @@ export class SystemProtectionService {
       }
     }
 
-    // === 6. user_definition — bảo vệ root admin
+    // === 7. user_definition — bảo vệ root admin
     if (tableName === 'user_definition') {
       const isTargetRoot = existing?.isRootAdmin === true;
 

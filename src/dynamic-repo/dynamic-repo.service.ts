@@ -73,28 +73,6 @@ export class DynamicRepoService {
     this.repo = this.dataSourceService.getRepository(this.tableName);
   }
 
-  private async getRelatedRoute(data: any, existing: any) {
-    if (
-      [
-        'route_handler_definition',
-        'hook_definition',
-        'middleware_definition',
-      ].includes(this.tableName)
-    ) {
-      const routeId =
-        data?.route?.id ||
-        data?.routeId ||
-        existing?.route?.id ||
-        existing?.routeId;
-      if (routeId) {
-        return await this.dataSourceService
-          .getRepository('route_definition')
-          .findOne({ where: { id: routeId } });
-      }
-    }
-    return null;
-  }
-
   async find(opt: { where?: any }) {
     return await this.queryEngine.find({
       tableName: this.tableName,
@@ -111,14 +89,11 @@ export class DynamicRepoService {
 
   async create(body: any) {
     try {
-      const relatedRoute = await this.getRelatedRoute(body, null);
-
       this.systemProtectionService.assertSystemSafe({
         operation: 'create',
         tableName: this.tableName,
         data: body,
         existing: null,
-        relatedRoute,
         currentUser: this.currentUser,
       });
 
@@ -143,14 +118,11 @@ export class DynamicRepoService {
       const exists = await this.repo.findOne({ where: { id } });
       if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
 
-      const relatedRoute = await this.getRelatedRoute(body, exists);
-
       this.systemProtectionService.assertSystemSafe({
         operation: 'update',
         tableName: this.tableName,
         data: body,
         existing: exists,
-        relatedRoute,
         currentUser: this.currentUser,
       });
 
@@ -177,14 +149,11 @@ export class DynamicRepoService {
       const exists = await this.repo.findOne({ where: { id } });
       if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
 
-      const relatedRoute = await this.getRelatedRoute(null, exists);
-
       this.systemProtectionService.assertSystemSafe({
         operation: 'delete',
         tableName: this.tableName,
         data: {},
         existing: exists,
-        relatedRoute,
         currentUser: this.currentUser,
       });
 

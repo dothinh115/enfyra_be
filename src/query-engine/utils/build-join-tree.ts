@@ -190,7 +190,7 @@ export function buildJoinTree({
       return;
     }
     for (const key in f) {
-      if (['and', 'or'].includes(key)) {
+      if (['_and', '_or'].includes(key)) {
         extractPathsFromFilter(f[key], basePath, currentMeta);
       } else if (!OPERATORS.includes(key)) {
         const path = [...basePath, key];
@@ -244,7 +244,6 @@ export function buildJoinTree({
       log.push?.(`+ Add sort: ${res.alias}.${res.lastField.propertyName} ASC`);
     }
   }
-
   return {
     joinArr,
     selectArr: Array.from(selectSet),
