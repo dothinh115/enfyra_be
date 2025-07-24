@@ -1,20 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { RedisLockService } from './redis-lock.service';
-import { IsNull, Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { GLOBAL_ROUTES_KEY } from '../utils/constant';
 
 @Injectable()
 export class RouteCacheService {
+  private readonly logger = new Logger(RouteCacheService.name);
+
   constructor(
-    private dataSourceService: DataSourceService,
-    private redisLockService: RedisLockService,
+    private readonly dataSourceService: DataSourceService,
+    private readonly redisLockService: RedisLockService,
   ) {}
 
-  async loadAndCacheRoutes() {
+  private async loadRoutes(): Promise<any[]> {
     const routeDefRepo: Repository<any> =
       this.dataSourceService.getRepository('route_definition');
-    const hookRepo = this.dataSourceService.getRepository('hook_definition');
+    const hookRepo: Repository<any> =
+      this.dataSourceService.getRepository('hook_definition');
 
     const [globalHooks, routes] = await Promise.all([
       hookRepo.find({
@@ -30,9 +33,7 @@ export class RouteCacheService {
           'route.hooks',
           'hooks',
           'hooks.isEnabled = :enabled',
-          {
-            enabled: true,
-          },
+          { enabled: true },
         )
         .leftJoinAndSelect('hooks.methods', 'hooks_method')
         .leftJoinAndSelect('hooks.route', 'hooks_route')
@@ -42,9 +43,7 @@ export class RouteCacheService {
           'route.routePermissions',
           'routePermissions',
           'routePermissions.isEnabled = :enabled',
-          {
-            enabled: true,
-          },
+          { enabled: true },
         )
         .leftJoinAndSelect('routePermissions.role', 'role')
         .leftJoinAndSelect('routePermissions.methods', 'methods')
@@ -53,18 +52,39 @@ export class RouteCacheService {
         .getMany(),
     ]);
 
-    routes.forEach((route: any) => {
-      route.hooks?.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
-      route.hooks = [...globalHooks, ...route.hooks];
-    });
+    // Merge global hooks vào từng route
+    for (const route of routes) {
+      route.hooks = [
+        ...(globalHooks || []),
+        ...(route.hooks ?? []).sort(
+          (a, b) => (a.priority ?? 0) - (b.priority ?? 0),
+        ),
+      ];
+    }
 
-    await this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 15000);
     return routes;
   }
 
-  async reloadRouteCache() {
-    await this.redisLockService.deleteKey(GLOBAL_ROUTES_KEY);
-    await this.loadAndCacheRoutes();
-    console.log(`[RouteCache] Nội dung: reload route cache`);
+  async loadAndCacheRoutes(): Promise<any[]> {
+    const routes = await this.loadRoutes();
+    await this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 60000); // TTL: 60s
+    return routes;
+  }
+
+  async reloadRouteCache(): Promise<void> {
+    try {
+      const routes = await this.loadRoutes();
+
+      await this.redisLockService.set(GLOBAL_ROUTES_KEY, routes, 60000);
+
+      this.logger.log(
+        `[RouteCache] Reloaded route cache with ${routes.length} routes`,
+      );
+    } catch (error) {
+      this.logger.error(
+        '[RouteCache] Failed to reload route cache',
+        error.stack || error.message,
+      );
+    }
   }
 }

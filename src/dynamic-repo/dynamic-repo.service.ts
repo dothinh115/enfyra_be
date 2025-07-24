@@ -133,8 +133,9 @@ export class DynamicRepoService {
         );
         return this.find({ where: { id: { _eq: table.id } } });
       }
+      body.id = id;
 
-      await this.repo.save({ ...exists, ...body });
+      await this.repo.save(body);
       const result = await this.find({ where: { id: { _eq: id } } });
       await this.reload();
       return result;
@@ -176,9 +177,9 @@ export class DynamicRepoService {
       [
         'table_definition',
         'route_definition',
-        'middleware_definition',
         'hook_definition',
         'route_handler_definition',
+        'route_permission_definition',
       ].includes(this.tableName)
     ) {
       await this.routeCacheService.reloadRouteCache();

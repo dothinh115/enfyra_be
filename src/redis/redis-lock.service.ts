@@ -57,6 +57,13 @@ export class RedisLockService {
     return parsed;
   }
 
+  async set<T = any>(key: string, value: T, ttlMs: number): Promise<void> {
+    const serializedValue = this.serialize(value);
+    await this.redis.set(key, serializedValue, 'PX', ttlMs);
+    const ttl = await this.redis.pttl(key);
+    console.log(`[RedisLockService] SET ${key} => TTL=${ttl}ms`);
+  }
+
   async exists(key: string, value: any): Promise<boolean> {
     const current = await this.redis.get(key);
     const parsed = this.deserialize(current);
