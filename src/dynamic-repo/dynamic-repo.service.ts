@@ -133,8 +133,7 @@ export class DynamicRepoService {
         );
         return this.find({ where: { id: { _eq: table.id } } });
       }
-      body.id = id;
-
+      body.id = exists.id;
       await this.repo.save(body);
       const result = await this.find({ where: { id: { _eq: id } } });
       await this.reload();

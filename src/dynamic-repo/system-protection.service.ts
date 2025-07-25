@@ -54,7 +54,7 @@ export class SystemProtectionService {
     const e = this.stripRelations(existing, relationFields);
 
     return Object.keys(d).filter((key) => {
-      const isChanged = key in e && !isEqual(d[key], e[key]);
+      const isChanged = e && key in e && !isEqual(d[key], e[key]);
       return isChanged;
     });
   }

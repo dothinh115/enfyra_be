@@ -59,6 +59,7 @@ export class DynamicResolver {
     const metaPicker = fullFieldPicker
       .filter((f) => f.startsWith('meta.'))
       .map((f) => f.replace(/^meta\./, ''));
+
     const query = {
       fields: fieldPicker.join(','),
       filter: args.filter,
@@ -68,8 +69,9 @@ export class DynamicResolver {
       sort: args.sort,
       aggregate: args.aggregate,
     };
+
     const dynamicFindEntries = await Promise.all(
-      [mainTable, ...targetTables]?.map(async (table) => {
+      [mainTable, ...targetTables].map(async (table) => {
         const dynamicRepo = new DynamicRepoService({
           query,
           tableName: table.name,
@@ -113,11 +115,8 @@ export class DynamicResolver {
 
     try {
       const defaultHandler = `return await $ctx.$repos.main.find();`;
-
-      const scriptCode = defaultHandler;
-
       const result = await this.handlerExecutorService.run(
-        scriptCode,
+        defaultHandler,
         handlerCtx,
         5000,
       );
@@ -133,7 +132,7 @@ export class DynamicResolver {
       throwGqlError('400', 'Missing table name');
     }
 
-    let routes: any[] =
+    const routes =
       (await this.redisLockService.get(GLOBAL_ROUTES_KEY)) ||
       (await this.routeCacheService.loadAndCacheRoutes());
 
@@ -143,29 +142,30 @@ export class DynamicResolver {
 
     const accessToken =
       context.request?.headers?.get('authorization')?.split('Bearer ')[1] || '';
-    let decoded: any;
 
     const user = await this.canPass(currentRoute, accessToken);
 
     return {
       matchedRoute: currentRoute,
       user,
-      decodedToken: decoded,
       mainTable: currentRoute.mainTable,
       targetTables: currentRoute.targetTables,
     };
   }
 
-  async canPass(currentRoute: any, accessToken: string) {
-    const isEnabled = currentRoute.isEnabled;
-    if (!isEnabled) {
+  private async canPass(currentRoute: any, accessToken: string) {
+    if (!currentRoute?.isEnabled) {
       throwGqlError('404', 'NotFound');
     }
-    const isPublished = currentRoute.publishedMethods?.includes('GQL_QUERY');
+
+    const isPublished = currentRoute.publishedMethods.some(
+      (item: any) => item.method === 'GQL_QUERY',
+    );
 
     if (isPublished) {
-      return undefined;
+      return { isAnonymous: true };
     }
+
     let decoded;
     try {
       decoded = this.jwtService.verify(accessToken);
@@ -182,6 +182,7 @@ export class DynamicResolver {
     if (!user) {
       throwGqlError('401', 'Invalid user');
     }
+
     const canPass =
       user.isRootAdmin ||
       currentRoute.routePermissions?.some(
