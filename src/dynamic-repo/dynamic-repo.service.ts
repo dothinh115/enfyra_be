@@ -100,6 +100,7 @@ export class DynamicRepoService {
       if (this.tableName === 'table_definition') {
         body.isSystem = false;
         const table: any = await this.tableHandlerService.createTable(body);
+        await this.reload();
         return await this.find({ where: { id: { _eq: table.id } } });
       }
 
