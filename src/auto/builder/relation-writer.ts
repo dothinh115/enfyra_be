@@ -37,7 +37,7 @@ export function addRelationToClass({
 
   const decorators = [];
 
-  // Add Index decorator for common FK types
+  // ✅ Tự động index với many-to-one và one-to-one (không nghịch)
   const shouldAddIndex =
     rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse);
   if (shouldAddIndex) {
@@ -45,7 +45,6 @@ export function addRelationToClass({
     usedImports.add('Index');
   }
 
-  // Compose options
   const options: string[] = [];
   if (rel.isEager) options.push('eager: true');
   if (rel.isNullable !== undefined && rel.type !== 'one-to-many') {
@@ -59,24 +58,18 @@ export function addRelationToClass({
   }
   options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
 
-  // Build decorator arguments
-  const args: string[] = [`'${target}'`];
-
-  const relationCallback =
-    !isInverse && rel.inversePropertyName
-      ? `(rel: any) => rel.${rel.inversePropertyName}`
-      : isInverse && rel.propertyName
-        ? `(rel: any) => rel.${rel.propertyName}`
-        : `(rel: any) => rel.id`; // fallback nếu không có inverse
-
-  args.push(relationCallback);
+  const args = [`'${target}'`];
+  if (rel.inversePropertyName) {
+    args.push(`(rel: any) => rel.${rel.inversePropertyName}`);
+  } else if (rel.type === 'one-to-many') {
+    throw new Error('One to many relation must have inversePropertyName');
+  }
   if (options.length) {
     args.push(`{ ${options.join(', ')} }`);
   }
 
   decorators.push({ name: relationType, arguments: args });
 
-  // JoinTable or JoinColumn
   if (rel.type === 'many-to-many' && !isInverse) {
     decorators.push({ name: 'JoinTable', arguments: [] });
     usedImports.add('JoinTable');
@@ -85,7 +78,6 @@ export function addRelationToClass({
     usedImports.add('JoinColumn');
   }
 
-  // Add the property
   classDeclaration.addProperty({
     name: rel.propertyName!,
     type: 'any',

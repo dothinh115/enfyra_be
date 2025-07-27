@@ -117,7 +117,8 @@ export class MetadataSyncService {
       this.logger.error('🛑 THROWING lỗi sau khi restore');
 
       throw new BadRequestException(
-        `Something went wrong, check your table schema again....`,
+        err.message ??
+          `Something went wrong, check your table schema again....`,
       );
     }
   }

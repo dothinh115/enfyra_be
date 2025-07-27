@@ -122,9 +122,9 @@ export class TableHandlerService {
         exists.relations,
         body.relations,
       );
-
-      await columnRepo.delete(deletedColumnIds);
-      await relationRepo.delete(deletedRelationIds);
+      if (deletedColumnIds.length) await columnRepo.delete(deletedColumnIds);
+      if (deletedRelationIds.length)
+        await relationRepo.delete(deletedRelationIds);
 
       const result = await tableRepo.save(
         tableRepo.create({

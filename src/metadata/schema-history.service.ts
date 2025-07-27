@@ -64,7 +64,6 @@ export class SchemaHistoryService {
     });
 
     if (oldest) {
-      console.log(oldest.id);
       await tableDefRepo.save(oldest.schema);
       this.logger.warn('⚠️ Đã khôi phục metadata từ schema_history');
       await this.metadataSyncService.syncAll({
