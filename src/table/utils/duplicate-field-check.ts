@@ -1,16 +1,18 @@
 export function validateUniquePropertyNames(columns: any[], relations: any[]) {
+  const normalize = (s: string) => s.trim().toLowerCase();
+
   const columnNames = columns.map((c, idx) => {
     if (!c.name) {
       throw new Error(`Column at index ${idx} is missing "name".`);
     }
-    return c.name;
+    return normalize(c.name);
   });
 
   const relationNames = relations.map((r, idx) => {
     if (!r.propertyName) {
       throw new Error(`Relation at index ${idx} is missing "propertyName".`);
     }
-    return r.propertyName;
+    return normalize(r.propertyName);
   });
 
   const allNames = [...columnNames, ...relationNames];

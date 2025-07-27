@@ -63,39 +63,43 @@ export class SystemProtectionService {
     return [...new Set([...base, 'createdAt', 'updatedAt'])];
   }
 
-  private async assertRelationSystemRecordsNotRemoved(
-    tableName: string,
-    existingId: any,
-    newData: any,
-  ) {
+  private async reloadIfSystem(existing: any, tableName: string): Promise<any> {
+    if (!existing?.isSystem) return existing;
+
     const dataSource = this.dataSourceService.getDataSource();
     const meta = dataSource.getMetadata(tableName);
+    const repo = dataSource.getRepository(meta.target);
+    const relations = this.getAllRelationFieldsWithInverse(tableName);
+
+    const full = await repo.findOne({
+      where: { id: existing.id },
+      relations,
+    });
+
+    if (!full) throw new Error('Không tìm thấy bản ghi hệ thống đầy đủ');
+    return full;
+  }
+
+  private async assertRelationSystemRecordsNotRemoved(
+    tableName: string,
+    existing: any,
+    newData: any,
+  ) {
     const relationFields = this.getAllRelationFieldsWithInverse(tableName);
     if (relationFields.length === 0) return;
 
-    const repo = dataSource.getRepository(meta.target);
-    const existingWithRelations = await repo.findOne({
-      where: { id: existingId },
-      relations: relationFields,
-    });
-
-    if (!existingWithRelations) return;
-
     for (const field of relationFields) {
-      const oldItems = existingWithRelations[field];
+      const oldItems = existing[field];
       const newItems = newData?.[field];
 
       if (!Array.isArray(oldItems) || !Array.isArray(newItems)) continue;
 
-      const oldSystemRecords = oldItems.filter((i: any) => i?.isSystem);
-      const oldSystemIds = oldSystemRecords.map((r: any) => r.id);
+      const oldSystemIds = oldItems
+        .filter((i: any) => i?.isSystem)
+        .map((i) => i.id);
+      const newIds = newItems.filter((i: any) => i?.id).map((i) => i.id);
+      const newCreated = newItems.filter((i: any) => !i?.id);
 
-      const newRecordsWithId = newItems.filter((i: any) => i?.id);
-      const newIds = newRecordsWithId.map((i: any) => i.id);
-
-      const newCreatedItems = newItems.filter((i: any) => !i?.id);
-
-      // ❌ 1. Không được xoá record hệ thống cũ
       for (const id of oldSystemIds) {
         if (!newIds.includes(id)) {
           throw new Error(
@@ -104,8 +108,7 @@ export class SystemProtectionService {
         }
       }
 
-      // ❌ 2. Không được tạo mới record hệ thống
-      for (const item of newCreatedItems) {
+      for (const item of newCreated) {
         if (item?.isSystem) {
           throw new Error(
             `Không được tạo record hệ thống mới trong quan hệ '${field}'`,
@@ -128,128 +131,180 @@ export class SystemProtectionService {
     existing?: any;
     currentUser?: any;
   }) {
+    const fullExisting = await this.reloadIfSystem(existing, tableName);
     const relationFields = this.getAllRelationFieldsWithInverse(tableName);
-    const changedFields = this.getChangedFields(data, existing, relationFields);
+    const changedFields = this.getChangedFields(
+      data,
+      fullExisting,
+      relationFields,
+    );
 
-    // === 1. route_definition ===
-    if (tableName === 'route_definition' && existing?.isSystem) {
-      const allowed = this.getAllowedFields([
-        'description',
-        'publishedMethods',
-      ]);
-      const changedDisallowed = changedFields.filter(
-        (key) => !allowed.includes(key),
-      );
-
-      if (changedDisallowed.length > 0) {
-        throw new Error(
-          `Không được sửa route hệ thống (chỉ cho phép cập nhật: ${allowed.join(', ')}): ${changedDisallowed.join(', ')}`,
-        );
-      }
-
-      if ('handlers' in data) {
-        const oldIds = (existing.handlers || []).map((h: any) => h.id).sort();
-        const newIds = (data.handlers || []).map((h: any) => h.id).sort();
-        const isSame =
-          oldIds.length === newIds.length &&
-          oldIds.every((id: any, i: number) => id === newIds[i]);
-
-        if (!isSame) {
-          throw new Error(
-            `Không được thêm hoặc thay đổi handlers của route hệ thống`,
-          );
-        }
-      }
-    }
-
-    // === 2. route_handler_definition ===
-
-    // === 3. Tạo mới — không được gán isSystem
     if (operation === 'create') {
       this.commonService.assertNoSystemFlagDeep([data]);
     }
 
-    // === 4. Xoá bản ghi hệ thống
-    if (operation === 'delete' && existing?.isSystem) {
+    if (operation === 'delete' && fullExisting?.isSystem) {
       throw new Error('Không được xoá bản ghi hệ thống!');
     }
 
-    // === 5. Kiểm tra relation hệ thống khi patch
-    if (operation === 'update' && existing?.isSystem) {
+    if (operation === 'update' && fullExisting?.isSystem) {
       await this.assertRelationSystemRecordsNotRemoved(
         tableName,
-        existing.id,
+        fullExisting,
         data,
       );
     }
 
-    // === 6. hook_definition
+    if (tableName === 'route_definition' && fullExisting?.isSystem) {
+      const allowed = this.getAllowedFields([
+        'description',
+        'publishedMethods',
+      ]);
+      const disallowed = changedFields.filter((f) => !allowed.includes(f));
+      if (disallowed.length > 0) {
+        throw new Error(
+          `Không được sửa route hệ thống (chỉ cho phép: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
+        );
+      }
+
+      if ('handlers' in data) {
+        const oldIds = (fullExisting.handlers || [])
+          .map((h: any) => h.id)
+          .sort();
+        const newIds = (data.handlers || []).map((h: any) => h.id).sort();
+        const isSame =
+          oldIds.length === newIds.length &&
+          oldIds.every((id, i) => id === newIds[i]);
+        if (!isSame)
+          throw new Error(
+            'Không được thêm hoặc thay đổi handlers của route hệ thống',
+          );
+      }
+    }
+
     if (tableName === 'hook_definition') {
       if (operation === 'create' && data?.isSystem) {
         throw new Error('Không được phép tạo hook hệ thống');
       }
-
-      if (operation === 'update' && existing?.isSystem) {
+      if (operation === 'update' && fullExisting?.isSystem) {
         const allowed = this.getAllowedFields(['description']);
-        const changedDisallowedFields = changedFields.filter(
-          (f) => !allowed.includes(f),
-        );
-
-        if (changedDisallowedFields.length > 0) {
+        const disallowed = changedFields.filter((f) => !allowed.includes(f));
+        if (disallowed.length > 0)
           throw new Error(
-            `Không được sửa hook hệ thống (chỉ cho phép cập nhật: ${allowed.join(', ')}): ${changedDisallowedFields.join(', ')}`,
+            `Không được sửa hook hệ thống (chỉ cho phép: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
           );
-        }
 
         if (
           data.route?.id &&
-          existing.route?.id &&
-          data.route.id !== existing.route.id
+          fullExisting.route?.id &&
+          data.route.id !== fullExisting.route.id
         ) {
           throw new Error(`Không được đổi 'route' của hook hệ thống`);
         }
 
-        const oldMethodIds = (existing.methods ?? []).map((m) => m.id).sort();
-        const newMethodIds = (data.methods ?? []).map((m) => m.id).sort();
-        if (!isEqual(oldMethodIds, newMethodIds)) {
+        const oldIds = (fullExisting.methods || [])
+          .map((m: any) => m.id)
+          .sort();
+        const newIds = (data.methods || []).map((m: any) => m.id).sort();
+        if (!isEqual(oldIds, newIds))
           throw new Error(`Không được đổi 'methods' của hook hệ thống`);
-        }
       }
     }
 
-    // === 7. user_definition — bảo vệ root admin
     if (tableName === 'user_definition') {
-      const isTargetRoot = existing?.isRootAdmin === true;
+      const isRoot = fullExisting?.isRootAdmin;
 
-      if (operation === 'delete' && isTargetRoot) {
+      if (operation === 'delete' && isRoot)
         throw new Error('Không được xoá user Root Admin');
-      }
 
       if (operation === 'update') {
         if (
           'isRootAdmin' in data &&
-          data.isRootAdmin !== existing?.isRootAdmin
+          data.isRootAdmin !== fullExisting?.isRootAdmin
         ) {
           throw new Error('Không được chỉnh sửa isRootAdmin');
         }
 
-        const isSelf = currentUser?.id === existing?.id;
+        const isSelf = currentUser?.id === fullExisting?.id;
 
-        if (isTargetRoot && !isSelf) {
+        if (isRoot && !isSelf)
           throw new Error('Chỉ Root Admin mới được sửa chính họ');
-        }
 
         if (isSelf) {
           const allowed = this.getAllowedFields(['email', 'password']);
-          const changedDisallowed = changedFields.filter(
-            (k) => !allowed.includes(k),
+          const disallowed = changedFields.filter((k) => !allowed.includes(k));
+          if (disallowed.length > 0)
+            throw new Error(
+              `Root Admin chỉ được sửa: ${allowed.join(', ')}. Vi phạm: ${disallowed.join(', ')}`,
+            );
+        }
+      }
+    }
+
+    if (tableName === 'table_definition') {
+      const isSystem = fullExisting?.isSystem;
+      if (operation === 'create' && data?.isSystem)
+        throw new Error('Không được tạo bảng hệ thống mới!');
+      if (operation === 'delete' && isSystem)
+        throw new Error('Không được xoá bảng hệ thống!');
+
+      if (operation === 'update' && isSystem) {
+        const allowed = this.getAllowedFields(['description']);
+        const disallowed = changedFields.filter((k) => !allowed.includes(k));
+        if (disallowed.length > 0)
+          throw new Error(
+            `Không được sửa table hệ thống (chỉ cho phép: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
           );
 
-          if (changedDisallowed.length > 0) {
+        const oldCols = fullExisting.columns || [];
+        const newCols = data?.columns || [];
+        const oldRels = fullExisting.relations || [];
+        const newRels = data?.relations || [];
+
+        const removedCols = oldCols.filter(
+          (col) => !newCols.some((c) => c.id === col.id),
+        );
+        for (const col of removedCols) {
+          if (col.isSystem)
+            throw new Error(`Không được xoá column hệ thống: '${col.name}'`);
+        }
+
+        const removedRels = oldRels.filter(
+          (rel) => !newRels.some((r) => r.id === rel.id),
+        );
+        for (const rel of removedRels) {
+          if (rel.isSystem)
             throw new Error(
-              `Root Admin chỉ được sửa các trường: ${allowed.join(', ')}. Vi phạm: ${changedDisallowed.join(', ')}`,
+              `Không được xoá relation hệ thống: '${rel.propertyName}'`,
             );
-          }
+        }
+
+        for (const oldCol of oldCols.filter((c) => c.isSystem)) {
+          const updated = newCols.find((c) => c.id === oldCol.id);
+          if (!updated) continue;
+          const allowed = this.getAllowedFields(['description']);
+          const changed = Object.keys(updated).filter(
+            (key) =>
+              !allowed.includes(key) && !isEqual(updated[key], oldCol[key]),
+          );
+          if (changed.length > 0)
+            throw new Error(
+              `Không được sửa column hệ thống '${oldCol.name}' (chỉ cho phép: ${allowed.join(', ')})`,
+            );
+        }
+
+        for (const oldRel of oldRels.filter((r) => r.isSystem)) {
+          const updated = newRels.find((r) => r.id === oldRel.id);
+          if (!updated) continue;
+          const allowed = this.getAllowedFields(['description']);
+          const changed = Object.keys(updated).filter(
+            (key) =>
+              !allowed.includes(key) && !isEqual(updated[key], oldRel[key]),
+          );
+          if (changed.length > 0)
+            throw new Error(
+              `Không được sửa relation hệ thống '${oldRel.propertyName}' (chỉ cho phép: ${allowed.join(', ')})`,
+            );
         }
       }
     }
