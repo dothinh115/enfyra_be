@@ -1,7 +1,4 @@
-import {
-  TDynamicContext,
-  TGqlDynamicContext,
-} from '../utils/types/dynamic-context.type';
+import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { wrapCtx } from './utils/wrap-ctx';
 import { resolvePath } from './utils/resolve-path';
 import {
@@ -41,8 +38,26 @@ export class HandlerExecutorService {
       child.on('message', async (msg: any) => {
         if (isDone) return;
         if (msg.type === 'call') {
+          if (msg.path.includes('$errors')) {
+            let error;
+            switch (msg.path) {
+              case '$errors.throw400':
+                error = new BadRequestException(...msg.args);
+                break;
+              case '$errors.throw401':
+                error = new UnauthorizedException();
+                break;
+              case '$errors.throw403':
+                error = new ForbiddenException();
+                break;
+              default:
+                error = new InternalServerErrorException();
+            }
+            reject(error);
+          }
           try {
             const { parent, method } = resolvePath(ctx, msg.path);
+
             if (typeof parent[method] !== 'function') return;
             const result = await parent[method](...msg.args);
             child.send({

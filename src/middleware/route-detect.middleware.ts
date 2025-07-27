@@ -33,9 +33,11 @@ export class RouteDetectMiddleware implements NestMiddleware {
 
   async use(req: any, res: any, next: (error?: any) => void) {
     const method = req.method;
+
     let routes: any[] =
       (await this.redisLockService.get(GLOBAL_ROUTES_KEY)) ||
       (await this.routeCacheService.loadAndCacheRoutes());
+
     const matchedRoute = this.findMatchedRoute(routes, req.baseUrl, method);
     const systemTables = [
       'table_definition',
@@ -76,14 +78,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
 
       const context: TDynamicContext = {
         $body: req.body,
-        $errors: {
-          throw400: (msg: string) => {
-            throw new BadRequestException(msg);
-          },
-          throw401: () => {
-            throw new UnauthorizedException();
-          },
-        },
+        $errors: {},
         $logs(...args) {},
         $helpers: {
           $jwt: (payload: any, exp: string) =>

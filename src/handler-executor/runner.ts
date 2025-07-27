@@ -7,6 +7,18 @@ const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 export const pendingCalls = new Map();
 
+process.on('unhandledRejection', (reason: any, promise) => {
+  process.send({
+    type: 'error',
+    error: {
+      message: reason.errorResponse?.message ?? reason.message,
+      stack: reason.errorResponse?.stack,
+      name: reason.errorResponse?.name,
+      statusCode: reason.errorResponse?.statusCode,
+    },
+  });
+});
+
 process.on('message', async (msg: any) => {
   if (msg.type === 'call_result') {
     const { callId, result, error, ...others } = msg;

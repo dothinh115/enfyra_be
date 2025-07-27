@@ -13,10 +13,7 @@ export type TDynamicContext = {
   $req: Request & {
     [key: string]: any;
   };
-  $errors: {
-    throw400: (msg: string) => never;
-    throw401: () => never;
-  };
+  $errors: {};
   $result?: any;
   $data?: any;
   $statusCode?: number;
