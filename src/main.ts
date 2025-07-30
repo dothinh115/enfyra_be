@@ -13,7 +13,7 @@ import { GraphqlService } from './graphql/graphql.service';
 async function bootstrap() {
   const logger = new Logger('Main');
 
-  const script = `node ${path.resolve(__dirname, '../../scripts/init-db.js')}`;
+  const script = `node ${path.resolve(__dirname, '../scripts/init-db.js')}`;
   try {
     execSync(script, { stdio: 'inherit' });
     logger.debug('Build file js thành công');

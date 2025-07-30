@@ -48,7 +48,7 @@ function generateSnapshotFromPayload(payload) {
 }
 
 function main() {
-  const payload = require('../schema-from-db.json');
+  const payload = require('../data/schema-from-db.json');
 
   const snapshot = generateSnapshotFromPayload(payload);
 
@@ -71,7 +71,7 @@ function main() {
   }
 
   fs.writeFileSync(
-    path.resolve(__dirname, 'snapshot.json'),
+    path.resolve(__dirname, '../data/snapshot.json'),
     prettyPrintOneLineArrays(snapshot),
     'utf-8',
   );

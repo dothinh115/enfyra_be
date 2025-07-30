@@ -29,7 +29,7 @@ export class CoreInitService {
   }
 
   async createInitMetadata(): Promise<void> {
-    const snapshot = await import(path.resolve('snapshot.json'));
+    const snapshot = await import(path.resolve('data/snapshot.json'));
     const dataSource = this.dataSourceService.getDataSource();
     const queryRunner = dataSource.createQueryRunner();
 
