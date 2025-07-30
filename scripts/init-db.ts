@@ -3,6 +3,7 @@ import { Project, QuoteKind } from 'ts-morph';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DataSource } from 'typeorm';
+import { execSync } from 'child_process';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -381,6 +382,13 @@ async function main() {
   await checkDS.destroy();
 
   await writeEntitiesFromSnapshot();
+
+  // Build entities sang JS
+  const buildScript = `node ${path.resolve(process.cwd(), 'scripts/build-entities.js')} -t ${path.resolve(process.cwd(), 'src/entities')} -o ${path.resolve(process.cwd(), 'dist/src/entities')}`;
+  console.log('🔄 Building entities to JS...');
+  execSync(buildScript, { stdio: 'inherit' });
+  console.log('✅ Entities built to JS successfully');
+
   await ensureDatabaseExists();
 
   const dataSource = new DataSource({
@@ -390,7 +398,7 @@ async function main() {
     username: DB_USERNAME,
     password: DB_PASSWORD,
     database: DB_NAME,
-    entities: [path.resolve(process.cwd(), 'src/entities/*.entity.ts')],
+    entities: [path.resolve(process.cwd(), 'dist/src/entities/*.entity.js')],
     synchronize: true,
     logging: false,
   });
