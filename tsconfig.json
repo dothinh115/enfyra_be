@@ -19,6 +19,6 @@
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true,
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "init-db.ts"],
   "exclude": ["node_modules", "dist", "build-entities.ts"] // Luôn loại trừ các thư mục này
 }

@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../data-source/data-source.service';
 import { BcryptService } from '../auth/bcrypt.service';
-const initJson = require('../bootstrap/init.json');
+import * as fs from 'fs';
+import * as path from 'path';
+
+const initJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/bootstrap/init.json'), 'utf8'));
 
 @Injectable()
 export class DefaultDataService {

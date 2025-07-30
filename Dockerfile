@@ -22,4 +22,4 @@ RUN yarn build
 EXPOSE 1105
 
 # Start command
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]

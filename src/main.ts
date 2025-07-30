@@ -13,13 +13,13 @@ import { GraphqlService } from './graphql/graphql.service';
 async function bootstrap() {
   const logger = new Logger('Main');
 
-  const script = `ts-node ${path.resolve(__dirname, '../', 'init-db.ts')}`;
+  const script = `node ${path.resolve(__dirname, '../../init-db.js')}`;
   try {
     execSync(script, { stdio: 'inherit' });
     logger.debug('Build file js thành công');
     buildToJs({
       targetDir: path.resolve('src/entities'),
-      outDir: path.resolve('dist/entities'),
+      outDir: path.resolve('dist/src/entities'),
     });
   } catch (err) {
     logger.error('Lỗi khi chạy shell script:', err);

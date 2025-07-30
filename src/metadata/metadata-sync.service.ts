@@ -96,7 +96,7 @@ export class MetadataSyncService {
       await this.pullMetadataFromDb();
       buildToJs({
         targetDir: path.resolve('src/entities'),
-        outDir: path.resolve('dist/entities'),
+        outDir: path.resolve('dist/src/entities'),
       });
       await this.autoService.clearMigrationsTable();
       generateMigrationFile();

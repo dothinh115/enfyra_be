@@ -92,7 +92,7 @@ import { SystemProtectionService } from './dynamic-repo/system-protection.servic
     { provide: APP_INTERCEPTOR, useClass: HideFieldInterceptor },
   ],
   exports: [
-    RabbitMQRegistry,
+    // RabbitMQRegistry,
     DataSourceModule,
     JwtModule,
     SchemaReloadService,

@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
-    "outDir": "dist/entities",
+    "outDir": "dist/src/entities",
     "rootDir": "src/entities",
     "strict": false,
     "esModuleInterop": true,

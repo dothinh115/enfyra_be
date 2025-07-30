@@ -4,7 +4,7 @@ import { createDataSource } from '../data-source/data-source';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntitySchema, EntityTarget, Repository } from 'typeorm';
 
-const entityDir = path.resolve('dist', 'entities');
+const entityDir = path.resolve('dist', 'src', 'entities');
 
 @Injectable()
 export class DataSourceService implements OnModuleInit {
