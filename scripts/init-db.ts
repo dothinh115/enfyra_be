@@ -7,7 +7,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const metadata = JSON.parse(
-  fs.readFileSync(path.resolve('./snapshot.json'), 'utf8'),
+  fs.readFileSync(path.resolve(__dirname, '../snapshot.json'), 'utf8'),
 );
 
 function capitalize(str: string): string {
@@ -123,7 +123,7 @@ async function writeEntitiesFromSnapshot() {
     manipulationSettings: { quoteKind: QuoteKind.Single },
   });
 
-  const entitiesDir = path.resolve('src/entities');
+  const entitiesDir = path.resolve(__dirname, '../src/entities');
 
   if (!fs.existsSync(entitiesDir))
     fs.mkdirSync(entitiesDir, { recursive: true });
@@ -390,7 +390,7 @@ async function main() {
     username: DB_USERNAME,
     password: DB_PASSWORD,
     database: DB_NAME,
-    entities: [path.resolve('src/entities/*.entity.ts')],
+    entities: [path.resolve(__dirname, '../src/entities/*.entity.ts')],
     synchronize: true,
     logging: false,
   });

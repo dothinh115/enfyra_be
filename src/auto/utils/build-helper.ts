@@ -11,7 +11,7 @@ export function buildToJs({
   targetDir: string;
   outDir: string;
 }) {
-  const script = `npx node ${path.resolve('build-entities.js')} -t ${targetDir} -o ${outDir}`;
+  const script = `npx node ${path.resolve('scripts/build-entities.js')} -t ${targetDir} -o ${outDir}`;
   logger.log('Chuẩn bị build file js');
   logger.log('script', script);
 

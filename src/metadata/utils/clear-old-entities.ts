@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export function clearOldEntitiesJs() {
-  const directory = path.resolve('dist', 'entities');
+  const directory = path.resolve('dist', 'src', 'entities');
 
   if (!fs.existsSync(directory)) return;
 
