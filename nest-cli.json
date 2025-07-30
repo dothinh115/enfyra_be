@@ -8,6 +8,10 @@
       {
         "include": "**/*.json", 
         "exclude": "**/node_modules/**" 
+      },
+      {
+        "include": "data/**/*",
+        "outDir": "dist"
       }
     ]
   }
