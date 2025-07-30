@@ -67,7 +67,7 @@ export class RouteCacheService {
 
   async loadAndCacheRoutes(): Promise<any[]> {
     const routes = await this.loadRoutes();
-    await this.redisLockService.set(GLOBAL_ROUTES_KEY, routes, 60000);
+    await this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 60000);
     return routes;
   }
 
