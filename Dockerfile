@@ -1,5 +1,5 @@
 # Dockerfile for Enfyra Backend
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Install system dependencies
 RUN apk add --no-cache python3 make g++ sqlite
