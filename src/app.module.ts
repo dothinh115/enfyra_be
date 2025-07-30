@@ -73,7 +73,7 @@ import { SystemProtectionService } from './dynamic-repo/system-protection.servic
     HandlerExecutorModule,
   ],
   providers: [
-    RabbitMQRegistry,
+    // RabbitMQRegistry,
     JwtStrategy,
     HideFieldInterceptor,
     SchemaStateService,
