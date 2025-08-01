@@ -28,7 +28,7 @@ export class HandlerExecutorService {
         isDone = true;
         child.removeAllListeners();
         try {
-          child.kill();
+          await child.kill();
         } catch (e) {
           console.warn('Failed to kill child on timeout', e);
         }

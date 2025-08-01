@@ -31,7 +31,7 @@ export class DynamicService {
       const result = await this.handlerExecutorService.run(
         scriptCode,
         req.routeData.context,
-        7000,
+        15000,
       );
 
       return result;
