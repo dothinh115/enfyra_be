@@ -105,5 +105,9 @@ ${queryDefs}
 }
 `;
 
+  console.log('=== GENERATED GRAPHQL SCHEMA ===');
+  console.log(fullTypeDefs);
+  console.log('=== END SCHEMA ===');
+
   return fullTypeDefs;
 }
