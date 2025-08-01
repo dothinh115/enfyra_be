@@ -87,13 +87,18 @@ export class GraphqlService implements OnApplicationBootstrap {
   }
 
   async reloadSchema() {
-    const schema = await this.schemaGenerator();
+    try {
+      const schema = await this.schemaGenerator();
 
-    this.yogaApp = createYoga({
-      schema,
-      graphqlEndpoint: '/graphql',
-      graphiql: true,
-    });
+      this.yogaApp = createYoga({
+        schema,
+        graphqlEndpoint: '/graphql',
+        graphiql: true,
+      });
+    } catch (error) {
+      console.error('Error reloading GraphQL schema:', error);
+      throw error;
+    }
   }
 
   getYogaInstance() {
