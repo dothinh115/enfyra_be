@@ -2,20 +2,21 @@ name: Deploy to VPS
 on:
   push:
     branches: [main]
-  jobs:
-    deploy:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Deploy to VPS
-          uses: appleboy/ssh-action@v0.1.5
-          with:
-            host: ${{ secrets.VPS_HOST }}
-            username: ${{ secrets.VPS_USER }}
-            password: ${{ secrets.VPS_PASSWORD }}
-            script: |
-              cd /apps/enfyra-backend
-              git pull origin main
-              docker build -t enfyra-backend:latest .
-              docker save enfyra-backend:latest | microk8s ctr image import -
-              microk8s kubectl rollout restart deployment/enfyra-backend
-              microk8s kubectl rollout status deployment/enfyra-backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            cd /apps/enfyra-backend
+            git pull origin main
+            docker build -t enfyra-backend:latest .
+            docker save enfyra-backend:latest | microk8s ctr image import -
+            microk8s kubectl rollout restart deployment/enfyra-backend
+            microk8s kubectl rollout status deployment/enfyra-backend
