@@ -15,9 +15,9 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           script: |
             cd /apps/enfyra-backend
-            git stash
+            git reset --hard HEAD
+            git clean -fd
             git pull origin main
-            git stash pop || true
             docker build -t enfyra-backend:latest .
             docker save enfyra-backend:latest | microk8s ctr image import -
             microk8s kubectl rollout restart deployment/enfyra-backend
