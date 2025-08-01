@@ -69,7 +69,7 @@ import { SystemProtectionService } from './dynamic-repo/system-protection.servic
     MeModule,
     DynamicModule,
     BootstrapModule,
-    GraphqlModule,
+    // GraphqlModule,
     HandlerExecutorModule,
   ],
   providers: [
