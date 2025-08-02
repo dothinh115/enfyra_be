@@ -46,9 +46,14 @@ jobs:
             # Docker cleanup
             echo "=== Docker Cleanup ==="
 
-            # Remove ALL old project images (keep only current deploy)
-            echo "Removing ALL old $PROJECT_NAME Docker images..."
-            docker images $PROJECT_NAME --format "{{.Repository}}:{{.Tag}}" | tail -n +2 | xargs -r docker rmi -f || true
+            # Get current running image tag from K8s deployment
+            echo "Getting current running image tag..."
+            CURRENT_IMAGE=$(microk8s.kubectl get deployment ${PROJECT_NAME}-deployment -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
+            echo "Current running image: $CURRENT_IMAGE"
+            
+            # Remove old project images (keep only current deploy and 1 previous for rollback)
+            echo "Removing old $PROJECT_NAME Docker images (keeping current + 1 previous)..."
+            docker images $PROJECT_NAME --format "{{.Repository}}:{{.Tag}}" | grep -v "$(echo $CURRENT_IMAGE | cut -d':' -f2)" | tail -n +2 | xargs -r docker rmi -f || true
 
 
             # Remove ALL localhost:32000 registry images (they're cached locally)
@@ -70,9 +75,14 @@ jobs:
             # MicroK8s cleanup
             echo "=== MicroK8s Cleanup ==="
 
-            # Remove ALL old project images from containerd (keep only current)
-            echo "Removing ALL old $PROJECT_NAME images from containerd..."
-            microk8s ctr images list -q | grep "$PROJECT_NAME:" | tail -n +2 | xargs -r microk8s ctr images remove || true
+            # Remove old project images from containerd (keep current + 1 previous)
+            echo "Removing old $PROJECT_NAME images from containerd (keeping current + 1 previous)..."
+            if [ ! -z "$CURRENT_IMAGE" ]; then
+              CURRENT_TAG=$(echo $CURRENT_IMAGE | cut -d':' -f2)
+              microk8s ctr images list -q | grep "$PROJECT_NAME:" | grep -v "$CURRENT_TAG" | tail -n +2 | xargs -r microk8s ctr images remove || true
+            else
+              microk8s ctr images list -q | grep "$PROJECT_NAME:" | tail -n +2 | xargs -r microk8s ctr images remove || true
+            fi
 
 
             # Aggressive registry cleanup (remove ALL old images except current)
@@ -90,9 +100,12 @@ jobs:
             echo "Pruning containerd references..."
             microk8s ctr content prune references || true
 
-            # NUCLEAR: Remove ALL project images to break ALL dependencies
-            echo "NUCLEAR: Removing ALL $PROJECT_NAME images..."
-            microk8s ctr images list -q | grep "$PROJECT_NAME:" | xargs -r microk8s ctr images remove || true
+            # SAFE: Remove old project images (keep current + 1 previous)
+            echo "SAFE: Removing old $PROJECT_NAME images (keeping current + 1 previous)..."
+            if [ ! -z "$CURRENT_IMAGE" ]; then
+              CURRENT_TAG=$(echo $CURRENT_IMAGE | cut -d':' -f2)
+              microk8s ctr images list -q | grep "$PROJECT_NAME:" | grep -v "$CURRENT_TAG" | tail -n +2 | xargs -r microk8s ctr images remove || true
+            fi
 
             # NUCLEAR: Remove ALL registry images  
             echo "NUCLEAR: Removing ALL registry images..."
