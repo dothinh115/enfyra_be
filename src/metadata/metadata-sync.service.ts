@@ -93,16 +93,26 @@ export class MetadataSyncService {
     type: 'create' | 'update';
   }) {
     try {
-      await this.pullMetadataFromDb();
+      await Promise.all([
+        this.pullMetadataFromDb(),
+        this.autoService.clearMigrationsTable(),
+      ]);
+
       buildToJs({
         targetDir: path.resolve('src/entities'),
         outDir: path.resolve('dist/src/entities'),
       });
-      await this.autoService.clearMigrationsTable();
-      generateMigrationFile();
-      runMigration();
-      await this.dataSourceService.reloadDataSource();
+
+      await Promise.all([
+        this.dataSourceService.reloadDataSource(),
+        Promise.resolve(generateMigrationFile()),
+      ]);
+      
+      // Reload GraphQL schema sau khi DataSource đã được reload
       await this.graphqlService.reloadSchema();
+
+      runMigration();
+
       const version = await this.schemaHistoryService.backup();
       return version;
     } catch (err) {

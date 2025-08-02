@@ -37,9 +37,9 @@ export function generateTypeDefsFromTables(
       console.warn('Skipping table with invalid name:', table);
       continue;
     }
-    
+
     const typeName = table.name;
-    
+
     // Skip if already processed
     if (processedTypes.has(typeName)) {
       console.warn('Skipping duplicate type:', typeName);
@@ -73,22 +73,25 @@ export function generateTypeDefsFromTables(
         console.warn('Skipping relation with invalid propertyName:', rel);
         continue;
       }
-      
+
       // Skip relation if no target metadata or table name
       if (!rel.inverseEntityMetadata?.tableName) {
-        console.warn('Skipping relation with missing target metadata:', rel.propertyName);
+        console.warn(
+          'Skipping relation with missing target metadata:',
+          rel.propertyName,
+        );
         continue;
       }
-      
+
       const relName = rel.propertyName;
       const targetType = rel.inverseEntityMetadata.tableName;
-      
+
       // Skip if target type same as current type (circular reference)
       if (targetType === typeName) {
         console.warn('Skipping circular reference:', relName, targetType);
         continue;
       }
-      
+
       const isArray = rel.isOneToMany || rel.isManyToMany;
 
       if (isArray) {
@@ -135,10 +138,5 @@ type Query {
 ${queryDefs}
 }
 `;
-
-  console.log('=== GENERATED GRAPHQL SCHEMA ===');
-  console.log(fullTypeDefs);
-  console.log('=== END SCHEMA ===');
-
   return fullTypeDefs;
 }
