@@ -127,7 +127,7 @@ export class MetadataSyncService {
       );
       await this.schemaHistoryService.restore({
         entityName: options?.entityName,
-        type: options.type,
+        type: options?.type,
       });
       this.logger.error('🛑 THROWING error after restore');
 
