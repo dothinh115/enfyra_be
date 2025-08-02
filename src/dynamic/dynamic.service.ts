@@ -28,10 +28,19 @@ export class DynamicService {
       }
 
       const scriptCode = userHandler || defaultHandler;
+
+      // Increase timeout for table_definition operations
+      const isTableDefinitionOperation =
+        req.routeData.mainTable?.name === 'table_definition' ||
+        req.routeData.targetTables?.some(
+          (table) => table.name === 'table_definition',
+        );
+      const timeout = isTableDefinitionOperation ? 30000 : 10000;
+
       const result = await this.handlerExecutorService.run(
         scriptCode,
         req.routeData.context,
-        15000,
+        timeout,
       );
 
       return result;
