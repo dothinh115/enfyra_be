@@ -14,38 +14,43 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           script: |
-            # Update source code in /apps/enfyra-backend
-            cd /apps/enfyra-backend
+            # Set project variables
+            export PROJECT_NAME="enfyra-backend"
+            export APP_DIR="/apps/$PROJECT_NAME"
+            export DEPLOYMENT_DIR="/deployments/$PROJECT_NAME"
+
+            # Update source code
+            cd $APP_DIR
             git reset --hard HEAD
             git clean -fd
             git pull origin main
             export IMAGE_TAG=$(git rev-parse --short HEAD)
-            docker build -t enfyra-backend:$IMAGE_TAG .
+            docker build -t $PROJECT_NAME:$IMAGE_TAG .
 
             # Detect K8s mode early
-            export K8S_MODE=$(yq '.kubernetes.provider' ~/configs/enfyra-backend.yaml 2>/dev/null || echo "microk8s")
+            export K8S_MODE=$(yq ".kubernetes.provider" ~/configs/$PROJECT_NAME.yaml 2>/dev/null || echo "microk8s")
             echo "K8S_MODE detected: $K8S_MODE"
 
             # Import image to MicroK8s  
             if [ "$K8S_MODE" = "microk8s" ]; then
-              echo "=== Importing image enfyra-backend:$IMAGE_TAG to MicroK8s ==="
+              echo "=== Importing image $PROJECT_NAME:$IMAGE_TAG to MicroK8s ==="
               echo "Saving Docker image to tar file..."
-              docker save enfyra-backend:$IMAGE_TAG -o /tmp/enfyra-backend-$IMAGE_TAG.tar
-              echo "Tar file created: $(ls -lh /tmp/enfyra-backend-$IMAGE_TAG.tar)"
+              docker save $PROJECT_NAME:$IMAGE_TAG -o /tmp/$PROJECT_NAME-$IMAGE_TAG.tar
+              echo "Tar file created: $(ls -lh /tmp/$PROJECT_NAME-$IMAGE_TAG.tar)"
               
               echo "Importing to MicroK8s..."
-              microk8s ctr image import /tmp/enfyra-backend-$IMAGE_TAG.tar
+              microk8s ctr image import /tmp/$PROJECT_NAME-$IMAGE_TAG.tar
               
               echo "Verifying import..."
-              microk8s ctr images list | grep enfyra-backend:$IMAGE_TAG || echo "ERROR: Image not found after import!"
+              microk8s ctr images list | grep $PROJECT_NAME:$IMAGE_TAG || echo "ERROR: Image not found after import!"
               
               echo "Cleaning up..."
-              rm -f /tmp/enfyra-backend-$IMAGE_TAG.tar
+              rm -f /tmp/$PROJECT_NAME-$IMAGE_TAG.tar
               echo "=== Image import completed ==="
             fi
 
             # Setup Kubernetes config
-            cd /deployments/enfyra-backend
+            cd $DEPLOYMENT_DIR
 
             if [ "$K8S_MODE" = "microk8s" ]; then
               echo "Using MicroK8s configuration"
@@ -62,45 +67,45 @@ jobs:
             # Run Pulumi deployment with new image tag
             pulumi version
             pulumi login file://$(pwd)/.pulumi
-            pulumi stack select enfyra-backend
+            pulumi stack select $PROJECT_NAME
 
             # Clear any existing locks
             pulumi cancel || true
 
-            pulumi config set image enfyra-backend:$IMAGE_TAG
+            pulumi config set image $PROJECT_NAME:$IMAGE_TAG
             pulumi up --yes
 
             # Cleanup old Docker images (keep latest 3)
             echo "=== Cleaning up old Docker images ==="
             echo "Current Docker images:"
-            docker images enfyra-backend --format "table {{.Repository}}:{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" | grep -v REPOSITORY
+            docker images $PROJECT_NAME --format "table {{.Repository}}:{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" | grep -v REPOSITORY
 
-            # Remove old Docker enfyra-backend images except latest 3 
+            # Remove old Docker enfyra-cms images except latest 3 
             echo "Removing old Docker images (keeping latest 3)..."
-            docker images enfyra-backend --format "{{.Repository}}:{{.Tag}}" | grep -v latest | tail -n +4 | xargs -r docker rmi -f || true
+            docker images $PROJECT_NAME --format "{{.Repository}}:{{.Tag}}" | grep -v latest | tail -n +4 | xargs -r docker rmi -f || true
 
             # Cleanup old K8s images based on provider
             if [ "$K8S_MODE" = "microk8s" ]; then
               echo "Cleaning up old MicroK8s images..."
-              microk8s ctr images list -q | grep enfyra-backend | grep -v latest | tail -n +4 | xargs -r microk8s ctr images remove || true
+              microk8s ctr images list -q | grep $PROJECT_NAME | grep -v latest | tail -n +4 | xargs -r microk8s ctr images remove || true
             else
               echo "Cleaning up old kubeadm/containerd images..."
-              # List all enfyra-backend images, keep latest 3, remove older ones
-              crictl images | grep enfyra-backend | grep -v '<none>' | sort -k4 -r | tail -n +4 | awk '{print $3}' | xargs -r crictl rmi || true
+              # List all project images, keep latest 3, remove older ones
+              crictl images | grep $PROJECT_NAME | grep -v '<none>' | sort -k4 -r | tail -n +4 | awk '{print $3}' | xargs -r crictl rmi || true
             fi
 
             # Show remaining images after cleanup
             echo "=== Remaining images after cleanup ==="
             if [ "$K8S_MODE" = "microk8s" ]; then
               echo "MicroK8s images:"
-              microk8s ctr images list | grep enfyra-backend || echo "No enfyra-backend images found"
+              microk8s ctr images list | grep $PROJECT_NAME || echo "No $PROJECT_NAME images found"
             else
               echo "Containerd images:"
-              crictl images | grep enfyra-backend || echo "No enfyra-backend images found"
+              crictl images | grep $PROJECT_NAME || echo "No $PROJECT_NAME images found"
             fi
 
             echo "Docker images:"
-            docker images enfyra-backend --format "table {{.Repository}}:{{.Tag}}\\t{{.CreatedAt}}\\t{{.Size}}" || echo "No enfyra-backend images found"
+            docker images $PROJECT_NAME --format "table {{.Repository}}:{{.Tag}}\\t{{.CreatedAt}}\\t{{.Size}}" || echo "No $PROJECT_NAME images found"
 
             # Clean up Docker system (dangling images, unused networks, etc)
             echo "Running Docker system prune..."
