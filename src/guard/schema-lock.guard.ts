@@ -24,7 +24,7 @@ export class SchemaLockGuard implements CanActivate {
       console.log('🔁 Reloading schema, waiting...');
       if (waited >= maxWaitTimeMs) {
         throw new ServiceUnavailableException(
-          'Schema đang được reload, vui lòng thử lại sau.',
+          'Schema is being reloaded, please try again later.',
         );
       }
       await this.commonService.delay(intervalMs);

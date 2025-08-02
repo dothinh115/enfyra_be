@@ -33,17 +33,17 @@ export class BootstrapService implements OnApplicationBootstrap {
     for (let i = 0; i < maxRetries; i++) {
       try {
         await settingRepo.query('SELECT 1');
-        this.logger.log('Kết nối tới DB thành công.');
+        this.logger.log('Database connection successful.');
         return;
       } catch (error) {
-        this.logger.warn(`Chưa kết nối được DB, thử lại sau ${delayMs}ms...`);
+        this.logger.warn(`Unable to connect to DB, retrying after ${delayMs}ms...`);
         await this.commonService.delay(delayMs);
         await this.dataSourceService.reloadDataSource();
         settingRepo =
           this.dataSourceService.getRepository('setting_definition');
       }
     }
-    throw new Error(`Không thể kết nối tới DB sau ${maxRetries} lần thử.`);
+    throw new Error(`Unable to connect to DB after ${maxRetries} attempts.`);
   }
 
   async onApplicationBootstrap() {
@@ -51,7 +51,7 @@ export class BootstrapService implements OnApplicationBootstrap {
     try {
       await this.waitForDatabaseConnection();
     } catch (err) {
-      this.logger.error('❌ Lỗi khi bootstrap ứng dụng:', err);
+      this.logger.error('❌ Error during application bootstrap:', err);
     }
     let settingRepo =
       this.dataSourceService.getRepository('setting_definition');
@@ -70,7 +70,7 @@ export class BootstrapService implements OnApplicationBootstrap {
       await settingRepo.update(setting.id, { isInit: true });
       schemaHistoryRepo =
         this.dataSourceService.getRepository('schema_history');
-      this.logger.debug('Init thành công');
+      this.logger.debug('Initialization successful');
 
       const lastVersion: any = await schemaHistoryRepo.findOne({
         where: {},
@@ -90,7 +90,7 @@ export class BootstrapService implements OnApplicationBootstrap {
       );
       if (acquired) {
         await this.metadataSyncService.syncAll();
-        this.logger.warn('set aquired thanh cong', acquired);
+        this.logger.warn('Lock acquired successfully', acquired);
         schemaHistoryRepo =
           this.dataSourceService.getRepository('schema_history');
         const lastVersion: any = await schemaHistoryRepo.findOne({

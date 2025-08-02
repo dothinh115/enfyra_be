@@ -81,20 +81,20 @@ export class CommonService {
 
     const files = fs.readdirSync(entityDir).filter((f) => f.endsWith('.js'));
 
-    // 1️⃣ Xoá cache tất cả trước
+    // 1️⃣ Clear all cache first
     for (const file of files) {
       const fullPath = path.join(entityDir, file);
       const resolved = require.resolve(fullPath);
       if (require.cache[resolved]) delete require.cache[resolved];
     }
 
-    // 2️⃣ Require tất cả để populate lại cache đúng thứ tự
+    // 2️⃣ Require all to repopulate cache in correct order
     for (const file of files) {
       const fullPath = path.join(entityDir, file);
       require(fullPath);
     }
 
-    // 3️⃣ Extract export từ cache
+    // 3️⃣ Extract exports from cache
     for (const file of files) {
       const fullPath = path.join(entityDir, file);
       const module = require(fullPath);
@@ -142,7 +142,7 @@ export class CommonService {
   checkTsErrors(dirPath: string, tsconfigPath = 'tsconfig.json'): void {
     const configPath = ts.findConfigFile(tsconfigPath, ts.sys.fileExists);
     if (!configPath)
-      throw new Error(`Không tìm thấy tsconfig tại ${tsconfigPath}`);
+      throw new Error(`tsconfig not found at ${tsconfigPath}`);
 
     const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
     const parsedConfig = ts.parseJsonConfigFileContent(
@@ -173,16 +173,16 @@ export class CommonService {
       });
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
-        console.error(`🗑️ Đã xoá file lỗi: ${filePath}`);
+        console.error(`🗑️ Deleted error file: ${filePath}`);
       }
       console.error(
-        `❌ Lỗi TypeScript trong file ${filePath}:\n${errors.join('\n')}`,
+        `❌ TypeScript error in file ${filePath}:\n${errors.join('\n')}`,
       );
       hasError = true;
     }
 
     if (hasError)
-      throw new Error('Một hoặc nhiều file có lỗi TypeScript đã bị xoá.');
+      throw new Error('One or more files with TypeScript errors have been deleted.');
   }
 
   async removeOldFile(filePathOrPaths: string | string[], logger: Logger) {
@@ -195,7 +195,7 @@ export class CommonService {
         const stat = await fs.promises.stat(targetPath);
         if (stat.isFile()) {
           await fs.promises.unlink(targetPath);
-          logger.log(`🧹 Đã xoá file: ${targetPath}`);
+          logger.log(`🧹 Deleted file: ${targetPath}`);
         } else if (stat.isDirectory()) {
           const files = await fs.promises.readdir(targetPath);
           for (const file of files) {
@@ -203,12 +203,12 @@ export class CommonService {
             const fileStat = await fs.promises.stat(fullPath);
             if (fileStat.isFile()) {
               await fs.promises.unlink(fullPath);
-              logger.log(`🧹 Đã xoá file trong thư mục: ${fullPath}`);
+              logger.log(`🧹 Deleted file in directory: ${fullPath}`);
             }
           }
         }
       } catch (error) {
-        logger.error(`❌ Lỗi khi xoá file: ${error.message}`);
+        logger.error(`❌ Error deleting file: ${error.message}`);
         throw error;
       }
     }
@@ -231,14 +231,14 @@ export class CommonService {
       const item = arr[i];
       const currentPath = `${path}[${i}]`;
 
-      // 🚨 Nếu là record mới (chưa có id) mà isSystem = true → báo lỗi
+      // 🚨 If it's a new record (no id) and isSystem = true → throw error
       if (!item?.id && item?.isSystem === true) {
         throw new Error(
-          `Không được tạo mới ${currentPath} với isSystem = true`,
+          `Cannot create new ${currentPath} with isSystem = true`,
         );
       }
 
-      // Tiếp tục kiểm tra các nested object
+      // Continue checking nested objects
       this.assertNoSystemFlagDeepRecursive(item, currentPath);
     }
   }

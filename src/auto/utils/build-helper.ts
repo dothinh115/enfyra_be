@@ -12,13 +12,13 @@ export function buildToJs({
   outDir: string;
 }) {
   const script = `npx node ${path.resolve('scripts/build-entities.js')} -t ${targetDir} -o ${outDir}`;
-  logger.log('Chuẩn bị build file js');
+  logger.log('Preparing to build JavaScript files');
   logger.log('script', script);
 
   try {
     execSync(script, { stdio: 'inherit' });
-    logger.debug('Build file js thành công');
+    logger.debug('JavaScript file build successful');
   } catch (err) {
-    logger.error('Lỗi khi chạy shell script:', err);
+    logger.error('Error running shell script:', err);
   }
 }

@@ -76,7 +76,7 @@ function main() {
     'utf-8',
   );
 
-  console.log('✅ snapshot.json đã được ghi thành công dưới dạng 1 dòng!');
+  console.log('✅ snapshot.json has been successfully written as a single line!');
 }
 
 main();

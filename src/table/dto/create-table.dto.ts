@@ -103,7 +103,7 @@ export class CreateRelationDto {
   @Transform(({ obj }) => {
     if (obj.isEager === true && obj.isInverseEager === true) {
       throw new Error(
-        'Không được bật cả isEager và isInverseEager cùng lúc để tránh eager 2 chiều.',
+        'Cannot enable both isEager and isInverseEager simultaneously to avoid bidirectional eager loading.',
       );
     }
     return obj.isEager;
@@ -130,7 +130,7 @@ export class CreateRelationDto {
   @Transform(({ obj }) => {
     if (obj.isEager === true && obj.isInverseEager === true) {
       throw new Error(
-        'Không được bật cả isEager và isInverseEager cùng lúc để tránh eager 2 chiều.',
+        'Cannot enable both isEager and isInverseEager simultaneously to avoid bidirectional eager loading.',
       );
     }
     return obj.isEager;

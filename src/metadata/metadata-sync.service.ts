@@ -103,28 +103,32 @@ export class MetadataSyncService {
         outDir: path.resolve('dist/src/entities'),
       });
 
+      // Bước 3: Song song reload services (nặng) và migration flow (nhẹ)
       await Promise.all([
-        this.dataSourceService.reloadDataSource(),
-        Promise.resolve(generateMigrationFile()),
+        // Services reload (I/O bound)
+        Promise.all([
+          this.dataSourceService.reloadDataSource(),
+          this.graphqlService.reloadSchema(),
+        ]),
+        // Migration flow (CPU bound)
+        (async () => {
+          generateMigrationFile();
+          runMigration();
+        })(),
       ]);
-      
-      // Reload GraphQL schema sau khi DataSource đã được reload
-      await this.graphqlService.reloadSchema();
-
-      runMigration();
 
       const version = await this.schemaHistoryService.backup();
       return version;
     } catch (err) {
       this.logger.error(
-        '❌ Lỗi khi đồng bộ metadata, đang khôi phục schema trước đó...',
+        '❌ Error synchronizing metadata, restoring previous schema...',
         err,
       );
       await this.schemaHistoryService.restore({
         entityName: options?.entityName,
         type: options.type,
       });
-      this.logger.error('🛑 THROWING lỗi sau khi restore');
+      this.logger.error('🛑 THROWING error after restore');
 
       throw new BadRequestException(
         err.message ??

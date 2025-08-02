@@ -37,7 +37,7 @@ export function addRelationToClass({
 
   const decorators = [];
 
-  // ✅ Tự động index với many-to-one và one-to-one (không nghịch)
+  // ✅ Auto index for many-to-one and one-to-one (non-inverse)
   const shouldAddIndex =
     rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse);
   if (shouldAddIndex) {

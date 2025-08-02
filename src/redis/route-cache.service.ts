@@ -52,7 +52,7 @@ export class RouteCacheService {
         .getMany(),
     ]);
 
-    // Merge global hooks vào từng route
+    // Merge global hooks into each route
     for (const route of routes) {
       route.hooks = [
         ...(globalHooks || []),

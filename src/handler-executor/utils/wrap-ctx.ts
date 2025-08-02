@@ -65,7 +65,7 @@ export function wrapCtx(
     }
 
     if (key === '$user') {
-      wrapped[key] = toPlainSafe(val); // Giữ nguyên Date ở đây
+      wrapped[key] = toPlainSafe(val); // Keep Date as is here
       continue;
     }
 
@@ -83,13 +83,13 @@ export function wrapCtx(
   return wrapped;
 }
 
-// ✅ Giữ lại Date, bỏ function/symbol, chống vòng lặp
+// ✅ Keep Date, remove function/symbol, prevent circular loops
 function toPlainSafe(obj: any, seen = new WeakSet()): any {
   if (obj === null || typeof obj !== 'object') return obj;
   if (seen.has(obj)) return '[Circular]';
   seen.add(obj);
 
-  // Giữ nguyên Date object
+  // Keep Date object as is
   if (obj instanceof Date) return obj;
 
   if (Array.isArray(obj)) {

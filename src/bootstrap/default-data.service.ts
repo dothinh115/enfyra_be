@@ -25,21 +25,21 @@ export class DefaultDataService {
         (Array.isArray(rawRecords) && rawRecords.length === 0)
       ) {
         this.logger.debug(
-          `❎ Bảng '${tableName}' không có dữ liệu mặc định, bỏ qua.`,
+          `❎ Table '${tableName}' has no default data, skipping.`,
         );
         continue;
       }
 
       if (count > 0) {
-        this.logger.debug(`⏩ Bảng '${tableName}' đã có dữ liệu, bỏ qua.`);
+        this.logger.debug(`⏩ Table '${tableName}' already has data, skipping.`);
         continue;
       }
 
-      this.logger.log(`📥 Khởi tạo bảng '${tableName}'`);
+      this.logger.log(`📥 Initializing table '${tableName}'`);
 
       let records = Array.isArray(rawRecords) ? rawRecords : [rawRecords];
 
-      // Plugin: xử lý đặc biệt nếu cần
+      // Plugin: special handling if needed
       if (tableName === 'user_definition') {
         records = await Promise.all(
           records.map(async (r) => ({
@@ -59,7 +59,7 @@ export class DefaultDataService {
             });
             if (!mainTable) {
               this.logger.warn(
-                `⚠️ Không tìm thấy bảng '${r.mainTable}' cho route ${r.path}, bỏ qua.`,
+                `⚠️ Table '${r.mainTable}' not found for route ${r.path}, skipping.`,
               );
               return null;
             }
@@ -69,7 +69,7 @@ export class DefaultDataService {
             };
           }),
         );
-        records = records.filter(Boolean); // bỏ undefined
+        records = records.filter(Boolean); // remove undefined
       }
 
       if (tableName === 'method_definition') {
@@ -77,7 +77,7 @@ export class DefaultDataService {
           this.dataSourceService.getRepository('setting_definition');
         const setting = await settingRepo.findOne({ where: {} });
         if (!setting) {
-          this.logger.warn(`⚠️ Không có setting để gán permission, bỏ qua.`);
+          this.logger.warn(`⚠️ No settings to assign permissions, skipping.`);
           continue;
         }
 
@@ -114,7 +114,7 @@ export class DefaultDataService {
 
               if (!route) {
                 this.logger.warn(
-                  `⚠️ Không tìm thấy route '${hook.route}' cho hook '${hook.name}', bỏ qua.`,
+                  `⚠️ Route '${hook.route}' not found for hook '${hook.name}', skipping.`,
                 );
                 return null;
               }
@@ -133,7 +133,7 @@ export class DefaultDataService {
                     !methodEntities.find((me: any) => me.method === m),
                 );
                 this.logger.warn(
-                  `⚠️ Không tìm thấy method(s) '${notFound.join(', ')}' cho hook '${hook.name}', bỏ qua.`,
+                  `⚠️ Method(s) '${notFound.join(', ')}' not found for hook '${hook.name}', skipping.`,
                 );
                 return null;
               }
@@ -151,7 +151,7 @@ export class DefaultDataService {
       const created = repo.create(records);
       await repo.save(created);
       this.logger.log(
-        `✅ Tạo mặc định '${tableName}' thành công (${records.length} bản ghi).`,
+        `✅ Successfully created default '${tableName}' (${records.length} records).`,
       );
     }
   }

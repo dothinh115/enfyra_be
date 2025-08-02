@@ -142,7 +142,7 @@ export function buildJoinTree({
       if (
         res.lastMeta.relations.some((r) => r.propertyName === col.propertyName)
       ) {
-        log.push?.(`- Skip column "${col.propertyName}" vì trùng với relation`);
+        log.push?.(`- Skip column "${col.propertyName}" because it conflicts with relation`);
         continue;
       }
       selectSet.add(`${res.alias}.${col.propertyName}`);

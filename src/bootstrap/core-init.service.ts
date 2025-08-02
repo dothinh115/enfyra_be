@@ -17,15 +17,15 @@ export class CoreInitService {
     for (let i = 0; i < maxRetries; i++) {
       try {
         await dataSource.query('SELECT 1');
-        this.logger.log('Kết nối tới DB thành công.');
+        this.logger.log('Database connection successful.');
         return;
       } catch (error) {
-        this.logger.warn(`Chưa kết nối được DB, thử lại sau ${delayMs}ms...`);
+        this.logger.warn(`Unable to connect to DB, retrying after ${delayMs}ms...`);
         await new Promise((res) => setTimeout(res, delayMs));
       }
     }
 
-    throw new Error(`Không thể kết nối tới DB sau ${maxRetries} lần thử.`);
+    throw new Error(`Unable to connect to DB after ${maxRetries} attempts.`);
   }
 
   async createInitMetadata(): Promise<void> {
@@ -40,7 +40,7 @@ export class CoreInitService {
       const tableNameToId: Record<string, number> = {};
       const tableDefRepo =
         this.dataSourceService.getRepository('table_definition');
-      // Phase 1: Insert bảng trắng
+      // Phase 1: Insert empty tables
       for (const [name, defRaw] of Object.entries(snapshot)) {
         const def = defRaw as any;
 
@@ -53,7 +53,7 @@ export class CoreInitService {
 
         if (exist) {
           tableNameToId[name] = exist.id;
-          this.logger.log(`⏩ Bỏ qua ${name}, đã tồn tại`);
+          this.logger.log(`⏩ Skip ${name}, already exists`);
         } else {
           const { columns, relations, ...rest } = def;
           const created = await queryRunner.manager.save(
@@ -61,11 +61,11 @@ export class CoreInitService {
             rest,
           );
           tableNameToId[name] = created.id;
-          this.logger.log(`✅ Tạo bảng trắng: ${name}`);
+          this.logger.log(`✅ Created empty table: ${name}`);
         }
       }
 
-      // Phase 2: Thêm column chưa có
+      // Phase 2: Add missing columns
       for (const [name, defRaw] of Object.entries(snapshot)) {
         const def = defRaw as any;
         const tableId = tableNameToId[name];
@@ -95,14 +95,14 @@ export class CoreInitService {
           }));
           await queryRunner.manager.save(columnEntity, toInsert);
           this.logger.log(
-            `📌 Thêm ${newColumns.length} column mới cho ${name}`,
+            `📌 Added ${newColumns.length} new columns for ${name}`,
           );
         } else {
-          this.logger.log(`⏩ Không cần thêm column nào cho ${name}`);
+          this.logger.log(`⏩ No columns to add for ${name}`);
         }
       }
 
-      // Phase 3: Thêm relation chưa có
+      // Phase 3: Add missing relations
       for (const [name, defRaw] of Object.entries(snapshot)) {
         const def = defRaw as any;
         const tableId = tableNameToId[name];
@@ -163,18 +163,18 @@ export class CoreInitService {
         if (newRelations.length) {
           await queryRunner.manager.save(relationEntity, newRelations);
           this.logger.log(
-            `📌 Thêm ${newRelations.length} relation mới cho ${name}`,
+            `📌 Added ${newRelations.length} new relations for ${name}`,
           );
         } else {
-          this.logger.log(`⏩ Không cần thêm relation nào cho ${name}`);
+          this.logger.log(`⏩ No relations to add for ${name}`);
         }
       }
 
       await queryRunner.commitTransaction();
-      this.logger.log('🎉 createInitMetadata hoàn tất!');
+      this.logger.log('🎉 createInitMetadata completed!');
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      this.logger.error('💥 Lỗi khi chạy createInitMetadata:', err);
+      this.logger.error('💥 Error running createInitMetadata:', err);
       throw err;
     } finally {
       await queryRunner.release();

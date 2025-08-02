@@ -15,24 +15,24 @@ export class DataSourceService implements OnModuleInit {
   constructor(private commonService: CommonService) {}
 
   async onModuleInit() {
-    this.logger.log('Chuẩn bị gán và init DataSource.');
+    this.logger.log('Preparing to assign and initialize DataSource.');
     await this.reloadDataSource();
-    this.logger.debug('Gán và init DataSource thành công!');
+    this.logger.debug('DataSource assignment and initialization successful!');
   }
 
   async reloadDataSource() {
-    this.logger.log('🔁 Chuẩn bị reload DataSource');
+    this.logger.log('🔁 Preparing to reload DataSource');
 
     try {
       const entities = await this.commonService.loadDynamicEntities(entityDir);
       const newDataSource = createDataSource(entities);
       await newDataSource.initialize();
-      this.logger.debug('✅ ReInit DataSource thành công!');
+      this.logger.debug('✅ DataSource reinitialization successful!');
 
       if (this.dataSource?.isInitialized) {
         await this.dataSource.destroy();
         this.clearMetadata();
-        this.logger.debug('✅ Destroy DataSource cũ thành công!');
+        this.logger.debug('✅ Old DataSource destroyed successfully!');
       }
       this.dataSource = newDataSource;
       entities.forEach((entityClass) => {
@@ -41,7 +41,7 @@ export class DataSourceService implements OnModuleInit {
       });
       return this.dataSource;
     } catch (error: any) {
-      this.logger.error('❌ Lỗi khi reInit DataSource:', error.message);
+      this.logger.error('❌ Error during DataSource reinitialization:', error.message);
       this.logger.error(error.stack || error);
       throw error;
     }
@@ -51,13 +51,13 @@ export class DataSourceService implements OnModuleInit {
     identifier: string | Function | EntitySchema<any>,
   ): Repository<Entity> | null {
     if (!this.dataSource?.isInitialized) {
-      throw new Error('DataSource chưa được khởi tạo!');
+      throw new Error('DataSource is not initialized!');
     }
 
     let metadata;
 
     if (typeof identifier === 'string') {
-      // Tìm theo tên bảng
+      // Find by table name
       metadata = this.dataSource.entityMetadatas.find(
         (meta) => meta.tableName === identifier,
       );
@@ -65,7 +65,7 @@ export class DataSourceService implements OnModuleInit {
       try {
         metadata = this.dataSource.getMetadata(identifier);
       } catch {
-        return null; // Không tìm thấy metadata
+        return null; // Metadata not found
       }
     }
 

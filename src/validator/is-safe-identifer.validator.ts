@@ -38,7 +38,7 @@ export function IsSafeIdentifier(validationOptions?: ValidationOptions) {
           );
         },
         defaultMessage(args: ValidationArguments) {
-          return `Tên "${args.value}" không hợp lệ: không được bắt đầu bằng số, chứa ký tự đặc biệt hoặc là từ khóa JavaScript.`;
+          return `Name "${args.value}" is invalid: cannot start with a number, contain special characters, or be a JavaScript keyword.`;
         },
       },
     });

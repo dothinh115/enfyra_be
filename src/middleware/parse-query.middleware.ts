@@ -12,7 +12,7 @@ export class ParseQueryMiddleware implements NestMiddleware {
         try {
           newQuery[key] = JSON.parse(req.query[key] as string);
         } catch {
-          // nếu không parse được thì bỏ qua
+          // skip if cannot parse
         }
       }
     }

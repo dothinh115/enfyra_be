@@ -4,7 +4,7 @@ let callCounter = 1;
 export function buildFunctionProxy(prefixPath: string): any {
   return new Proxy(function () {}, {
     get(_, prop: string | symbol) {
-      // Bỏ qua những property đặc biệt khi debug/log
+      // Skip special properties during debug/log
       if (
         prop === 'toJSON' ||
         prop === 'inspect' ||
@@ -14,7 +14,7 @@ export function buildFunctionProxy(prefixPath: string): any {
         return () => `[FunctionProxy: ${prefixPath}]`;
       }
 
-      // Cho phép gọi nested như $helpers.$bcrypt.hash
+      // Allow nested calls like $helpers.$bcrypt.hash
       const newPath = `${prefixPath}.${String(prop)}`;
       return buildFunctionProxy(newPath);
     },
@@ -46,7 +46,7 @@ export function buildCallableFunctionProxy(path: string) {
 }
 
 /**
- * Chờ phản hồi từ parent process
+ * Wait for response from parent process
  */
 function waitForParentResponse(callId: string): Promise<any> {
   return new Promise((resolve, reject) => {

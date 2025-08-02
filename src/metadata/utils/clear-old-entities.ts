@@ -14,12 +14,12 @@ export function clearOldEntitiesJs() {
     try {
       const stat = fs.statSync(fullPath);
 
-      // Đảm bảo chỉ xoá file thường và có đuôi .js
+      // Ensure only regular files with .js extension are deleted
       if (stat.isFile() && file.endsWith('.js')) {
         fs.unlinkSync(fullPath);
       }
     } catch (err) {
-      console.error(`❌ Lỗi khi xử lý: ${fullPath}`, err);
+      console.error(`❌ Error processing: ${fullPath}`, err);
     }
   }
 }

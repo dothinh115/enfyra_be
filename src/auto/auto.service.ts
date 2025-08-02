@@ -73,7 +73,7 @@ export class AutoService {
       });
     }
 
-    // Thêm các quan hệ thuận
+    // Add forward relations
     for (const rel of payload.relations || []) {
       addRelationToClass({
         classDeclaration,
@@ -84,7 +84,7 @@ export class AutoService {
       });
     }
 
-    // Thêm các quan hệ nghịch nếu có
+    // Add inverse relations if available
     if (inverseRelationMap?.has(payload.name)) {
       for (const rel of inverseRelationMap.get(payload.name)!) {
         addRelationToClass({
@@ -170,9 +170,9 @@ export class AutoService {
 
     if (exists) {
       await queryRunner.query('DELETE FROM migrations;');
-      this.logger.log('✅ Đã xoá sạch dữ liệu trong bảng migrations.');
+      this.logger.log('✅ Successfully cleared data in migrations table.');
     } else {
-      this.logger.warn('⚠️ Bảng migrations không tồn tại, bỏ qua xoá.');
+      this.logger.warn('⚠️ Migrations table does not exist, skipping deletion.');
     }
 
     await queryRunner.release();

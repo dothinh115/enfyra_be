@@ -10,18 +10,18 @@ const argv = yargs(hideBin(process.argv))
   .option('target', {
     alias: 't',
     type: 'array',
-    describe: 'Danh sách thư mục chứa file cần auto import',
+    describe: 'List of directories containing files for auto import',
     demandOption: true,
   })
   .option('scan', {
     alias: 's',
     type: 'array',
-    describe: 'Danh sách thư mục để quét export',
+    describe: 'List of directories to scan for exports',
     demandOption: true,
   })
   .help().argv;
 
-// ✅ CẤU HÌNH
+// ✅ CONFIGURATION
 const TARGET_DIRS = argv.target.map((d) => path.resolve(d));
 const SCAN_DIRS = argv.scan.map((d) => path.resolve(d));
 
@@ -99,12 +99,12 @@ function getMissingIdentifiers(sourceFile) {
   const declared = new Set();
   const imported = new Set();
 
-  // ✅ Import đã có
+  // ✅ Existing imports
   sourceFile.getImportDeclarations().forEach((decl) => {
     decl.getNamedImports().forEach((imp) => imported.add(imp.getName()));
   });
 
-  // ✅ Identifier bình thường
+  // ✅ Regular identifiers
   sourceFile.forEachDescendant((node) => {
     if (node.getKind() === SyntaxKind.Identifier) {
       const name = node.getText();
@@ -112,7 +112,7 @@ function getMissingIdentifiers(sourceFile) {
       if (!symbol && !imported.has(name)) used.add(name);
     }
 
-    // ✅ THÊM: check decorator (quan trọng)
+    // ✅ ADDED: check decorator (important)
     if (node.getKind() === SyntaxKind.Decorator) {
       const expr = node.getExpression();
       if (expr.getKind() === SyntaxKind.CallExpression) {
@@ -174,7 +174,7 @@ function applyAutoImports(sourceFile, missingNames, exportMap) {
 async function main() {
   const targetFiles = getAllFilesFromDirs(TARGET_DIRS);
   if (!targetFiles.length) {
-    console.warn('⚠️ Không tìm thấy file nào trong TARGET_DIRS.');
+    console.warn('⚠️ No files found in TARGET_DIRS.');
     return;
   }
 
@@ -199,12 +199,12 @@ async function main() {
       }
     },
     { concurrency: 4 },
-  ); // giới hạn 4 file cùng lúc
+  ); // limit 4 files at once
 
-  await project.save(); // 💾 Chỉ gọi save 1 lần
+  await project.save(); // 💾 Only call save once
 }
 
 main().catch((err) => {
-  console.error('❌ Lỗi:', err);
+  console.error('❌ Error:', err);
   process.exit(1);
 });

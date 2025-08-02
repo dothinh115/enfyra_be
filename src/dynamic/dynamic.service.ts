@@ -24,7 +24,7 @@ export class DynamicService {
       const defaultHandler = this.getDefaultHandler(req.method);
 
       if (!userHandler && !defaultHandler) {
-        throw new BadRequestException('Không có handler tương ứng');
+        throw new BadRequestException('No corresponding handler found');
       }
 
       const scriptCode = userHandler || defaultHandler;
@@ -45,7 +45,7 @@ export class DynamicService {
 
       return result;
     } catch (error) {
-      this.logger.error('❌ Lỗi khi chạy handler:', error.message);
+      this.logger.error('❌ Error running handler:', error.message);
       this.logger.debug(error.stack);
 
       throw new BadRequestException(`Script error: ${error.message}`);

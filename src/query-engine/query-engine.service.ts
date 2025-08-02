@@ -89,7 +89,7 @@ export class QueryEngine {
         );
       }
 
-      // === Meta tổng ===
+      // === Total Meta ===
       const metaParts = (meta || '').split(',').map((x) => x.trim());
       let totalCount = 0;
       let filterCount = 0;

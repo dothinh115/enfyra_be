@@ -76,7 +76,7 @@ export class SystemProtectionService {
       relations,
     });
 
-    if (!full) throw new Error('Không tìm thấy bản ghi hệ thống đầy đủ');
+    if (!full) throw new Error('Full system record not found');
     return full;
   }
 
@@ -103,7 +103,7 @@ export class SystemProtectionService {
       for (const id of oldSystemIds) {
         if (!newIds.includes(id)) {
           throw new Error(
-            `Không được xoá record hệ thống (id=${id}) trong quan hệ '${field}'`,
+            `Cannot delete system record (id=${id}) in relation '${field}'`,
           );
         }
       }
@@ -111,7 +111,7 @@ export class SystemProtectionService {
       for (const item of newCreated) {
         if (item?.isSystem) {
           throw new Error(
-            `Không được tạo record hệ thống mới trong quan hệ '${field}'`,
+            `Cannot create new system record in relation '${field}'`,
           );
         }
       }
@@ -144,7 +144,7 @@ export class SystemProtectionService {
     }
 
     if (operation === 'delete' && fullExisting?.isSystem) {
-      throw new Error('Không được xoá bản ghi hệ thống!');
+      throw new Error('Cannot delete system record!');
     }
 
     if (operation === 'update' && fullExisting?.isSystem) {
@@ -163,7 +163,7 @@ export class SystemProtectionService {
       const disallowed = changedFields.filter((f) => !allowed.includes(f));
       if (disallowed.length > 0) {
         throw new Error(
-          `Không được sửa route hệ thống (chỉ cho phép: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
+          `Cannot modify system route (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
         );
       }
 
@@ -177,21 +177,21 @@ export class SystemProtectionService {
           oldIds.every((id, i) => id === newIds[i]);
         if (!isSame)
           throw new Error(
-            'Không được thêm hoặc thay đổi handlers của route hệ thống',
+            'Cannot add or modify system route handlers',
           );
       }
     }
 
     if (tableName === 'hook_definition') {
       if (operation === 'create' && data?.isSystem) {
-        throw new Error('Không được phép tạo hook hệ thống');
+        throw new Error('Cannot create system hook');
       }
       if (operation === 'update' && fullExisting?.isSystem) {
         const allowed = this.getAllowedFields(['description']);
         const disallowed = changedFields.filter((f) => !allowed.includes(f));
         if (disallowed.length > 0)
           throw new Error(
-            `Không được sửa hook hệ thống (chỉ cho phép: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
+            `Cannot modify system hook (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
           );
 
         if (
@@ -199,7 +199,7 @@ export class SystemProtectionService {
           fullExisting.route?.id &&
           data.route.id !== fullExisting.route.id
         ) {
-          throw new Error(`Không được đổi 'route' của hook hệ thống`);
+          throw new Error(`Cannot change 'route' of system hook`);
         }
 
         const oldIds = (fullExisting.methods || [])
@@ -207,7 +207,7 @@ export class SystemProtectionService {
           .sort();
         const newIds = (data.methods || []).map((m: any) => m.id).sort();
         if (!isEqual(oldIds, newIds))
-          throw new Error(`Không được đổi 'methods' của hook hệ thống`);
+          throw new Error(`Cannot change 'methods' of system hook`);
       }
     }
 
@@ -215,27 +215,27 @@ export class SystemProtectionService {
       const isRoot = fullExisting?.isRootAdmin;
 
       if (operation === 'delete' && isRoot)
-        throw new Error('Không được xoá user Root Admin');
+        throw new Error('Cannot delete Root Admin user');
 
       if (operation === 'update') {
         if (
           'isRootAdmin' in data &&
           data.isRootAdmin !== fullExisting?.isRootAdmin
         ) {
-          throw new Error('Không được chỉnh sửa isRootAdmin');
+          throw new Error('Cannot modify isRootAdmin');
         }
 
         const isSelf = currentUser?.id === fullExisting?.id;
 
         if (isRoot && !isSelf)
-          throw new Error('Chỉ Root Admin mới được sửa chính họ');
+          throw new Error('Only Root Admin can modify themselves');
 
         if (isSelf) {
           const allowed = this.getAllowedFields(['email', 'password']);
           const disallowed = changedFields.filter((k) => !allowed.includes(k));
           if (disallowed.length > 0)
             throw new Error(
-              `Root Admin chỉ được sửa: ${allowed.join(', ')}. Vi phạm: ${disallowed.join(', ')}`,
+              `Root Admin can only modify: ${allowed.join(', ')}. Violations: ${disallowed.join(', ')}`,
             );
         }
       }
@@ -244,16 +244,16 @@ export class SystemProtectionService {
     if (tableName === 'table_definition') {
       const isSystem = fullExisting?.isSystem;
       if (operation === 'create' && data?.isSystem)
-        throw new Error('Không được tạo bảng hệ thống mới!');
+        throw new Error('Cannot create new system table!');
       if (operation === 'delete' && isSystem)
-        throw new Error('Không được xoá bảng hệ thống!');
+        throw new Error('Cannot delete system table!');
 
       if (operation === 'update' && isSystem) {
         const allowed = this.getAllowedFields(['description']);
         const disallowed = changedFields.filter((k) => !allowed.includes(k));
         if (disallowed.length > 0)
           throw new Error(
-            `Không được sửa table hệ thống (chỉ cho phép: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
+            `Cannot modify system table (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
           );
 
         const oldCols = fullExisting.columns || [];
@@ -266,7 +266,7 @@ export class SystemProtectionService {
         );
         for (const col of removedCols) {
           if (col.isSystem)
-            throw new Error(`Không được xoá column hệ thống: '${col.name}'`);
+            throw new Error(`Cannot delete system column: '${col.name}'`);
         }
 
         const removedRels = oldRels.filter(
@@ -275,7 +275,7 @@ export class SystemProtectionService {
         for (const rel of removedRels) {
           if (rel.isSystem)
             throw new Error(
-              `Không được xoá relation hệ thống: '${rel.propertyName}'`,
+              `Cannot delete system relation: '${rel.propertyName}'`,
             );
         }
 
@@ -289,7 +289,7 @@ export class SystemProtectionService {
           );
           if (changed.length > 0)
             throw new Error(
-              `Không được sửa column hệ thống '${oldCol.name}' (chỉ cho phép: ${allowed.join(', ')})`,
+              `Cannot modify system column '${oldCol.name}' (only allowed: ${allowed.join(', ')})`,
             );
         }
 
@@ -303,7 +303,7 @@ export class SystemProtectionService {
           );
           if (changed.length > 0)
             throw new Error(
-              `Không được sửa relation hệ thống '${oldRel.propertyName}' (chỉ cho phép: ${allowed.join(', ')})`,
+              `Cannot modify system relation '${oldRel.propertyName}' (only allowed: ${allowed.join(', ')})`,
             );
         }
       }

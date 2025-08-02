@@ -33,7 +33,7 @@ export class TableHandlerService {
         .findOne({ where: { name: body.name } });
 
       if (hasTable && existing) {
-        throw new Error(`Bảng ${body.name} đã tồn tại!`);
+        throw new Error(`Table ${body.name} already exists!`);
       }
 
       const idCol = body.columns.find(
@@ -105,7 +105,7 @@ export class TableHandlerService {
       });
 
       if (!exists) {
-        throw new Error(`Table ${body.name} không tồn tại.`);
+        throw new Error(`Table ${body.name} does not exist.`);
       }
 
       if (!body.columns?.some((col) => col.isPrimary)) {
@@ -116,7 +116,7 @@ export class TableHandlerService {
 
       validateUniquePropertyNames(body.columns || [], body.relations || []);
 
-      // Xử lý xoá các column và relation (nếu không phải system thì được phép xoá)
+      // Handle deletion of columns and relations (if not system, deletion is allowed)
       const deletedColumnIds = getDeletedIds(exists.columns, body.columns);
       const deletedRelationIds = getDeletedIds(
         exists.relations,
@@ -150,7 +150,7 @@ export class TableHandlerService {
       const exists = await tableDefRepo.findOne({ where: { id } });
 
       if (!exists) {
-        throw new Error(`Table với id ${id} không tồn tại.`);
+        throw new Error(`Table with id ${id} does not exist.`);
       }
 
       const result = await tableDefRepo.remove(exists);
@@ -181,7 +181,7 @@ export class TableHandlerService {
       this.logger.log('✅ Unlocking schema');
       await this.schemaReloadService.unlockSchema();
     } catch (error) {
-      this.logger.error('❌ Lỗi trong afterEffect khi đồng bộ schema:', error);
+      this.logger.error('❌ Error in afterEffect during schema synchronization:', error);
       await this.schemaReloadService.unlockSchema();
       throw error;
     }

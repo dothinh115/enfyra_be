@@ -7,7 +7,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const result = await super.canActivate(context);
     return result as boolean;
   }
-  // Đè logic quăng lỗi mặc định của auth guard
+  // Override default error throwing logic of auth guard
   handleRequest(err: any, user: any, info: any, context: any, status?: any) {
     const req = context.switchToHttp().getRequest();
 
@@ -16,10 +16,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return null;
     }
 
-    // Gán user vào request
+    // Assign user to request
     req.user = user;
 
-    // Gán user vào dynamic repo nếu có
+    // Assign user to dynamic repo if available
     if (req.routeData?.context?.$repos) {
       for (const repo of Object.values(req.routeData?.context?.$repos) as any) {
         repo.currentUser = user;

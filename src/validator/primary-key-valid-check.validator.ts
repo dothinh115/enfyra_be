@@ -18,7 +18,7 @@ export function PrimaryKeyValidCheck(validationOptions?: ValidationOptions) {
           return primaryCount <= 1;
         },
         defaultMessage(args: ValidationArguments) {
-          return 'Chỉ được phép có tối đa 1 cột isPrimary: true trong columns';
+          return 'Only a maximum of 1 column with isPrimary: true is allowed in columns';
         },
       },
     });

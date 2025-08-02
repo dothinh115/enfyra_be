@@ -9,13 +9,13 @@ const argv = yargs(hideBin(process.argv))
   .option('targetDir', {
     alias: 't',
     type: 'string',
-    description: 'Thư mục chứa source TypeScript',
+    description: 'Directory containing TypeScript source files',
     demandOption: true,
   })
   .option('outDir', {
     alias: 'o',
     type: 'string',
-    description: 'Thư mục xuất file biên dịch',
+    description: 'Output directory for compiled files',
     demandOption: true,
   })
   .parseSync();
@@ -72,4 +72,4 @@ for (const outputFile of output.getFiles()) {
   fs.writeFileSync(filePath, outputFile.text, 'utf8');
 }
 
-console.log('✅ Đã biên dịch và ghi JS vào:', outDir);
+console.log('✅ Compiled and written JS files to:', outDir);

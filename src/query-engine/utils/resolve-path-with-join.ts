@@ -53,7 +53,7 @@ export function resolvePathWithJoin({
 
     parentAlias = currentAlias;
     currentAlias = `${currentAlias}_${segment}`;
-    currentMeta = currentMeta.connection.getMetadata(found.type); // gọi lại getMetadata ở ngoài nếu cần
+    currentMeta = currentMeta.connection.getMetadata(found.type); // call getMetadata externally if needed
   }
 
   return {

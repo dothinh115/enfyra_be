@@ -10,29 +10,29 @@ export function generateMigrationFile() {
   const needDeleteDir = path.resolve('src', 'migrations');
   const appDataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
 
-  logger.log('Chuẩn bị generate file migration');
+  logger.log('Preparing to generate migration file');
 
   try {
     if (fs.existsSync(needDeleteDir)) {
       fs.rmSync(needDeleteDir, { recursive: true, force: true });
-      logger.log(`Đã xoá sạch thư mục ${needDeleteDir}`);
+      logger.log(`Successfully deleted directory ${needDeleteDir}`);
     }
 
     fs.mkdirSync(migrationDir, { recursive: true });
-    logger.log(`Đã tạo thư mục ${migrationDir}`);
+    logger.log(`Successfully created directory ${migrationDir}`);
 
     const script = `npm run typeorm -- migration:generate ${migrationDir} -d ${appDataSourceDir}`;
     execSync(script, { encoding: 'utf-8' });
-    logger.debug('Generate file migration thành công!');
+    logger.debug('Migration file generation successful!');
   } catch (error: any) {
     const output = error?.output?.[1]?.toString() ?? '';
 
-    logger.error('Lỗi khi chạy generate migration:');
+    logger.error('Error running generate migration:');
     console.error(output);
 
     if (output.includes('No changes in database schema were found')) {
-      logger.warn('⏭️ Không có gì thay đổi để generate migration. Bỏ qua.');
-      return; // không throw, để tránh loop restore
+      logger.warn('⏭️ No changes to generate migration. Skipping.');
+      return; // don't throw, to avoid restore loop
     }
 
     throw error;
@@ -43,14 +43,14 @@ export function runMigration() {
   const dataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
   const script = `npm run typeorm -- migration:run -d ${dataSourceDir}`;
 
-  logger.log('Chuẩn bị run migration');
+  logger.log('Preparing to run migration');
   logger.log(`Script: ${script}`);
 
   try {
     execSync(script, { stdio: 'inherit' });
-    logger.debug('Run migration thành công!');
+    logger.debug('Migration execution successful!');
   } catch (error) {
-    logger.error('Lỗi khi chạy shell script:', error);
+    logger.error('Error running shell script:', error);
     throw error;
   }
 }

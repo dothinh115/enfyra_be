@@ -28,7 +28,7 @@ export async function resolveDeepRelations(options: {
 
       if (!joinColumn?.propertyName) {
         log.push(
-          `! Deep relation "${relationName}" bị bỏ qua do không xác định được foreignKey`,
+          `! Deep relation "${relationName}" skipped due to unable to determine foreignKey`,
         );
         return;
       }
@@ -69,7 +69,7 @@ export async function resolveDeepRelations(options: {
           } catch (error) {
             row[relationName] = [];
             log.push(
-              `! Deep relation "${relationName}" thất bại với id ${row.id}: ${error.message}`,
+              `! Deep relation "${relationName}" failed with id ${row.id}: ${error.message}`,
             );
           }
         }),
