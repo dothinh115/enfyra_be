@@ -77,6 +77,7 @@ export class MetadataSyncService {
         this.logger.warn(`🗑️ Đã xoá entity không hợp lệ: ${file}`);
       }
     }
+
     clearOldEntitiesJs();
 
     await Promise.all(
