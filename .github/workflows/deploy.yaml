@@ -15,17 +15,17 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           script: |
             # Set project variables
-            export PROJECT_NAME="enfyra-cms"
+            export PROJECT_NAME="enfyra-backend"
             export APP_DIR="/apps/$PROJECT_NAME"
             export DEPLOYMENT_DIR="/deployments/$PROJECT_NAME"
-            
+
             # Update source code
             cd $APP_DIR
             git reset --hard HEAD
             git clean -fd
             git pull origin main
             export IMAGE_TAG=$(git rev-parse --short HEAD)
-            
+
             # Build with timeout and retry
             echo "Building Docker image $PROJECT_NAME:$IMAGE_TAG..."
             if ! timeout 600 docker build -t $PROJECT_NAME:$IMAGE_TAG . ; then
@@ -33,19 +33,19 @@ jobs:
               docker system prune -f || true
               timeout 600 docker build -t $PROJECT_NAME:$IMAGE_TAG . || exit 1
             fi
-            
+
             # Verify build success
             if ! docker images $PROJECT_NAME:$IMAGE_TAG | grep -q $IMAGE_TAG; then
               echo "ERROR: Docker image build failed!"
               exit 1
             fi
-            
+
             echo "Build completed successfully"
-            
+
             # Detect K8s mode early
             export K8S_MODE=$(yq ".kubernetes.provider" ~/configs/$PROJECT_NAME.yaml 2>/dev/null || echo "microk8s")
             echo "K8S_MODE detected: $K8S_MODE"
-            
+
             # Configure image for MicroK8s - Use direct import (no registry)
             if [ "$K8S_MODE" = "microk8s" ]; then
               echo "=== Importing image to MicroK8s ==="
@@ -85,13 +85,13 @@ jobs:
             pulumi version
             pulumi login file://$(pwd)/.pulumi
             pulumi stack select $PROJECT_NAME
-            
+
             # Clear any existing locks
             pulumi cancel || true
-            
+
             pulumi config set image ${PULUMI_IMAGE:-$PROJECT_NAME:$IMAGE_TAG}
             pulumi up --yes
-            
+
             echo "=== Deployment completed successfully ==="
 
   # Aggressive cleanup AFTER deploy to remove old images
@@ -104,4 +104,3 @@ jobs:
       VPS_HOST: ${{ secrets.VPS_HOST }}
       VPS_USER: ${{ secrets.VPS_USER }}
       VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
-
