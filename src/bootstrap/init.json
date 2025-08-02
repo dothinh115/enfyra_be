@@ -51,20 +51,6 @@
             "icon":"lucide:shield-check"
         },
         {
-            "path": "/column_definition",
-            "mainTable": "column_definition",
-            "isEnabled": true,
-            "isSystem":true,
-            "icon":"lucide:columns"
-        },
-        {
-            "path": "/relation_definition",
-            "mainTable": "relation_definition",
-            "isEnabled": true,
-            "isSystem":true,
-            "icon":"lucide:link"
-        },
-        {
             "path": "/auth/login",
             "mainTable": "user_definition",
             "isEnabled": true,
