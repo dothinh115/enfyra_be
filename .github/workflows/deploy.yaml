@@ -119,7 +119,24 @@ jobs:
             
             # Deploy with skip-preview to avoid conflicts
             echo "Deploying with updated image..."
-            pulumi up --yes --skip-preview
+            if ! pulumi up --yes --skip-preview; then
+              echo "❌ Deployment failed, checking pod status..."
+              
+              # Debug deployment issues
+              echo "=== Pod Status ==="
+              kubectl get pods -l app=${PROJECT_NAME} -o wide || true
+              
+              echo "=== Pod Logs (latest) ==="
+              kubectl logs -l app=${PROJECT_NAME} --tail=50 || true
+              
+              echo "=== Pod Events ==="
+              kubectl get events --sort-by='.lastTimestamp' | grep ${PROJECT_NAME} | tail -10 || true
+              
+              echo "=== Deployment Status ==="
+              kubectl describe deployment ${PROJECT_NAME}-deployment || true
+              
+              exit 1
+            fi
 
             echo "=== Deployment completed successfully ==="
 

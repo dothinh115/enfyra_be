@@ -51,9 +51,7 @@ USER enfyra
 # Expose port
 EXPOSE 1105
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:1105/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
+# No health check - Let Kubernetes handle readiness/liveness probes
 
 # Start command
 CMD ["node", "dist/src/main.js"]
