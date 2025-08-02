@@ -43,6 +43,7 @@ COPY --from=builder /app/scripts ./scripts
 
 # Copy necessary runtime files
 COPY src/data-source/data-source.ts ./src/data-source/data-source.ts
+COPY src/bootstrap ./src/bootstrap
 
 # Change ownership to non-root user
 RUN chown -R enfyra:nodejs /app
