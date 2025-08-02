@@ -113,8 +113,13 @@ jobs:
 
             pulumi config set image ${PULUMI_IMAGE:-$PROJECT_NAME:$IMAGE_TAG}
             
-            # Deploy with force option to override field conflicts
-            pulumi up --yes --force
+            # Sync state first, then deploy
+            echo "Refreshing Pulumi state..."
+            pulumi refresh --yes || true
+            
+            # Deploy with skip-preview to avoid conflicts
+            echo "Deploying with updated image..."
+            pulumi up --yes --skip-preview
 
             echo "=== Deployment completed successfully ==="
 
