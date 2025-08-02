@@ -6,7 +6,7 @@ on:
       project_name:
         description: 'Project name to cleanup'
         required: true
-        default: 'enfyra-cms'
+        default: 'enfyra-backend'
         type: string
   workflow_call: # Called by other workflows
     inputs:
@@ -38,7 +38,7 @@ jobs:
             # Set project variables and K8s config
             export PROJECT_NAME="${{ inputs.project_name }}"
             export KUBECONFIG=/var/snap/microk8s/current/credentials/client.config
-            
+
             # Export kubectl path
             export PATH=$PATH:/snap/microk8s/8148:/snap/bin
             alias kubectl='microk8s.kubectl'
@@ -59,7 +59,7 @@ jobs:
             echo "FORCE cleaning build cache..."
             docker builder prune -af --filter until=1h || true
             docker builder prune -af || true
-            
+
             # Comprehensive cleanup
             docker image prune -af || true
             docker container prune -f || true
@@ -93,38 +93,38 @@ jobs:
             # NUCLEAR: Remove ALL project images to break ALL dependencies
             echo "NUCLEAR: Removing ALL $PROJECT_NAME images..."
             microk8s ctr images list -q | grep "$PROJECT_NAME:" | xargs -r microk8s ctr images remove || true
-            
+
             # NUCLEAR: Remove ALL registry images  
             echo "NUCLEAR: Removing ALL registry images..."
             microk8s ctr images list -q | grep "localhost:32000" | xargs -r microk8s ctr images remove || true
-            
+
             # SAFE APPROACH: Configure aggressive kubelet GC (zero downtime)
             echo "Configuring aggressive kubelet garbage collection..."
-            
+
             # Configure kubelet for aggressive cleanup
             KUBELET_ARGS="/var/snap/microk8s/current/args/kubelet"
             cp $KUBELET_ARGS $KUBELET_ARGS.backup
-            
+
             # Remove old GC settings if they exist
             sed -i '/--image-gc-/d' $KUBELET_ARGS
-            
+
             # Add aggressive GC settings
             echo "--image-gc-high-threshold=30" >> $KUBELET_ARGS
             echo "--image-gc-low-threshold=25" >> $KUBELET_ARGS
             echo "--minimum-container-ttl-duration=30s" >> $KUBELET_ARGS
             echo "--maximum-dead-containers=10" >> $KUBELET_ARGS
             echo "--maximum-dead-containers-per-container=1" >> $KUBELET_ARGS
-            
-            # Restart kubelet to apply settings (minimal disruption)
-            echo "Restarting kubelet with aggressive GC..."
-            snap restart microk8s.daemon-kubelet
+
+            # Restart kubelite to apply settings (minimal disruption)
+            echo "Restarting kubelite with aggressive GC..."
+            snap restart microk8s.daemon-kubelite
             sleep 10
-            
+
             # Trigger immediate garbage collection
             echo "Triggering immediate garbage collection..."
             kubectl delete pods --field-selector=status.phase=Succeeded --all-namespaces || true
             kubectl delete pods --field-selector=status.phase=Failed --all-namespaces || true
-            
+
             # Final Docker cleanup after nuclear reset
             echo "Final Docker cleanup..."
             docker system prune -af --volumes || true
