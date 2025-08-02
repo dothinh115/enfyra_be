@@ -15,38 +15,55 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           script: |
             # Set project variables
-            export PROJECT_NAME="enfyra-backend"
+            export PROJECT_NAME="enfyra-cms"
             export APP_DIR="/apps/$PROJECT_NAME"
             export DEPLOYMENT_DIR="/deployments/$PROJECT_NAME"
-
+            
             # Update source code
             cd $APP_DIR
             git reset --hard HEAD
             git clean -fd
             git pull origin main
             export IMAGE_TAG=$(git rev-parse --short HEAD)
-            docker build -t $PROJECT_NAME:$IMAGE_TAG .
-
+            
+            # Build with timeout and retry
+            echo "Building Docker image $PROJECT_NAME:$IMAGE_TAG..."
+            if ! timeout 600 docker build -t $PROJECT_NAME:$IMAGE_TAG . ; then
+              echo "Build failed or timed out, retrying..."
+              docker system prune -f || true
+              timeout 600 docker build -t $PROJECT_NAME:$IMAGE_TAG . || exit 1
+            fi
+            
+            # Verify build success
+            if ! docker images $PROJECT_NAME:$IMAGE_TAG | grep -q $IMAGE_TAG; then
+              echo "ERROR: Docker image build failed!"
+              exit 1
+            fi
+            
+            echo "Build completed successfully"
+            
             # Detect K8s mode early
             export K8S_MODE=$(yq ".kubernetes.provider" ~/configs/$PROJECT_NAME.yaml 2>/dev/null || echo "microk8s")
             echo "K8S_MODE detected: $K8S_MODE"
-
-            # Import image to MicroK8s  
+            
+            # Configure image for MicroK8s - Use direct import (no registry)
             if [ "$K8S_MODE" = "microk8s" ]; then
-              echo "=== Importing image $PROJECT_NAME:$IMAGE_TAG to MicroK8s ==="
-              echo "Saving Docker image to tar file..."
-              docker save $PROJECT_NAME:$IMAGE_TAG -o /tmp/$PROJECT_NAME-$IMAGE_TAG.tar
-              echo "Tar file created: $(ls -lh /tmp/$PROJECT_NAME-$IMAGE_TAG.tar)"
+              echo "=== Importing image to MicroK8s ==="
               
-              echo "Importing to MicroK8s..."
-              microk8s ctr image import /tmp/$PROJECT_NAME-$IMAGE_TAG.tar
+              # Direct import to MicroK8s containerd (faster & reliable)
+              echo "Importing $PROJECT_NAME:$IMAGE_TAG to MicroK8s..."
+              docker save $PROJECT_NAME:$IMAGE_TAG | microk8s ctr image import -
               
-              echo "Verifying import..."
-              microk8s ctr images list | grep $PROJECT_NAME:$IMAGE_TAG || echo "ERROR: Image not found after import!"
+              # Verify import success
+              if microk8s ctr images list | grep -q "$PROJECT_NAME:$IMAGE_TAG"; then
+                echo "✅ Image successfully imported to MicroK8s"
+                export PULUMI_IMAGE="$PROJECT_NAME:$IMAGE_TAG"
+              else
+                echo "❌ Failed to import image"
+                exit 1
+              fi
               
-              echo "Cleaning up..."
-              rm -f /tmp/$PROJECT_NAME-$IMAGE_TAG.tar
-              echo "=== Image import completed ==="
+              echo "=== MicroK8s import completed ==="
             fi
 
             # Setup Kubernetes config
@@ -68,96 +85,23 @@ jobs:
             pulumi version
             pulumi login file://$(pwd)/.pulumi
             pulumi stack select $PROJECT_NAME
-
+            
             # Clear any existing locks
             pulumi cancel || true
-
-            pulumi config set image $PROJECT_NAME:$IMAGE_TAG
+            
+            pulumi config set image ${PULUMI_IMAGE:-$PROJECT_NAME:$IMAGE_TAG}
             pulumi up --yes
+            
+            echo "=== Deployment completed successfully ==="
 
-            # Cleanup old Docker images (keep latest 3)
-            echo "=== Cleaning up old Docker images ==="
-            echo "Current Docker images:"
-            docker images $PROJECT_NAME --format "table {{.Repository}}:{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" | grep -v REPOSITORY
+  # Aggressive cleanup AFTER deploy to remove old images
+  cleanup:
+    needs: deploy
+    uses: ./.github/workflows/cleanup.yaml
+    with:
+      project_name: 'enfyra-cms'
+    secrets:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
 
-            # Remove old Docker images except latest 3 
-            echo "Removing old Docker images (keeping latest 3)..."
-            docker images $PROJECT_NAME --format "{{.Repository}}:{{.Tag}}" | grep -v latest | tail -n +4 | xargs -r docker rmi -f || true
-
-            # Remove ALL untagged images (dangling)
-            echo "Removing all dangling/untagged images..."
-            docker images -f "dangling=true" -q | xargs -r docker rmi -f || true
-
-            # Cleanup old K8s images based on provider
-            if [ "$K8S_MODE" = "microk8s" ]; then
-              echo "Cleaning up old MicroK8s images..."
-              
-              # Remove old project images (keep latest 2)
-              echo "Cleaning $PROJECT_NAME images..."
-              microk8s ctr images list -q | grep "$PROJECT_NAME:" | grep -v latest | tail -n +3 | xargs -r microk8s ctr images remove || true
-              
-              # Remove any dangling/unnamed images
-              echo "Removing dangling containerd images..."
-              microk8s ctr images list -q | grep "sha256:" | xargs -r microk8s ctr images remove || true
-              
-            else
-              echo "Cleaning up old kubeadm/containerd images..."
-              # List all project images, keep latest 3, remove older ones
-              crictl images | grep $PROJECT_NAME | grep -v '<none>' | sort -k4 -r | tail -n +4 | awk '{print $3}' | xargs -r crictl rmi || true
-            fi
-
-            # Show remaining images after cleanup
-            echo "=== Remaining images after cleanup ==="
-            if [ "$K8S_MODE" = "microk8s" ]; then
-              echo "MicroK8s images:"
-              microk8s ctr images list | grep $PROJECT_NAME || echo "No $PROJECT_NAME images found"
-            else
-              echo "Containerd images:"
-              crictl images | grep $PROJECT_NAME || echo "No $PROJECT_NAME images found"
-            fi
-
-            echo "Docker images:"
-            docker images $PROJECT_NAME --format "table {{.Repository}}:{{.Tag}}\\t{{.CreatedAt}}\\t{{.Size}}" || echo "No $PROJECT_NAME images found"
-
-            # Aggressive Docker cleanup
-            echo "=== Running comprehensive Docker cleanup ==="
-
-            # Remove dangling images (not associated with any container)
-            echo "Removing dangling images..."
-            docker image prune -f || true
-
-            # Remove unused build cache
-            echo "Removing build cache..."
-            timeout 60 docker builder prune -f || echo "Build cache cleanup completed or timed out"
-
-            # Remove stopped containers
-            echo "Removing stopped containers..."
-            docker container prune -f || true
-
-            # Remove unused networks
-            echo "Removing unused networks..."
-            docker network prune -f || true
-
-            # Remove unused volumes
-            echo "Removing unused volumes..."
-            docker volume prune -f || true
-
-            # Clean up container logs (truncate large logs)
-            echo "Cleaning up container logs..."
-            find /var/lib/docker/containers/ -name "*.log" -exec truncate -s 0 {} \; 2>/dev/null || true
-
-            # Final system prune (everything unused)
-            echo "Final system cleanup..."
-            timeout 120 docker system prune -af --volumes || echo "System prune completed or timed out"
-
-            # Show final disk usage
-            echo "=== Final disk usage ==="
-            timeout 30 df -h / || echo "Disk usage check timed out"
-            echo "=== Docker directory usage ==="
-            timeout 30 du -sh /var/lib/docker/* 2>/dev/null | sort -rh | head -10 || echo "Docker directory check completed or timed out"
-            echo "=== Docker system df ==="
-            timeout 30 docker system df || echo "Docker system df completed or timed out"
-            echo "=== Total Docker images ==="
-            timeout 30 docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | head -20 || echo "Docker images list completed or timed out"
-
-            echo "=== Cleanup completed - deployment will continue ==="

@@ -1,0 +1,155 @@
+name: Cleanup Server Storage
+
+on:
+  workflow_dispatch: # Manual trigger
+    inputs:
+      project_name:
+        description: 'Project name to cleanup'
+        required: true
+        default: 'enfyra-cms'
+        type: string
+  workflow_call: # Called by other workflows
+    inputs:
+      project_name:
+        description: 'Project name to cleanup'
+        required: true
+        type: string
+    secrets:
+      VPS_HOST:
+        required: true
+      VPS_USER:
+        required: true
+      VPS_PASSWORD:
+        required: true
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup Server Storage
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            echo "=== Starting Server Storage Cleanup ==="
+
+            # Set project variables and K8s config
+            export PROJECT_NAME="${{ inputs.project_name }}"
+            export KUBECONFIG=/var/snap/microk8s/current/credentials/client.config
+            
+            # Export kubectl path
+            export PATH=$PATH:/snap/microk8s/8148:/snap/bin
+            alias kubectl='microk8s.kubectl'
+
+            # Docker cleanup
+            echo "=== Docker Cleanup ==="
+
+            # Remove ALL old project images (keep only current deploy)
+            echo "Removing ALL old $PROJECT_NAME Docker images..."
+            docker images $PROJECT_NAME --format "{{.Repository}}:{{.Tag}}" | tail -n +2 | xargs -r docker rmi -f || true
+
+
+            # Remove ALL localhost:32000 registry images (they're cached locally)
+            echo "Removing ALL registry images..."
+            docker images localhost:32000/* --format "{{.Repository}}:{{.Tag}}" | xargs -r docker rmi -f || true
+
+            # FORCE build cache cleanup (2GB+ problem)
+            echo "FORCE cleaning build cache..."
+            docker builder prune -af --filter until=1h || true
+            docker builder prune -af || true
+            
+            # Comprehensive cleanup
+            docker image prune -af || true
+            docker container prune -f || true
+            docker volume prune -f || true
+            docker network prune -f || true
+            docker system prune -af --volumes || true
+
+            # MicroK8s cleanup
+            echo "=== MicroK8s Cleanup ==="
+
+            # Remove ALL old project images from containerd (keep only current)
+            echo "Removing ALL old $PROJECT_NAME images from containerd..."
+            microk8s ctr images list -q | grep "$PROJECT_NAME:" | tail -n +2 | xargs -r microk8s ctr images remove || true
+
+
+            # Aggressive registry cleanup (remove ALL old images except current)
+            echo "Aggressive registry cleanup..."
+            microk8s ctr images list -q | grep -E "($PROJECT_NAME:|localhost:32000)" | tail -n +5 | xargs -r microk8s ctr images remove || true
+
+            # Containerd aggressive cleanup
+            echo "Running containerd aggressive cleanup..."
+
+            # Remove ALL localhost:32000 registry images from containerd
+            echo "Removing registry images from containerd..."
+            microk8s ctr images list name~='localhost:32000' -q | xargs -r microk8s ctr images remove || true
+
+            # Prune references (recommended cleanup)
+            echo "Pruning containerd references..."
+            microk8s ctr content prune references || true
+
+            # NUCLEAR: Remove ALL project images to break ALL dependencies
+            echo "NUCLEAR: Removing ALL $PROJECT_NAME images..."
+            microk8s ctr images list -q | grep "$PROJECT_NAME:" | xargs -r microk8s ctr images remove || true
+            
+            # NUCLEAR: Remove ALL registry images  
+            echo "NUCLEAR: Removing ALL registry images..."
+            microk8s ctr images list -q | grep "localhost:32000" | xargs -r microk8s ctr images remove || true
+            
+            # SAFE APPROACH: Configure aggressive kubelet GC (zero downtime)
+            echo "Configuring aggressive kubelet garbage collection..."
+            
+            # Configure kubelet for aggressive cleanup
+            KUBELET_ARGS="/var/snap/microk8s/current/args/kubelet"
+            cp $KUBELET_ARGS $KUBELET_ARGS.backup
+            
+            # Remove old GC settings if they exist
+            sed -i '/--image-gc-/d' $KUBELET_ARGS
+            
+            # Add aggressive GC settings
+            echo "--image-gc-high-threshold=30" >> $KUBELET_ARGS
+            echo "--image-gc-low-threshold=25" >> $KUBELET_ARGS
+            echo "--minimum-container-ttl-duration=30s" >> $KUBELET_ARGS
+            echo "--maximum-dead-containers=10" >> $KUBELET_ARGS
+            echo "--maximum-dead-containers-per-container=1" >> $KUBELET_ARGS
+            
+            # Restart kubelet to apply settings (minimal disruption)
+            echo "Restarting kubelet with aggressive GC..."
+            snap restart microk8s.daemon-kubelet
+            sleep 10
+            
+            # Trigger immediate garbage collection
+            echo "Triggering immediate garbage collection..."
+            kubectl delete pods --field-selector=status.phase=Succeeded --all-namespaces || true
+            kubectl delete pods --field-selector=status.phase=Failed --all-namespaces || true
+            
+            # Final Docker cleanup after nuclear reset
+            echo "Final Docker cleanup..."
+            docker system prune -af --volumes || true
+
+            # Remove evicted pods
+            echo "Removing evicted pods..."
+            kubectl get pods --all-namespaces | grep Evicted | awk '{print $2 " --namespace=" $1}' | xargs -r kubectl delete pod || true
+
+            # Clean old replica sets
+            echo "Cleaning old replica sets..."
+            kubectl get replicaset --all-namespaces | grep '0         0         0' | awk '{print $2 " --namespace=" $1}' | head -10 | xargs -r kubectl delete replicaset || true
+
+            # Clean temp files
+            echo "Cleaning temp files..."
+            rm -rf /tmp/$PROJECT_NAME-*.tar || true
+
+            # Clean container logs
+            echo "Truncating container logs..."
+            find /var/lib/docker/containers/ -name "*.log" -exec truncate -s 0 {} \; 2>/dev/null || true
+
+            # Final disk usage report
+            echo "=== Final Disk Usage ==="
+            df -h /
+            echo "=== Docker Usage ==="
+            docker system df || true
+            echo "=== MicroK8s Images ==="
+            microk8s ctr images list | grep -E "($PROJECT_NAME|SIZE)" | head -10
+            echo "=== Cleanup Completed ==="
