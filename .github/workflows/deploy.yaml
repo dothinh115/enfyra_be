@@ -80,14 +80,26 @@ jobs:
             echo "Current Docker images:"
             docker images $PROJECT_NAME --format "table {{.Repository}}:{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" | grep -v REPOSITORY
 
-            # Remove old Docker enfyra-cms images except latest 3 
+            # Remove old Docker images except latest 3 
             echo "Removing old Docker images (keeping latest 3)..."
             docker images $PROJECT_NAME --format "{{.Repository}}:{{.Tag}}" | grep -v latest | tail -n +4 | xargs -r docker rmi -f || true
+
+            # Remove ALL untagged images (dangling)
+            echo "Removing all dangling/untagged images..."
+            docker images -f "dangling=true" -q | xargs -r docker rmi -f || true
 
             # Cleanup old K8s images based on provider
             if [ "$K8S_MODE" = "microk8s" ]; then
               echo "Cleaning up old MicroK8s images..."
-              microk8s ctr images list -q | grep $PROJECT_NAME | grep -v latest | tail -n +4 | xargs -r microk8s ctr images remove || true
+              
+              # Remove old project images (keep latest 2)
+              echo "Cleaning $PROJECT_NAME images..."
+              microk8s ctr images list -q | grep "$PROJECT_NAME:" | grep -v latest | tail -n +3 | xargs -r microk8s ctr images remove || true
+              
+              # Remove any dangling/unnamed images
+              echo "Removing dangling containerd images..."
+              microk8s ctr images list -q | grep "sha256:" | xargs -r microk8s ctr images remove || true
+              
             else
               echo "Cleaning up old kubeadm/containerd images..."
               # List all project images, keep latest 3, remove older ones
@@ -107,8 +119,45 @@ jobs:
             echo "Docker images:"
             docker images $PROJECT_NAME --format "table {{.Repository}}:{{.Tag}}\\t{{.CreatedAt}}\\t{{.Size}}" || echo "No $PROJECT_NAME images found"
 
-            # Clean up Docker system (dangling images, unused networks, etc)
-            echo "Running Docker system prune..."
-            docker system prune -f --volumes || true
+            # Aggressive Docker cleanup
+            echo "=== Running comprehensive Docker cleanup ==="
 
-            echo "=== Cleanup completed ==="
+            # Remove dangling images (not associated with any container)
+            echo "Removing dangling images..."
+            docker image prune -f || true
+
+            # Remove unused build cache
+            echo "Removing build cache..."
+            timeout 60 docker builder prune -f || echo "Build cache cleanup completed or timed out"
+
+            # Remove stopped containers
+            echo "Removing stopped containers..."
+            docker container prune -f || true
+
+            # Remove unused networks
+            echo "Removing unused networks..."
+            docker network prune -f || true
+
+            # Remove unused volumes
+            echo "Removing unused volumes..."
+            docker volume prune -f || true
+
+            # Clean up container logs (truncate large logs)
+            echo "Cleaning up container logs..."
+            find /var/lib/docker/containers/ -name "*.log" -exec truncate -s 0 {} \; 2>/dev/null || true
+
+            # Final system prune (everything unused)
+            echo "Final system cleanup..."
+            timeout 120 docker system prune -af --volumes || echo "System prune completed or timed out"
+
+            # Show final disk usage
+            echo "=== Final disk usage ==="
+            timeout 30 df -h / || echo "Disk usage check timed out"
+            echo "=== Docker directory usage ==="
+            timeout 30 du -sh /var/lib/docker/* 2>/dev/null | sort -rh | head -10 || echo "Docker directory check completed or timed out"
+            echo "=== Docker system df ==="
+            timeout 30 docker system df || echo "Docker system df completed or timed out"
+            echo "=== Total Docker images ==="
+            timeout 30 docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | head -20 || echo "Docker images list completed or timed out"
+
+            echo "=== Cleanup completed - deployment will continue ==="
