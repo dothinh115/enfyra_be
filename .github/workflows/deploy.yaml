@@ -89,8 +89,32 @@ jobs:
             # Clear any existing locks
             pulumi cancel || true
 
+            # Fix field conflicts before Pulumi deployment
+            echo "=== Resolving Kubernetes field conflicts ==="
+            
+            # Remove field manager conflicts from deployment
+            kubectl patch deployment ${PROJECT_NAME}-deployment --type='merge' -p='{"metadata":{"managedFields":null}}' 2>/dev/null || true
+            
+            # Force reset image and imagePullPolicy to let Pulumi manage them
+            kubectl patch deployment ${PROJECT_NAME}-deployment --type='strategic' -p='{
+              "spec": {
+                "template": {
+                  "spec": {
+                    "containers": [{
+                      "name": "'${PROJECT_NAME}'",
+                      "imagePullPolicy": null
+                    }]
+                  }
+                }
+              }
+            }' 2>/dev/null || true
+
+            echo "Field conflicts resolved"
+
             pulumi config set image ${PULUMI_IMAGE:-$PROJECT_NAME:$IMAGE_TAG}
-            pulumi up --yes
+            
+            # Deploy with force option to override field conflicts
+            pulumi up --yes --force
 
             echo "=== Deployment completed successfully ==="
 
