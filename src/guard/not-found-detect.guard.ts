@@ -17,6 +17,7 @@ export class NotFoundDetectGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
+
     if (isPublic) return true;
     if (!req.routeData) throw new NotFoundException();
     return true;
