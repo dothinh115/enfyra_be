@@ -51,18 +51,17 @@ jobs:
             CURRENT_IMAGE=$(microk8s.kubectl get deployment ${PROJECT_NAME}-deployment -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
             echo "Current running image: $CURRENT_IMAGE"
             
-            # Remove old project images (keep only current deploy and 1 previous for rollback)
-            echo "Removing old $PROJECT_NAME Docker images (keeping current + 1 previous)..."
-            docker images $PROJECT_NAME --format "{{.Repository}}:{{.Tag}}" | grep -v "$(echo $CURRENT_IMAGE | cut -d':' -f2)" | tail -n +2 | xargs -r docker rmi -f || true
+            # Remove ALL project images from Docker
+            echo "Removing ALL $PROJECT_NAME Docker images..."
+            docker images $PROJECT_NAME --format "{{.Repository}}:{{.Tag}}" | xargs -r docker rmi -f || true
 
 
             # Remove ALL localhost:32000 registry images (they're cached locally)
             echo "Removing ALL registry images..."
             docker images localhost:32000/* --format "{{.Repository}}:{{.Tag}}" | xargs -r docker rmi -f || true
 
-            # FORCE build cache cleanup (2GB+ problem)
-            echo "FORCE cleaning build cache..."
-            docker builder prune -af --filter until=1h || true
+            # AGGRESSIVE build cache cleanup (remove ALL)
+            echo "Aggressive build cache cleanup..."
             docker builder prune -af || true
 
             # Comprehensive cleanup
@@ -100,15 +99,17 @@ jobs:
             echo "Pruning containerd references..."
             microk8s ctr content prune references || true
 
-            # SAFE: Remove old project images (keep current + 1 previous)
-            echo "SAFE: Removing old $PROJECT_NAME images (keeping current + 1 previous)..."
+            # AGGRESSIVE: Remove old project images (keep ONLY current)
+            echo "AGGRESSIVE: Removing old $PROJECT_NAME images (keeping ONLY current)..."
             if [ ! -z "$CURRENT_IMAGE" ]; then
               CURRENT_TAG=$(echo $CURRENT_IMAGE | cut -d':' -f2)
-              microk8s ctr images list -q | grep "$PROJECT_NAME:" | grep -v "$CURRENT_TAG" | tail -n +2 | xargs -r microk8s ctr images remove || true
+              microk8s ctr images list -q | grep "$PROJECT_NAME:" | grep -v "$CURRENT_TAG" | xargs -r microk8s ctr images remove || true
+            else
+              echo "WARNING: Could not determine current image, skipping containerd cleanup"
             fi
 
-            # NUCLEAR: Remove ALL registry images  
-            echo "NUCLEAR: Removing ALL registry images..."
+            # AGGRESSIVE: Remove ALL registry images
+            echo "AGGRESSIVE: Removing ALL registry images..."
             microk8s ctr images list -q | grep "localhost:32000" | xargs -r microk8s ctr images remove || true
 
             # SAFE APPROACH: Configure aggressive kubelet GC (zero downtime)
