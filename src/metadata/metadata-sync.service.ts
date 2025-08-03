@@ -109,7 +109,7 @@ export class MetadataSyncService {
         // Services reload (I/O bound)
         Promise.all([
           this.dataSourceService.reloadDataSource(),
-          this.graphqlService.reloadSchema(),
+          // this.graphqlService.reloadSchema(),
         ]),
         // Migration flow (CPU bound)
         (async () => {
