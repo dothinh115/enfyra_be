@@ -49,8 +49,27 @@ async function generateMigrationFileDirect() {
     const migrationName = `AutoMigration${timestamp}`;
     const migrationPath = path.join(migrationDir, `${migrationName}.ts`);
     
-    const upQueries = sqlInMemory.upQueries.map(query => `        await queryRunner.query(\`${query.query.replace(/`/g, '\\`')}\`);`).join('\n');
-    const downQueries = sqlInMemory.downQueries.map(query => `        await queryRunner.query(\`${query.query.replace(/`/g, '\\`')}\`);`).join('\n');
+    const upQueries = sqlInMemory.upQueries
+      .map(query => {
+        // Escape backticks, backslashes, and other problematic characters
+        const escapedQuery = query.query
+          .replace(/\\/g, '\\\\')  // Escape backslashes first
+          .replace(/`/g, '\\`')    // Escape backticks
+          .replace(/\${/g, '\\${'); // Escape template literal variables
+        return `        await queryRunner.query(\`${escapedQuery}\`);`;
+      })
+      .join('\n');
+      
+    const downQueries = sqlInMemory.downQueries
+      .map(query => {
+        // Escape backticks, backslashes, and other problematic characters  
+        const escapedQuery = query.query
+          .replace(/\\/g, '\\\\')  // Escape backslashes first
+          .replace(/`/g, '\\`')    // Escape backticks
+          .replace(/\${/g, '\\${'); // Escape template literal variables
+        return `        await queryRunner.query(\`${escapedQuery}\`);`;
+      })
+      .join('\n');
     
     const migrationTemplate = `import { MigrationInterface, QueryRunner } from "typeorm";
 

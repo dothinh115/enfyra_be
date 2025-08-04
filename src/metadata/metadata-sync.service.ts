@@ -117,36 +117,40 @@ export class MetadataSyncService {
       timings.step2 = Date.now() - step2Start;
       this.logger.debug(`Step 2 (Build JS entities): ${timings.step2}ms`);
 
-      // Step 3: Reload services + Migration
+      // Step 3: Generate Migration first (needs built entities)
       const step3Start = Date.now();
+      if (options?.type === 'create' || !options?.fromRestore) {
+        const migrationStart = Date.now();
+        await generateMigrationFile();
+        timings.generateMigration = Date.now() - migrationStart;
+      } else {
+        this.logger.debug('Skipping migration generation for non-structural changes');
+        timings.generateMigration = 0;
+      }
+      
+      // Step 4: Reload services + Run Migration (can run in parallel)
       await Promise.all([
         // Services reload (I/O bound)
         Promise.all([
           this.dataSourceService.reloadDataSource(),
           // this.graphqlService.reloadSchema(),
         ]),
-        // Migration flow (CPU bound)
+        // Run migration (now that it's generated)
         (async () => {
-          // Only run migration for table changes, not for data updates
           if (options?.type === 'create' || !options?.fromRestore) {
-            const migrationStart = Date.now();
-            await generateMigrationFile();
-            timings.generateMigration = Date.now() - migrationStart;
-            
             const runStart = Date.now();
             await runMigration();
             timings.runMigration = Date.now() - runStart;
           } else {
-            this.logger.debug('Skipping migration for non-structural changes');
-            timings.generateMigration = 0;
+            this.logger.debug('Skipping migration run for non-structural changes');
             timings.runMigration = 0;
           }
         })(),
       ]);
       timings.step3 = Date.now() - step3Start;
-      this.logger.debug(`Step 3 (Reload + Migration): ${timings.step3}ms`);
+      this.logger.debug(`Step 3-4 (Migration + Reload): ${timings.step3}ms`);
 
-      // Step 4: Backup
+      // Step 5: Backup
       const step4Start = Date.now();
       const version = await this.schemaHistoryService.backup();
       timings.step4 = Date.now() - step4Start;
