@@ -146,6 +146,9 @@ export class TableHandlerService {
   async delete(id: number) {
     const tableDefRepo: any =
       this.dataSourceService.getRepository('table_definition');
+    const dataSource = this.dataSourceService.getDataSource();
+    const queryRunner = dataSource.createQueryRunner();
+    
     try {
       const exists = await tableDefRepo.findOne({ where: { id } });
 
@@ -153,12 +156,48 @@ export class TableHandlerService {
         throw new Error(`Table with id ${id} does not exist.`);
       }
 
+      await queryRunner.connect();
+      
+      // ✅ Drop the actual database table first
+      const tableName = exists.name;
+      this.logger.log(`🗑️ Dropping database table: ${tableName}`);
+      
+      // Drop all foreign keys first to avoid constraint issues
+      const foreignKeys = await queryRunner.query(`
+        SELECT CONSTRAINT_NAME 
+        FROM information_schema.KEY_COLUMN_USAGE 
+        WHERE CONSTRAINT_SCHEMA = DATABASE()
+          AND TABLE_NAME = '${tableName}'
+          AND REFERENCED_TABLE_NAME IS NOT NULL
+      `);
+      
+      for (const fk of foreignKeys) {
+        try {
+          await queryRunner.query(`ALTER TABLE \`${tableName}\` DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``);
+          this.logger.debug(`Dropped foreign key: ${fk.CONSTRAINT_NAME}`);
+        } catch (fkError) {
+          this.logger.warn(`Failed to drop FK ${fk.CONSTRAINT_NAME}: ${fkError.message}`);
+        }
+      }
+      
+      // Drop the table
+      const hasTable = await queryRunner.hasTable(tableName);
+      if (hasTable) {
+        await queryRunner.dropTable(tableName);
+        this.logger.log(`✅ Database table ${tableName} dropped successfully`);
+      } else {
+        this.logger.warn(`Table ${tableName} does not exist in database`);
+      }
+
+      // Remove metadata record so entity won't be regenerated
       const result = await tableDefRepo.remove(exists);
       await this.afterEffect({ entityName: result.name, type: 'update' });
       return result;
     } catch (error) {
-      console.error(error.stack || error.message || error);
+      this.logger.error(`❌ Error deleting table:`, error);
       throw new Error(`Error: "${error.message}"`);
+    } finally {
+      await queryRunner.release();
     }
   }
 
