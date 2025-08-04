@@ -1,10 +1,12 @@
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { Logger } from '@nestjs/common';
 
+const execAsync = promisify(exec);
 const logger = new Logger('BuildHelper');
 
-export function buildToJs({
+export async function buildToJs({
   targetDir,
   outDir,
 }: {
@@ -16,9 +18,12 @@ export function buildToJs({
   logger.log('script', script);
 
   try {
-    execSync(script, { stdio: 'inherit' });
+    const { stdout, stderr } = await execAsync(script);
+    if (stdout) logger.debug(stdout);
+    if (stderr) logger.warn(stderr);
     logger.debug('JavaScript file build successful');
   } catch (err) {
     logger.error('Error running shell script:', err);
+    throw err;
   }
 }

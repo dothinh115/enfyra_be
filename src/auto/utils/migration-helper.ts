@@ -1,11 +1,13 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { Logger } from '@nestjs/common';
 
+const execAsync = promisify(exec);
 const logger = new Logger('MigrationHelper');
 
-export function generateMigrationFile() {
+export async function generateMigrationFile() {
   const migrationDir = path.resolve('src', 'migrations', 'AutoMigration');
   const needDeleteDir = path.resolve('src', 'migrations');
   const appDataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
@@ -21,16 +23,31 @@ export function generateMigrationFile() {
     fs.mkdirSync(migrationDir, { recursive: true });
     logger.log(`Successfully created directory ${migrationDir}`);
 
-    const script = `npm run typeorm -- migration:generate ${migrationDir} -d ${appDataSourceDir}`;
-    execSync(script, { encoding: 'utf-8' });
+    // Use ts-node to run TypeORM with TypeScript support
+    const tsNode = path.resolve('node_modules/.bin/ts-node');
+    const typeormCli = path.resolve('node_modules/typeorm/cli.js');
+    const script = `${tsNode} ${typeormCli} migration:generate ${migrationDir} -d ${appDataSourceDir}`;
+    const { stdout, stderr } = await execAsync(script, {
+      env: { ...process.env, NODE_ENV: process.env.NODE_ENV || 'development' }
+    });
+    
+    if (stdout) logger.debug(stdout);
+    if (stderr && !stderr.includes('No changes in database schema were found')) {
+      logger.warn(stderr);
+    }
+    
     logger.debug('Migration file generation successful!');
   } catch (error: any) {
-    const output = error?.output?.[1]?.toString() ?? '';
+    const errorMessage = error?.message || '';
+    const stdout = error?.stdout || '';
+    const stderr = error?.stderr || '';
 
     logger.error('Error running generate migration:');
-    console.error(output);
+    console.error(errorMessage);
 
-    if (output.includes('No changes in database schema were found')) {
+    if (stdout.includes('No changes in database schema were found') || 
+        stderr.includes('No changes in database schema were found') ||
+        errorMessage.includes('No changes in database schema were found')) {
       logger.warn('⏭️ No changes to generate migration. Skipping.');
       return; // don't throw, to avoid restore loop
     }
@@ -39,15 +56,21 @@ export function generateMigrationFile() {
   }
 }
 
-export function runMigration() {
+export async function runMigration() {
   const dataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
-  const script = `npm run typeorm -- migration:run -d ${dataSourceDir}`;
+  const tsNode = path.resolve('node_modules/.bin/ts-node');
+  const typeormCli = path.resolve('node_modules/typeorm/cli.js');
+  const script = `${tsNode} ${typeormCli} migration:run -d ${dataSourceDir}`;
 
   logger.log('Preparing to run migration');
   logger.log(`Script: ${script}`);
 
   try {
-    execSync(script, { stdio: 'inherit' });
+    const { stdout, stderr } = await execAsync(script, {
+      env: { ...process.env, NODE_ENV: process.env.NODE_ENV || 'development' }
+    });
+    if (stdout) logger.debug(stdout);
+    if (stderr) logger.warn(stderr);
     logger.debug('Migration execution successful!');
   } catch (error) {
     logger.error('Error running shell script:', error);

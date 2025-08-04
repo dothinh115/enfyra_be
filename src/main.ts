@@ -6,34 +6,42 @@ import * as express from 'express';
 import * as qs from 'qs';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { buildToJs } from './auto/utils/build-helper';
 import { GraphqlService } from './graphql/graphql.service';
+
+const execAsync = promisify(exec);
 
 async function bootstrap() {
   const startTime = Date.now();
   const logger = new Logger('Main');
   logger.log('🚀 Starting Cold Start');
 
-  const script = `node ${path.resolve(__dirname, '../scripts/init-db.js')}`;
+  // Sequential initialization - DB init must complete before build
   try {
+    // DB initialization first
     const initStart = Date.now();
-    execSync(script, { stdio: 'inherit' });
+    const script = `node ${path.resolve(__dirname, '../scripts/init-db.js')}`;
+    await execAsync(script);
     logger.log(`⏱️  DB Init: ${Date.now() - initStart}ms`);
     
+    // Build JS entities after DB is ready
     const buildStart = Date.now();
-    logger.debug('JavaScript file build successful');
-    buildToJs({
+    await buildToJs({
       targetDir: path.resolve('src/entities'),
       outDir: path.resolve('dist/src/entities'),
     });
     logger.log(`⏱️  Build JS: ${Date.now() - buildStart}ms`);
   } catch (err) {
-    logger.error('Error running shell script:', err);
+    logger.error('Error during initialization:', err);
   }
 
   const nestStart = Date.now();
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log'], // Reduce logging overhead
+    bufferLogs: true, // Buffer logs during initialization
+  });
   logger.log(`⏱️  NestJS Create: ${Date.now() - nestStart}ms`);
   const graphqlService = app.get(GraphqlService);
   const expressApp = app.getHttpAdapter().getInstance();
@@ -66,9 +74,15 @@ async function bootstrap() {
     }),
   );
 
+  // Initialize app (triggers onApplicationBootstrap)
+  const initStart = Date.now();
+  await app.init();
+  logger.log(`⏱️  App Init (Bootstrap): ${Date.now() - initStart}ms`);
+  
+  // Start listening
   const listenStart = Date.now();
   await app.listen(configService.get('PORT') || 1105);
-  logger.log(`⏱️  App Listen: ${Date.now() - listenStart}ms`);
+  logger.log(`⏱️  HTTP Listen: ${Date.now() - listenStart}ms`);
   
   const totalTime = Date.now() - startTime;
   logger.log(`🎉 Cold Start completed! Total time: ${totalTime}ms`);

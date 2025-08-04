@@ -1,0 +1,71 @@
+name: Deploy to VPS
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            # Set project variables
+            export PROJECT_NAME="enfyra-backend"
+            export APP_DIR="/apps/$PROJECT_NAME"
+            
+            # Setup PATH for tools
+            export PATH="$PATH:/usr/bin:/usr/local/bin:$HOME/.local/bin"
+            
+            # Find tool paths
+            GIT_PATH=$(which git || echo "/usr/bin/git")
+            NPM_PATH=$(which npm || echo "/usr/bin/npm")
+            YARN_PATH=$(which yarn || echo "")
+            PM2_PATH=$(which pm2 || echo "$HOME/.local/bin/pm2")
+            
+            # Install yarn if not found
+            if [ -z "$YARN_PATH" ]; then
+              echo "Yarn not found, installing..."
+              $NPM_PATH install -g yarn
+              YARN_PATH=$(which yarn || echo "$HOME/.local/bin/yarn")
+            fi
+            
+            echo "=== Starting PM2 Deployment ==="
+            echo "Tools found:"
+            echo "Git: $GIT_PATH"
+            echo "NPM: $NPM_PATH"
+            echo "Yarn: $YARN_PATH" 
+            echo "PM2: $PM2_PATH"
+            
+            # Navigate to app directory
+            cd $APP_DIR
+            echo "Current directory: $(pwd)"
+            
+            # Pull latest code with conflict resolution
+            echo "Pulling latest code..."
+            $GIT_PATH fetch origin main
+            $GIT_PATH reset --hard origin/main
+            $GIT_PATH clean -fd
+            echo "✅ Code updated to latest from git (local changes discarded)"
+            
+            # Install dependencies with yarn
+            echo "Installing dependencies with yarn..."
+            $YARN_PATH install --frozen-lockfile
+            
+            # Build application
+            echo "Building application..."
+            $YARN_PATH build
+            
+            # Restart PM2 application
+            echo "Restarting PM2 application..."
+            $PM2_PATH restart $PROJECT_NAME || $PM2_PATH start ecosystem.config.js
+            
+            # Show PM2 status
+            $PM2_PATH status
+            $PM2_PATH logs $PROJECT_NAME --lines 20
+            
+            echo "=== PM2 Deployment completed successfully ==="

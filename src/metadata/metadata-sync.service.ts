@@ -93,18 +93,32 @@ export class MetadataSyncService {
     fromRestore?: boolean;
     type: 'create' | 'update';
   }) {
+    const startTime = Date.now();
+    const timings: Record<string, number> = {};
+
     try {
+      // Step 1: Pull metadata + clear migrations (must complete before build)
+      const step1Start = Date.now();
       await Promise.all([
         this.pullMetadataFromDb(),
         this.autoService.clearMigrationsTable(),
       ]);
+      timings.step1 = Date.now() - step1Start;
+      this.logger.debug(
+        `Step 1 (Pull metadata + Clear migrations): ${timings.step1}ms`,
+      );
 
-      buildToJs({
+      // Step 2: Build JS entities (needs pulled metadata)
+      const step2Start = Date.now();
+      await buildToJs({
         targetDir: path.resolve('src/entities'),
         outDir: path.resolve('dist/src/entities'),
       });
+      timings.step2 = Date.now() - step2Start;
+      this.logger.debug(`Step 2 (Build JS entities): ${timings.step2}ms`);
 
-      // Bước 3: Song song reload services (nặng) và migration flow (nhẹ)
+      // Step 3: Reload services + Migration
+      const step3Start = Date.now();
       await Promise.all([
         // Services reload (I/O bound)
         Promise.all([
@@ -113,12 +127,33 @@ export class MetadataSyncService {
         ]),
         // Migration flow (CPU bound)
         (async () => {
-          generateMigrationFile();
-          runMigration();
+          // Only run migration for table changes, not for data updates
+          if (options?.type === 'create' || !options?.fromRestore) {
+            const migrationStart = Date.now();
+            await generateMigrationFile();
+            timings.generateMigration = Date.now() - migrationStart;
+            
+            const runStart = Date.now();
+            await runMigration();
+            timings.runMigration = Date.now() - runStart;
+          } else {
+            this.logger.debug('Skipping migration for non-structural changes');
+            timings.generateMigration = 0;
+            timings.runMigration = 0;
+          }
         })(),
       ]);
+      timings.step3 = Date.now() - step3Start;
+      this.logger.debug(`Step 3 (Reload + Migration): ${timings.step3}ms`);
 
+      // Step 4: Backup
+      const step4Start = Date.now();
       const version = await this.schemaHistoryService.backup();
+      timings.step4 = Date.now() - step4Start;
+
+      timings.total = Date.now() - startTime;
+      this.logger.log(`🏁 syncAll completed in ${timings.total}ms`, timings);
+
       return version;
     } catch (err) {
       this.logger.error(
