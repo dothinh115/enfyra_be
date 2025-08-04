@@ -59,9 +59,17 @@ export class RedisLockService {
 
   async set<T = any>(key: string, value: T, ttlMs: number): Promise<void> {
     const serializedValue = this.serialize(value);
-    await this.redis.set(key, serializedValue, 'PX', ttlMs);
-    const ttl = await this.redis.pttl(key);
-    console.log(`[RedisLockService] SET ${key} => TTL=${ttl}ms`);
+    
+    if (ttlMs > 0) {
+      // Set with TTL
+      await this.redis.set(key, serializedValue, 'PX', ttlMs);
+      const ttl = await this.redis.pttl(key);
+      console.log(`[RedisLockService] SET ${key} => TTL=${ttl}ms`);
+    } else {
+      // Set without TTL (persist forever)
+      await this.redis.set(key, serializedValue);
+      console.log(`[RedisLockService] SET ${key} => NO TTL (persistent)`);
+    }
   }
 
   async exists(key: string, value: any): Promise<boolean> {

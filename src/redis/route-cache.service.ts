@@ -4,11 +4,12 @@ import { RedisLockService } from './redis-lock.service';
 import { Repository, IsNull } from 'typeorm';
 import { GLOBAL_ROUTES_KEY } from '../utils/constant';
 
+const STALE_ROUTES_KEY = 'stale:routes';
+const REVALIDATING_KEY = 'revalidating:routes';
+
 @Injectable()
 export class RouteCacheService {
   private readonly logger = new Logger(RouteCacheService.name);
-  private isRevalidating = false; // Track if background refresh is in progress
-  private staleRoutes: any[] | null = null; // Keep stale routes for immediate return
 
   constructor(
     private readonly dataSourceService: DataSourceService,
@@ -69,7 +70,13 @@ export class RouteCacheService {
 
   async loadAndCacheRoutes(): Promise<any[]> {
     const routes = await this.loadRoutes();
-    await this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 60000);
+
+    // Update both main cache and stale cache
+    await Promise.all([
+      this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 60000),
+      this.redisLockService.set(STALE_ROUTES_KEY, routes, 0),
+    ]);
+
     return routes;
   }
 
@@ -77,8 +84,10 @@ export class RouteCacheService {
     try {
       const routes = await this.loadRoutes();
 
-      await this.redisLockService.set(GLOBAL_ROUTES_KEY, routes, 60000);
-      this.staleRoutes = routes; // Update stale cache
+      await Promise.all([
+        this.redisLockService.set(GLOBAL_ROUTES_KEY, routes, 60000),
+        this.redisLockService.set(STALE_ROUTES_KEY, routes, 0),
+      ]);
 
       this.logger.log(
         `[RouteCache] Reloaded route cache with ${routes.length} routes`,
@@ -96,20 +105,22 @@ export class RouteCacheService {
     const cachedRoutes = await this.redisLockService.get(GLOBAL_ROUTES_KEY);
 
     if (cachedRoutes) {
-      // Cache hit - update stale backup and return fresh data
-      this.staleRoutes = cachedRoutes;
+      // Cache hit - just return, no need to update stale cache
       return cachedRoutes;
     }
 
-    // Cache miss - check if we have stale data to return immediately
-    if (this.staleRoutes && !this.isRevalidating) {
+    // Cache miss - check if we have stale data in Redis to return immediately
+    const staleRoutes = await this.redisLockService.get(STALE_ROUTES_KEY);
+    const isRevalidating = await this.redisLockService.get(REVALIDATING_KEY);
+
+    if (staleRoutes && !isRevalidating) {
       // Start background revalidation (non-blocking)
       this.backgroundRevalidate();
 
       this.logger.debug(
         '[RouteCache] Cache expired, returning stale data while revalidating in background',
       );
-      return this.staleRoutes;
+      return staleRoutes;
     }
 
     // No stale data available or already revalidating - fetch synchronously
@@ -120,11 +131,17 @@ export class RouteCacheService {
   }
 
   private async backgroundRevalidate(): Promise<void> {
-    if (this.isRevalidating) {
-      return; // Already revalidating
+    // Set revalidating flag in Redis (multi-instance safe)
+    const acquired = await this.redisLockService.acquire(
+      REVALIDATING_KEY,
+      'true',
+      30000, // 30s TTL for revalidation lock
+    );
+
+    if (!acquired) {
+      return; // Another instance is already revalidating
     }
 
-    this.isRevalidating = true;
     this.logger.debug('[RouteCache] Starting background revalidation');
 
     try {
@@ -133,7 +150,8 @@ export class RouteCacheService {
     } catch (error) {
       this.logger.error('[RouteCache] Background revalidation failed:', error);
     } finally {
-      this.isRevalidating = false;
+      // Clear revalidating flag
+      await this.redisLockService.release(REVALIDATING_KEY, 'true');
     }
   }
 }
