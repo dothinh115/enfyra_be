@@ -3,34 +3,14 @@ import * as fs from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { Logger } from '@nestjs/common';
-import { getMigrationWorkerPool } from '../migration-worker-pool';
 
 const execAsync = promisify(exec);
 const logger = new Logger('MigrationHelper');
 
 export async function generateMigrationFile() {
-  logger.log('🚀 Generating migration using worker pool...');
-  
-  try {
-    const workerPool = await getMigrationWorkerPool();
-    const result = await workerPool.generateMigration();
-    
-    if (result.skipped) {
-      logger.warn('⏭️ No changes to generate migration. Skipping.');
-      return;
-    }
-    
-    logger.debug('✅ Migration file generation successful via worker pool!');
-  } catch (error: any) {
-    logger.error('❌ Error in worker pool migration generation:', error);
-    
-    // Fallback to direct execution if worker fails
-    logger.warn('🔄 Falling back to direct migration generation...');
-    await generateMigrationFileDirect();
-  }
+  await generateMigrationFileDirect();
 }
 
-// Fallback function for direct execution
 async function generateMigrationFileDirect() {
   const migrationDir = path.resolve('src', 'migrations', 'AutoMigration');
   const needDeleteDir = path.resolve('src', 'migrations');
@@ -52,14 +32,17 @@ async function generateMigrationFileDirect() {
     const typeormCli = path.resolve('node_modules/typeorm/cli.js');
     const script = `${tsNode} ${typeormCli} migration:generate ${migrationDir} -d ${appDataSourceDir}`;
     const { stdout, stderr } = await execAsync(script, {
-      env: { ...process.env, NODE_ENV: process.env.NODE_ENV || 'development' }
+      env: { ...process.env, NODE_ENV: process.env.NODE_ENV || 'development' },
     });
-    
+
     if (stdout) logger.debug(stdout);
-    if (stderr && !stderr.includes('No changes in database schema were found')) {
+    if (
+      stderr &&
+      !stderr.includes('No changes in database schema were found')
+    ) {
       logger.warn(stderr);
     }
-    
+
     logger.debug('Migration file generation successful!');
   } catch (error: any) {
     const errorMessage = error?.message || '';
@@ -69,9 +52,11 @@ async function generateMigrationFileDirect() {
     logger.error('Error running generate migration:');
     console.error(errorMessage);
 
-    if (stdout.includes('No changes in database schema were found') || 
-        stderr.includes('No changes in database schema were found') ||
-        errorMessage.includes('No changes in database schema were found')) {
+    if (
+      stdout.includes('No changes in database schema were found') ||
+      stderr.includes('No changes in database schema were found') ||
+      errorMessage.includes('No changes in database schema were found')
+    ) {
       logger.warn('⏭️ No changes to generate migration. Skipping.');
       return; // don't throw, to avoid restore loop
     }
@@ -81,23 +66,9 @@ async function generateMigrationFileDirect() {
 }
 
 export async function runMigration() {
-  logger.log('🚀 Running migration using worker pool...');
-  
-  try {
-    const workerPool = await getMigrationWorkerPool();
-    const result = await workerPool.runMigration();
-    
-    logger.debug('✅ Migration execution successful via worker pool!');
-  } catch (error: any) {
-    logger.error('❌ Error in worker pool migration run:', error);
-    
-    // Fallback to direct execution if worker fails
-    logger.warn('🔄 Falling back to direct migration run...');
-    await runMigrationDirect();
-  }
+  await runMigrationDirect();
 }
 
-// Fallback function for direct execution
 async function runMigrationDirect() {
   const dataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
   const tsNode = path.resolve('node_modules/.bin/ts-node');
@@ -109,7 +80,7 @@ async function runMigrationDirect() {
 
   try {
     const { stdout, stderr } = await execAsync(script, {
-      env: { ...process.env, NODE_ENV: process.env.NODE_ENV || 'development' }
+      env: { ...process.env, NODE_ENV: process.env.NODE_ENV || 'development' },
     });
     if (stdout) logger.debug(stdout);
     if (stderr) logger.warn(stderr);

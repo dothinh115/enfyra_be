@@ -7,7 +7,6 @@ import { CoreInitService } from './core-init.service';
 import { DataSourceService } from '../data-source/data-source.service';
 import { SchemaReloadService } from '../schema/schema-reload.service';
 import { RedisLockService } from '../redis/redis-lock.service';
-import { getMigrationWorkerPool } from '../auto/migration-worker-pool';
 
 @Injectable()
 export class BootstrapService implements OnApplicationBootstrap {
@@ -51,11 +50,6 @@ export class BootstrapService implements OnApplicationBootstrap {
     // return;
     try {
       await this.waitForDatabaseConnection();
-      
-      // Initialize migration worker pool for performance optimization
-      this.logger.log('🔧 Initializing migration worker pool...');
-      await getMigrationWorkerPool();
-      this.logger.log('✅ Migration worker pool ready');
     } catch (err) {
       this.logger.error('❌ Error during application bootstrap:', err);
     }
