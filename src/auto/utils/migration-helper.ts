@@ -11,8 +11,8 @@ export async function generateMigrationFile() {
 }
 
 async function generateMigrationFileDirect() {
-  const migrationDir = path.resolve('src', 'migrations', 'AutoMigration');
-  const needDeleteDir = path.resolve('src', 'migrations');
+  const migrationDir = path.resolve('dist', 'src', 'migrations', 'AutoMigration');
+  const needDeleteDir = path.resolve('dist', 'src', 'migrations');
   const entityDir = path.resolve('dist', 'src', 'entities');
 
   logger.log('🚀 Generating migration using DataSource API...');
@@ -44,10 +44,10 @@ async function generateMigrationFileDirect() {
       return;
     }
 
-    // Generate migration file
+    // Generate migration file as JS (not TS) for direct execution
     const timestamp = Date.now();
     const migrationName = `AutoMigration${timestamp}`;
-    const migrationPath = path.join(migrationDir, `${migrationName}.ts`);
+    const migrationPath = path.join(migrationDir, `${migrationName}.js`);
     
     const upQueries = sqlInMemory.upQueries
       .map(query => {
@@ -71,19 +71,21 @@ async function generateMigrationFileDirect() {
       })
       .join('\n');
     
-    const migrationTemplate = `import { MigrationInterface, QueryRunner } from "typeorm";
+    const migrationTemplate = `const { MigrationInterface } = require("typeorm");
 
-export class ${migrationName}${timestamp} implements MigrationInterface {
+class ${migrationName}${timestamp} {
     name = '${migrationName}${timestamp}'
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
+    async up(queryRunner) {
 ${upQueries}
     }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
+    async down(queryRunner) {
 ${downQueries}
     }
 }
+
+module.exports = { ${migrationName}${timestamp} };
 `;
 
     fs.writeFileSync(migrationPath, migrationTemplate);
@@ -103,15 +105,30 @@ export async function runMigration() {
 
 async function runMigrationDirect() {
   const entityDir = path.resolve('dist', 'src', 'entities');
-  const migrationDir = path.resolve('src', 'migrations');
+  const migrationDir = path.resolve('dist', 'src', 'migrations');
 
   logger.log('🚀 Running migration using DataSource API...');
 
   try {
-    // Load entities and create DataSource
+    // Load entities and create DataSource with proper migration path
     const commonService = new CommonService();
     const entities = await commonService.loadDynamicEntities(entityDir);
-    const dataSource = createDataSource(entities);
+    
+    // Create DataSource with explicit migration configuration
+    const { DataSource } = await import('typeorm');
+    const dataSource = new DataSource({
+      type: process.env.DB_TYPE as 'mysql',
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '3306'),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      synchronize: false,
+      entities,
+      migrations: [path.resolve('dist', 'src', 'migrations', '**', '*.js')], // Look for JS files in dist
+      migrationsRun: false, // Don't auto-run migrations
+      logging: false,
+    });
     
     await dataSource.initialize();
     logger.debug('✅ DataSource initialized for migration run');
@@ -129,6 +146,13 @@ async function runMigrationDirect() {
     }
     
     await dataSource.destroy();
+    
+    // ✅ Clean up migration files after successful execution
+    if (fs.existsSync(migrationDir)) {
+      fs.rmSync(migrationDir, { recursive: true, force: true });
+      logger.log(`🧹 Cleaned up migration directory: ${migrationDir}`);
+    }
+    
     logger.debug('✅ Migration execution successful via DataSource API!');
   } catch (error) {
     logger.error('❌ Error in DataSource migration run:', error);
