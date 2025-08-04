@@ -3,16 +3,40 @@ import * as fs from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { Logger } from '@nestjs/common';
+import { getMigrationWorkerPool } from '../migration-worker-pool';
 
 const execAsync = promisify(exec);
 const logger = new Logger('MigrationHelper');
 
 export async function generateMigrationFile() {
+  logger.log('🚀 Generating migration using worker pool...');
+  
+  try {
+    const workerPool = await getMigrationWorkerPool();
+    const result = await workerPool.generateMigration();
+    
+    if (result.skipped) {
+      logger.warn('⏭️ No changes to generate migration. Skipping.');
+      return;
+    }
+    
+    logger.debug('✅ Migration file generation successful via worker pool!');
+  } catch (error: any) {
+    logger.error('❌ Error in worker pool migration generation:', error);
+    
+    // Fallback to direct execution if worker fails
+    logger.warn('🔄 Falling back to direct migration generation...');
+    await generateMigrationFileDirect();
+  }
+}
+
+// Fallback function for direct execution
+async function generateMigrationFileDirect() {
   const migrationDir = path.resolve('src', 'migrations', 'AutoMigration');
   const needDeleteDir = path.resolve('src', 'migrations');
   const appDataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
 
-  logger.log('Preparing to generate migration file');
+  logger.log('Preparing to generate migration file (direct)');
 
   try {
     if (fs.existsSync(needDeleteDir)) {
@@ -57,12 +81,30 @@ export async function generateMigrationFile() {
 }
 
 export async function runMigration() {
+  logger.log('🚀 Running migration using worker pool...');
+  
+  try {
+    const workerPool = await getMigrationWorkerPool();
+    const result = await workerPool.runMigration();
+    
+    logger.debug('✅ Migration execution successful via worker pool!');
+  } catch (error: any) {
+    logger.error('❌ Error in worker pool migration run:', error);
+    
+    // Fallback to direct execution if worker fails
+    logger.warn('🔄 Falling back to direct migration run...');
+    await runMigrationDirect();
+  }
+}
+
+// Fallback function for direct execution
+async function runMigrationDirect() {
   const dataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
   const tsNode = path.resolve('node_modules/.bin/ts-node');
   const typeormCli = path.resolve('node_modules/typeorm/cli.js');
   const script = `${tsNode} ${typeormCli} migration:run -d ${dataSourceDir}`;
 
-  logger.log('Preparing to run migration');
+  logger.log('Preparing to run migration (direct)');
   logger.log(`Script: ${script}`);
 
   try {
