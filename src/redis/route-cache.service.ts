@@ -116,25 +116,36 @@ export class RouteCacheService {
   }
 
   async getRoutesWithSWR(): Promise<any[]> {
+    const overallStart = Date.now();
+    
     // Try to get fresh routes from cache
+    const cacheStart = Date.now();
     const cachedRoutes = await this.redisLockService.get(GLOBAL_ROUTES_KEY);
+    const cacheTime = Date.now() - cacheStart;
 
     if (cachedRoutes) {
-      // ✅ Cache hit - còn TTL, trả về luôn, không log gì
+      // ✅ Cache hit - còn TTL, trả về luôn, chỉ log nếu Redis chậm
+      if (cacheTime > 10) {
+        const requestId = Math.random().toString(36).substring(7);
+        this.logger.warn(`[SWR:${requestId}] ⚠️ Cache hit but Redis slow: ${cacheTime}ms`);
+      }
       return cachedRoutes;
     }
 
     // ❌ Cache miss - hết TTL, bắt đầu SWR logic
-    const startTime = Date.now();
     const requestId = Math.random().toString(36).substring(7);
     
-    this.logger.log(`[SWR:${requestId}] ❌ Cache EXPIRED - checking stale data...`);
+    this.logger.log(`[SWR:${requestId}] ❌ Cache EXPIRED (Redis: ${cacheTime}ms) - checking stale data...`);
 
     // Cache miss - check if we have stale data in Redis to return immediately
-    const staleRoutes = await this.redisLockService.get(STALE_ROUTES_KEY);
-    const isRevalidating = await this.redisLockService.get(REVALIDATING_KEY);
+    const staleStart = Date.now();
+    const [staleRoutes, isRevalidating] = await Promise.all([
+      this.redisLockService.get(STALE_ROUTES_KEY),
+      this.redisLockService.get(REVALIDATING_KEY)
+    ]);
+    const staleTime = Date.now() - staleStart;
 
-    this.logger.log(`[SWR:${requestId}] Stale data: ${staleRoutes ? `${staleRoutes.length} routes` : 'NONE'}, Revalidating: ${!!isRevalidating}`);
+    this.logger.log(`[SWR:${requestId}] Stale check (${staleTime}ms): ${staleRoutes ? `${staleRoutes.length} routes` : 'NONE'}, Revalidating: ${!!isRevalidating}`);
 
     if (staleRoutes) {
       if (!isRevalidating) {
@@ -147,8 +158,9 @@ export class RouteCacheService {
         this.logger.log(`[SWR:${requestId}] ⏳ Already revalidating, skip background task`);
       }
 
+      const totalTime = Date.now() - overallStart;
       this.logger.log(
-        `[SWR:${requestId}] ⚡ Serving STALE data - returned ${staleRoutes.length} routes in ${Date.now() - startTime}ms`,
+        `[SWR:${requestId}] ⚡ Serving STALE data - returned ${staleRoutes.length} routes in ${totalTime}ms (cache:${cacheTime}ms + stale:${staleTime}ms)`,
       );
       return staleRoutes;
     }
@@ -158,7 +170,8 @@ export class RouteCacheService {
       `[SWR:${requestId}] 🐌 SLOW PATH - No cache, no stale data - fetching from DB...`,
     );
     const routes = await this.loadAndCacheRoutes();
-    this.logger.warn(`[SWR:${requestId}] 🐌 DB fetch completed - ${routes.length} routes in ${Date.now() - startTime}ms`);
+    const totalTime = Date.now() - overallStart;
+    this.logger.warn(`[SWR:${requestId}] 🐌 DB fetch completed - ${routes.length} routes in ${totalTime}ms`);
     return routes;
   }
 
