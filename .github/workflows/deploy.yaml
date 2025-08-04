@@ -75,6 +75,12 @@ jobs:
             
             # Show PM2 status
             $PM2_PATH status
-            $PM2_PATH logs $PROJECT_NAME --lines 30
+            
+            # Show logs without tailing (just print and exit)
+            echo "=== Recent logs ==="
+            $PM2_PATH logs $PROJECT_NAME --lines 30 --nostream || {
+              echo "Using alternative log method..."
+              timeout 3s $PM2_PATH logs $PROJECT_NAME --lines 30 || true
+            }
             
             echo "=== PM2 Deployment completed successfully ==="
