@@ -41,7 +41,21 @@ export function addColumnToClass({
     if (col.defaultValue !== undefined && col.defaultValue !== null) {
       const invalidDefault =
         (col.type === 'uuid' && col.defaultValue === '') ||
-        (col.type === 'number' && isNaN(Number(col.defaultValue)));
+        (col.type === 'number' && isNaN(Number(col.defaultValue))) ||
+        // ✅ MySQL: TEXT, BLOB, GEOMETRY, JSON columns can't have default values
+        (col.type === 'text') ||
+        (col.type === 'blob') ||
+        (col.type === 'longtext') ||
+        (col.type === 'mediumtext') ||
+        (col.type === 'tinytext') ||
+        (col.type === 'longblob') ||
+        (col.type === 'mediumblob') ||
+        (col.type === 'tinyblob') ||
+        (col.type === 'json') ||
+        (col.type === 'geometry') ||
+        (col.type === 'point') ||
+        (col.type === 'linestring') ||
+        (col.type === 'polygon');
 
       if (invalidDefault) {
         // skip invalid default value
