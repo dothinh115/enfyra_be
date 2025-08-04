@@ -1,10 +1,9 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { Logger } from '@nestjs/common';
+import { createDataSource } from '../../data-source/data-source';
+import { CommonService } from '../../common/common.service';
 
-const execAsync = promisify(exec);
 const logger = new Logger('MigrationHelper');
 
 export async function generateMigrationFile() {
@@ -14,11 +13,12 @@ export async function generateMigrationFile() {
 async function generateMigrationFileDirect() {
   const migrationDir = path.resolve('src', 'migrations', 'AutoMigration');
   const needDeleteDir = path.resolve('src', 'migrations');
-  const appDataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
+  const entityDir = path.resolve('dist', 'src', 'entities');
 
-  logger.log('Preparing to generate migration file (direct)');
+  logger.log('🚀 Generating migration using DataSource API...');
 
   try {
+    // Clean up existing migrations
     if (fs.existsSync(needDeleteDir)) {
       fs.rmSync(needDeleteDir, { recursive: true, force: true });
       logger.log(`Successfully deleted directory ${needDeleteDir}`);
@@ -27,40 +27,53 @@ async function generateMigrationFileDirect() {
     fs.mkdirSync(migrationDir, { recursive: true });
     logger.log(`Successfully created directory ${migrationDir}`);
 
-    // Use ts-node to run TypeORM with TypeScript support
-    const tsNode = path.resolve('node_modules/.bin/ts-node');
-    const typeormCli = path.resolve('node_modules/typeorm/cli.js');
-    const script = `${tsNode} ${typeormCli} migration:generate ${migrationDir} -d ${appDataSourceDir}`;
-    const { stdout, stderr } = await execAsync(script, {
-      env: { ...process.env, NODE_ENV: process.env.NODE_ENV || 'development' },
-    });
+    // Load entities and create DataSource
+    const commonService = new CommonService();
+    const entities = await commonService.loadDynamicEntities(entityDir);
+    const dataSource = createDataSource(entities);
+    
+    await dataSource.initialize();
+    logger.debug('✅ DataSource initialized for migration generation');
 
-    if (stdout) logger.debug(stdout);
-    if (
-      stderr &&
-      !stderr.includes('No changes in database schema were found')
-    ) {
-      logger.warn(stderr);
-    }
-
-    logger.debug('Migration file generation successful!');
-  } catch (error: any) {
-    const errorMessage = error?.message || '';
-    const stdout = error?.stdout || '';
-    const stderr = error?.stderr || '';
-
-    logger.error('Error running generate migration:');
-    console.error(errorMessage);
-
-    if (
-      stdout.includes('No changes in database schema were found') ||
-      stderr.includes('No changes in database schema were found') ||
-      errorMessage.includes('No changes in database schema were found')
-    ) {
+    // Use TypeORM's migration generator
+    const sqlInMemory = await dataSource.driver.createSchemaBuilder().log();
+    
+    if (sqlInMemory.upQueries.length === 0) {
       logger.warn('⏭️ No changes to generate migration. Skipping.');
-      return; // don't throw, to avoid restore loop
+      await dataSource.destroy();
+      return;
     }
 
+    // Generate migration file
+    const timestamp = Date.now();
+    const migrationName = `AutoMigration${timestamp}`;
+    const migrationPath = path.join(migrationDir, `${migrationName}.ts`);
+    
+    const upQueries = sqlInMemory.upQueries.map(query => `        await queryRunner.query(\`${query.query.replace(/`/g, '\\`')}\`);`).join('\n');
+    const downQueries = sqlInMemory.downQueries.map(query => `        await queryRunner.query(\`${query.query.replace(/`/g, '\\`')}\`);`).join('\n');
+    
+    const migrationTemplate = `import { MigrationInterface, QueryRunner } from "typeorm";
+
+export class ${migrationName}${timestamp} implements MigrationInterface {
+    name = '${migrationName}${timestamp}'
+
+    public async up(queryRunner: QueryRunner): Promise<void> {
+${upQueries}
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+${downQueries}
+    }
+}
+`;
+
+    fs.writeFileSync(migrationPath, migrationTemplate);
+    logger.log(`✅ Migration file generated: ${migrationPath}`);
+    
+    await dataSource.destroy();
+    logger.debug('✅ Migration file generation successful via DataSource API!');
+  } catch (error: any) {
+    logger.error('❌ Error in DataSource migration generation:', error);
     throw error;
   }
 }
@@ -70,23 +83,36 @@ export async function runMigration() {
 }
 
 async function runMigrationDirect() {
-  const dataSourceDir = path.resolve('src', 'data-source', 'data-source.ts');
-  const tsNode = path.resolve('node_modules/.bin/ts-node');
-  const typeormCli = path.resolve('node_modules/typeorm/cli.js');
-  const script = `${tsNode} ${typeormCli} migration:run -d ${dataSourceDir}`;
+  const entityDir = path.resolve('dist', 'src', 'entities');
+  const migrationDir = path.resolve('src', 'migrations');
 
-  logger.log('Preparing to run migration (direct)');
-  logger.log(`Script: ${script}`);
+  logger.log('🚀 Running migration using DataSource API...');
 
   try {
-    const { stdout, stderr } = await execAsync(script, {
-      env: { ...process.env, NODE_ENV: process.env.NODE_ENV || 'development' },
-    });
-    if (stdout) logger.debug(stdout);
-    if (stderr) logger.warn(stderr);
-    logger.debug('Migration execution successful!');
+    // Load entities and create DataSource
+    const commonService = new CommonService();
+    const entities = await commonService.loadDynamicEntities(entityDir);
+    const dataSource = createDataSource(entities);
+    
+    await dataSource.initialize();
+    logger.debug('✅ DataSource initialized for migration run');
+
+    // Run pending migrations
+    const migrations = await dataSource.runMigrations();
+    
+    if (migrations.length === 0) {
+      logger.log('✅ No pending migrations to run');
+    } else {
+      logger.log(`✅ Successfully ran ${migrations.length} migration(s):`);
+      migrations.forEach(migration => {
+        logger.log(`  - ${migration.name}`);
+      });
+    }
+    
+    await dataSource.destroy();
+    logger.debug('✅ Migration execution successful via DataSource API!');
   } catch (error) {
-    logger.error('Error running shell script:', error);
+    logger.error('❌ Error in DataSource migration run:', error);
     throw error;
   }
 }
