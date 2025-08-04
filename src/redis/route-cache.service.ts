@@ -69,32 +69,47 @@ export class RouteCacheService {
   }
 
   async loadAndCacheRoutes(): Promise<any[]> {
+    const loadId = Math.random().toString(36).substring(7);
+    const loadStart = Date.now();
+    
+    this.logger.log(`[LOAD:${loadId}] 📊 Loading routes from database...`);
     const routes = await this.loadRoutes();
+    this.logger.log(`[LOAD:${loadId}] 📊 Loaded ${routes.length} routes in ${Date.now() - loadStart}ms`);
 
+    const cacheStart = Date.now();
     // Update both main cache and stale cache
     await Promise.all([
-      this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 60000),
+      this.redisLockService.acquire(GLOBAL_ROUTES_KEY, routes, 60000), // 1 minute
       this.redisLockService.set(STALE_ROUTES_KEY, routes, 0),
     ]);
+    this.logger.log(`[LOAD:${loadId}] 💾 Cached routes in ${Date.now() - cacheStart}ms`);
 
     return routes;
   }
 
   async reloadRouteCache(): Promise<void> {
+    const reloadId = Math.random().toString(36).substring(7);
+    
     try {
+      this.logger.log(`[RELOAD:${reloadId}] 🔄 Manual route cache reload requested...`);
+      const reloadStart = Date.now();
+      
       const routes = await this.loadRoutes();
+      this.logger.log(`[RELOAD:${reloadId}] 📊 Loaded ${routes.length} routes in ${Date.now() - reloadStart}ms`);
 
+      const cacheStart = Date.now();
       await Promise.all([
         this.redisLockService.set(GLOBAL_ROUTES_KEY, routes, 60000),
         this.redisLockService.set(STALE_ROUTES_KEY, routes, 0),
       ]);
+      this.logger.log(`[RELOAD:${reloadId}] 💾 Updated cache in ${Date.now() - cacheStart}ms`);
 
       this.logger.log(
-        `[RouteCache] Reloaded route cache with ${routes.length} routes`,
+        `[RELOAD:${reloadId}] ✅ Reloaded route cache with ${routes.length} routes in ${Date.now() - reloadStart}ms total`,
       );
     } catch (error) {
       this.logger.error(
-        '[RouteCache] Failed to reload route cache',
+        `[RELOAD:${reloadId}] ❌ Failed to reload route cache:`,
         error.stack || error.message,
       );
     }
@@ -105,32 +120,51 @@ export class RouteCacheService {
     const cachedRoutes = await this.redisLockService.get(GLOBAL_ROUTES_KEY);
 
     if (cachedRoutes) {
-      // Cache hit - just return, no need to update stale cache
+      // ✅ Cache hit - còn TTL, trả về luôn, không log gì
       return cachedRoutes;
     }
+
+    // ❌ Cache miss - hết TTL, bắt đầu SWR logic
+    const startTime = Date.now();
+    const requestId = Math.random().toString(36).substring(7);
+    
+    this.logger.log(`[SWR:${requestId}] ❌ Cache EXPIRED - checking stale data...`);
 
     // Cache miss - check if we have stale data in Redis to return immediately
     const staleRoutes = await this.redisLockService.get(STALE_ROUTES_KEY);
     const isRevalidating = await this.redisLockService.get(REVALIDATING_KEY);
 
-    if (staleRoutes && !isRevalidating) {
-      // Start background revalidation (non-blocking)
-      this.backgroundRevalidate();
+    this.logger.log(`[SWR:${requestId}] Stale data: ${staleRoutes ? `${staleRoutes.length} routes` : 'NONE'}, Revalidating: ${!!isRevalidating}`);
 
-      this.logger.debug(
-        '[RouteCache] Cache expired, returning stale data while revalidating in background',
+    if (staleRoutes) {
+      if (!isRevalidating) {
+        this.logger.log(`[SWR:${requestId}] 🔄 Starting background revalidation...`);
+        // Start background revalidation (non-blocking)
+        this.backgroundRevalidate().catch((err) =>
+          this.logger.error(`[SWR:${requestId}] Background revalidation error:`, err),
+        );
+      } else {
+        this.logger.log(`[SWR:${requestId}] ⏳ Already revalidating, skip background task`);
+      }
+
+      this.logger.log(
+        `[SWR:${requestId}] ⚡ Serving STALE data - returned ${staleRoutes.length} routes in ${Date.now() - startTime}ms`,
       );
       return staleRoutes;
     }
 
-    // No stale data available or already revalidating - fetch synchronously
-    this.logger.debug(
-      '[RouteCache] No cached data available, fetching routes synchronously',
+    // No stale data available - fetch synchronously
+    this.logger.warn(
+      `[SWR:${requestId}] 🐌 SLOW PATH - No cache, no stale data - fetching from DB...`,
     );
-    return await this.loadAndCacheRoutes();
+    const routes = await this.loadAndCacheRoutes();
+    this.logger.warn(`[SWR:${requestId}] 🐌 DB fetch completed - ${routes.length} routes in ${Date.now() - startTime}ms`);
+    return routes;
   }
 
   private async backgroundRevalidate(): Promise<void> {
+    const bgId = Math.random().toString(36).substring(7);
+    
     // Set revalidating flag in Redis (multi-instance safe)
     const acquired = await this.redisLockService.acquire(
       REVALIDATING_KEY,
@@ -139,19 +173,24 @@ export class RouteCacheService {
     );
 
     if (!acquired) {
+      this.logger.log(`[BG:${bgId}] ⏸️ Another instance is already revalidating - skipping`);
       return; // Another instance is already revalidating
     }
 
-    this.logger.debug('[RouteCache] Starting background revalidation');
+    this.logger.log(`[BG:${bgId}] 🔄 Starting background revalidation...`);
+    const bgStart = Date.now();
 
     try {
       await this.reloadRouteCache();
-      this.logger.debug('[RouteCache] Background revalidation completed');
+      this.logger.log(
+        `[BG:${bgId}] ✅ Background revalidation completed in ${Date.now() - bgStart}ms`,
+      );
     } catch (error) {
-      this.logger.error('[RouteCache] Background revalidation failed:', error);
+      this.logger.error(`[BG:${bgId}] ❌ Background revalidation failed:`, error);
     } finally {
       // Clear revalidating flag
-      await this.redisLockService.release(REVALIDATING_KEY, 'true');
+      const released = await this.redisLockService.release(REVALIDATING_KEY, 'true');
+      this.logger.log(`[BG:${bgId}] 🔓 Released revalidation lock: ${released}`);
     }
   }
 }
