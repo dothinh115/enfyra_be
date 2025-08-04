@@ -34,9 +34,8 @@ export class RouteDetectMiddleware implements NestMiddleware {
   async use(req: any, res: any, next: (error?: any) => void) {
     const method = req.method;
 
-    let routes: any[] =
-      (await this.redisLockService.get(GLOBAL_ROUTES_KEY)) ||
-      (await this.routeCacheService.loadAndCacheRoutes());
+    // ⚡ Use stale-while-revalidate pattern for faster response
+    let routes: any[] = await this.routeCacheService.getRoutesWithSWR();
 
     const matchedRoute = this.findMatchedRoute(routes, req.baseUrl, method);
     const systemTables = [

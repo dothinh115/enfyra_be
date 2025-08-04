@@ -7,6 +7,8 @@ import { GLOBAL_ROUTES_KEY } from '../utils/constant';
 @Injectable()
 export class RouteCacheService {
   private readonly logger = new Logger(RouteCacheService.name);
+  private isRevalidating = false; // Track if background refresh is in progress
+  private staleRoutes: any[] | null = null; // Keep stale routes for immediate return
 
   constructor(
     private readonly dataSourceService: DataSourceService,
@@ -76,6 +78,7 @@ export class RouteCacheService {
       const routes = await this.loadRoutes();
 
       await this.redisLockService.set(GLOBAL_ROUTES_KEY, routes, 60000);
+      this.staleRoutes = routes; // Update stale cache
 
       this.logger.log(
         `[RouteCache] Reloaded route cache with ${routes.length} routes`,
@@ -85,6 +88,52 @@ export class RouteCacheService {
         '[RouteCache] Failed to reload route cache',
         error.stack || error.message,
       );
+    }
+  }
+
+  async getRoutesWithSWR(): Promise<any[]> {
+    // Try to get fresh routes from cache
+    const cachedRoutes = await this.redisLockService.get(GLOBAL_ROUTES_KEY);
+
+    if (cachedRoutes) {
+      // Cache hit - update stale backup and return fresh data
+      this.staleRoutes = cachedRoutes;
+      return cachedRoutes;
+    }
+
+    // Cache miss - check if we have stale data to return immediately
+    if (this.staleRoutes && !this.isRevalidating) {
+      // Start background revalidation (non-blocking)
+      this.backgroundRevalidate();
+
+      this.logger.debug(
+        '[RouteCache] Cache expired, returning stale data while revalidating in background',
+      );
+      return this.staleRoutes;
+    }
+
+    // No stale data available or already revalidating - fetch synchronously
+    this.logger.debug(
+      '[RouteCache] No cached data available, fetching routes synchronously',
+    );
+    return await this.loadAndCacheRoutes();
+  }
+
+  private async backgroundRevalidate(): Promise<void> {
+    if (this.isRevalidating) {
+      return; // Already revalidating
+    }
+
+    this.isRevalidating = true;
+    this.logger.debug('[RouteCache] Starting background revalidation');
+
+    try {
+      await this.reloadRouteCache();
+      this.logger.debug('[RouteCache] Background revalidation completed');
+    } catch (error) {
+      this.logger.error('[RouteCache] Background revalidation failed:', error);
+    } finally {
+      this.isRevalidating = false;
     }
   }
 }
