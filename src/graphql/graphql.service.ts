@@ -14,7 +14,7 @@ export class GraphqlService implements OnApplicationBootstrap {
     private dynamicResolver: DynamicResolver,
   ) {}
   async onApplicationBootstrap() {
-    // await this.reloadSchema();
+    await this.reloadSchema();
   }
   private yogaApp: ReturnType<typeof createYoga>;
 
@@ -102,6 +102,9 @@ export class GraphqlService implements OnApplicationBootstrap {
   }
 
   getYogaInstance() {
+    if (!this.yogaApp) {
+      throw new Error('GraphQL Yoga instance not initialized. Call reloadSchema() first.');
+    }
     return this.yogaApp;
   }
 }
