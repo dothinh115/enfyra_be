@@ -60,12 +60,21 @@ jobs:
             echo "Building application..."
             $YARN_PATH build
             
-            # Restart PM2 application
-            echo "Restarting PM2 application..."
-            $PM2_PATH restart $PROJECT_NAME || $PM2_PATH start ecosystem.config.js
+            # Stop PM2 application completely to avoid conflicts
+            echo "Stopping PM2 application..."
+            $PM2_PATH stop $PROJECT_NAME || true
+            $PM2_PATH delete $PROJECT_NAME || true
+            
+            # Clean start PM2 application
+            echo "Starting PM2 application clean..."
+            $PM2_PATH start ecosystem.config.js
+            
+            # Wait for app to initialize
+            echo "Waiting for app initialization..."
+            sleep 10
             
             # Show PM2 status
             $PM2_PATH status
-            $PM2_PATH logs $PROJECT_NAME --lines 20
+            $PM2_PATH logs $PROJECT_NAME --lines 30
             
             echo "=== PM2 Deployment completed successfully ==="
