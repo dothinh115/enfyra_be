@@ -89,7 +89,7 @@ export class DynamicRepoService {
 
   async create(body: any) {
     try {
-      this.systemProtectionService.assertSystemSafe({
+      await this.systemProtectionService.assertSystemSafe({
         operation: 'create',
         tableName: this.tableName,
         data: body,
@@ -119,7 +119,7 @@ export class DynamicRepoService {
       const exists = await this.repo.findOne({ where: { id } });
       if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
 
-      this.systemProtectionService.assertSystemSafe({
+      await this.systemProtectionService.assertSystemSafe({
         operation: 'update',
         tableName: this.tableName,
         data: body,
@@ -150,7 +150,7 @@ export class DynamicRepoService {
       const exists = await this.repo.findOne({ where: { id } });
       if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
 
-      this.systemProtectionService.assertSystemSafe({
+      await this.systemProtectionService.assertSystemSafe({
         operation: 'delete',
         tableName: this.tableName,
         data: {},
