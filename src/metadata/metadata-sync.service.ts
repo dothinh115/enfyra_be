@@ -124,16 +124,18 @@ export class MetadataSyncService {
         await generateMigrationFile();
         timings.generateMigration = Date.now() - migrationStart;
       } else {
-        this.logger.debug('Skipping migration generation for non-structural changes');
+        this.logger.debug(
+          'Skipping migration generation for non-structural changes',
+        );
         timings.generateMigration = 0;
       }
-      
+
       // Step 4: Reload services + Run Migration (can run in parallel)
       await Promise.all([
         // Services reload (I/O bound)
         Promise.all([
           this.dataSourceService.reloadDataSource(),
-          // this.graphqlService.reloadSchema(),
+          this.graphqlService.reloadSchema(),
         ]),
         // Run migration (now that it's generated)
         (async () => {
@@ -142,7 +144,9 @@ export class MetadataSyncService {
             await runMigration();
             timings.runMigration = Date.now() - runStart;
           } else {
-            this.logger.debug('Skipping migration run for non-structural changes');
+            this.logger.debug(
+              'Skipping migration run for non-structural changes',
+            );
             timings.runMigration = 0;
           }
         })(),

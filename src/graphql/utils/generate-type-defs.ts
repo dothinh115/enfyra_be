@@ -67,6 +67,21 @@ export function generateTypeDefsFromTables(
       typeDefs += `  ${fieldName}: ${finalType}\n`;
     }
 
+    // Add default timestamp fields if they exist in entity metadata
+    const hasCreatedAt = entityMeta.columns.some(
+      (col) => col.propertyName === 'createdAt',
+    );
+    const hasUpdatedAt = entityMeta.columns.some(
+      (col) => col.propertyName === 'updatedAt',
+    );
+
+    if (hasCreatedAt) {
+      typeDefs += `  createdAt: String!\n`;
+    }
+    if (hasUpdatedAt) {
+      typeDefs += `  updatedAt: String!\n`;
+    }
+
     // Relations → lấy từ entityMeta.relations
     for (const rel of entityMeta.relations) {
       if (!rel?.propertyName) {

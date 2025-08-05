@@ -1,210 +1,185 @@
-# Dynamiq
+# Enfyra Backend - API-First Dynamic Platform
 
-### ⚙️ **API-first Platform — Dynamic Schema, Dynamic API, Dynamic Logic, Auto-Sync Multi-Instance/Node**
+## Overview
 
-Dynamiq là một nền tảng **backend động**, kết hợp giữa BaaS/AaaS và **low-code platform** — với khả năng override logic cực mạnh:
+Enfyra Backend is an API-first platform that enables dynamic creation and management of API endpoints, database schemas, and business logic through configuration. The system is built on NestJS with TypeScript and supports both MySQL and PostgreSQL databases.
 
-- **No-code**: dựng backend + CRUD API + GraphQL API tự động chỉ trong buổi sáng.
-- **Low-code**: override logic qua JS/TS handler — REST + GQL.
-- **Multi-instance & multi-node auto-sync**: tự đồng bộ schema, API, logic giữa các node/instance → scale-out dễ dàng.
-- **Permission per route / per Query/Mutation**: phân quyền cực chi tiết ở tầng API.
-- **Snapshot / Backup**: lưu toàn bộ schema + logic.
+## Quick Start
 
----
+```bash
+# Install dependencies
+npm install
 
-## ✨ Tính năng nổi bật
+# Setup environment
+cp env_example .env
+# Edit .env with your database credentials
 
-✅ Schema động → sinh CRUD & GQL tự động\
-✅ Override logic dễ dàng qua JS/TS\
-✅ Dynamic REST + Dynamic GraphQL\
-✅ Multi-instance & auto-sync\
-✅ Snapshot / restore schema\
-✅ Permission per Query/Mutation (hiếm có)\
-✅ UI tự động theo metadata
-
----
-
-## 🚀 So sánh đối thủ
-
-| Tính năng                     | Directus                      | Strapi      | OneEntry       | Dynamiq       |
-| ----------------------------- | ----------------------------- | ----------- | -------------- | ------------- |
-| GraphQL API                   | ✅ (queries, mutations, subs) | ✅          | ✅             | ✅            |
-| Permission per Query/Mutation | ✅                            | ⚠️ (plugin) | ❓             | ✅            |
-| Permission per field          | ✅                            | ✅          | ❓             | ❌ (chưa có)  |
-| Dynamic Logic (JS handler)    | ❌                            | ⚠️ plugin   | ❌             | ✅ (cực mạnh) |
-| Multi-instance/auto-sync      | ❌                            | ❌          | ⚠️ có giới hạn | ✅            |
-
----
-
-## How Dynamic GQL Proxy works
-
-### 🗺️ Flow:
-
-```
-Client → GQL Proxy Query → QueryEngine.query(ctx)
-                           ↑
-                        Có handler_code? → override toàn bộ logic (JS)
+# Start the server
+npm run start
 ```
 
----
+## Architecture Overview
 
-### GQL Query ví dụ:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Client Applications                      │
+└─────────────────────┬───────────────────────────────────────┘
+                      │ HTTP/GraphQL
+┌─────────────────────▼───────────────────────────────────────┐
+│                    API Gateway Layer                        │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │   REST API      │  │   GraphQL API   │  │   WebSocket │ │
+│  └─────────────────┘  └─────────────────┘  └──────────────┘ │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                    Middleware Layer                         │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │ Route Detection │  │ Parse Query     │  │ Auth/Guard   │ │
+│  └─────────────────┘  └─────────────────┘  └──────────────┘ │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                    Dynamic Layer                            │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │ Dynamic Service │  │ Dynamic Repo    │  │ Query Engine │ │
+│  └─────────────────┘  └─────────────────┘  └──────────────┘ │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                    Handler Execution Layer                  │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │ Handler Executor│  │ Executor Pool   │  │ Child Process│ │
+│  └─────────────────┘  └─────────────────┘  └──────────────┘ │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                    Data Layer                               │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │   TypeORM       │  │   MySQL         │  │   Redis      │ │
+│  └─────────────────┘  └─────────────────┘  └──────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Documentation
+
+### 📚 Core Documentation
+
+- **[Architecture](./docs/ARCHITECTURE.md)** - Detailed layer-by-layer architecture
+- **[API Reference](./docs/API.md)** - REST and GraphQL API documentation
+- **[Error Handling](./docs/ERROR_HANDLING.md)** - Error handling architecture and custom exceptions
+- **[Authentication](./docs/AUTH.md)** - JWT authentication and authorization
+- **[Database](./docs/DATABASE.md)** - MySQL and PostgreSQL support and configuration
+
+### 👥 User Guides
+
+- **[User Guide](./docs/USER_GUIDE.md)** - End-user guide for using the system (no coding required)
+- **[Admin Guide](./docs/ADMIN_GUIDE.md)** - System administration and deployment guide
+
+### 🔧 Development
+
+- **[Development Guide](./docs/DEVELOPMENT.md)** - Setup, testing, and development workflow
+
+## Key Features
+
+- ✅ **Dynamic Schema** → Auto-generate CRUD & GraphQL APIs
+- ✅ **Custom Logic** → Override with JavaScript/TypeScript handlers
+- ✅ **Dynamic REST + GraphQL** → Full API coverage
+- ✅ **Multi-instance Sync** → Auto-sync between instances
+- ✅ **Permission Control** → Per-route and per-query permissions
+- ✅ **Snapshot & Restore** → Backup and restore schemas
+
+## Technology Stack
+
+- **Framework**: NestJS with TypeScript
+- **Database**: MySQL 8.0+ / PostgreSQL 12+ with TypeORM
+- **Cache**: Redis
+- **Authentication**: JWT
+- **API**: REST + GraphQL
+- **Process Management**: PM2
+
+## Environment Variables
+
+```bash
+# Database Configuration
+# Choose one: MySQL or PostgreSQL
+DB_TYPE=mysql                    # mysql | mariadb | postgres
+DB_HOST=localhost
+DB_PORT=3306                     # 3306 for MySQL, 5432 for PostgreSQL
+DB_USERNAME=root
+DB_PASSWORD=1234
+DB_NAME=enfyra
+
+# Redis
+REDIS_URI=redis://localhost:6379
+DEFAULT_TTL=5
+
+# RabbitMQ (optional)
+RABBITMQ_USERNAME=root
+RABBITMQ_PASSWORD=1234
+
+# Application Settings
+MAX_VM_TIMEOUT_MS=2000
+NODE_NAME=my_enfyra
+PORT=1105
+
+# Authentication
+SECRET_KEY=my_secret
+SALT_ROUNDS=10
+ACCESS_TOKEN_EXP=15m
+REFRESH_TOKEN_NO_REMEMBER_EXP=1d
+REFRESH_TOKEN_REMEMBER_EXP=7d
+```
+
+## Quick API Examples
+
+### Create a Table
+
+```bash
+curl -X POST http://localhost:1105/table_definition \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "posts",
+    "columns": [
+      {"name": "id", "type": "int", "isPrimary": true, "isAutoIncrement": true},
+      {"name": "title", "type": "varchar", "length": 255},
+      {"name": "content", "type": "text"}
+    ]
+  }'
+```
+
+### Query with Filters
+
+```bash
+curl "http://localhost:1105/posts?filter[title][_contains]=hello&sort[createdAt]=desc&page=1&limit=10"
+```
+
+### GraphQL Query
 
 ```graphql
 query {
-  table_definition(
-    filter: { name: { _contains: "user" } }
-    page: 1
-    limit: 10
-  ) {
+  posts {
     data {
       id
-      name
+      title
+      content
       createdAt
-    }
-    meta {
-      totalCount
+      updatedAt
     }
   }
 }
 ```
 
----
+**Note**: GraphQL schema is automatically generated and reloaded when tables are created or modified through the `table_definition` API.
 
-### Toán tử filter hiện tại:
+## Contributing
 
-| Toán tử        | Mô tả                         |
-| -------------- | ----------------------------- |
-| `_eq`          | bằng                          |
-| `_neq`         | khác                          |
-| `_gt`          | lớn hơn                       |
-| `_gte`         | lớn hơn hoặc bằng             |
-| `_lt`          | nhỏ hơn                       |
-| `_lte`         | nhỏ hơn hoặc bằng             |
-| `_between`     | khoảng giữa                   |
-| `_in`          | nằm trong tập                 |
-| `_not_in`      | không nằm trong tập           |
-| `_is_null`     | is null / not null            |
-| `_contains`    | LIKE '%x%'                    |
-| `_starts_with` | LIKE 'x%'                     |
-| `_ends_with`   | LIKE '%x'                     |
-| `_not`         | NOT (bao quanh nhóm)          |
-| `_count`       | count trên relation nhiều     |
-| `_eq_set`      | match set trên relation nhiều |
+Please read [DEVELOPMENT.md](./docs/DEVELOPMENT.md) for details on development workflow and contribution guidelines.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-### Override logic (GQL Proxy Query):
-
-- Nếu không có handler_code → mặc định dùng `QueryEngine.query(ctx)`
-- Nếu có handler_code (JS string) → override toàn bộ logic (có thể dùng `$repos.xxx.find()`)
-
----
-
-### API `$repos.xxx` hiện tại:
-
-| Method                                  | Support hiện tại   |     |
-| --------------------------------------- | ------------------ | --- |
-| `.find({ where })`                      | ✅ override filter |     |
-| `.create(body)`                         | ✅                 |     |
-| `.update(id, body)`                     | ✅                 |     |
-| `.delete(id)`                           | ✅                 |     |
-|                                         |                    |     |
-| `.find() + custom where inside .find()` | ✅                 |     |
-
----
-
-### Ví dụ override handler_code (GQL):
-
-```js
-if ($ctx.$user.role !== 'admin') {
-  return await $ctx.$repos.table_definition.find({
-    where: {
-      isStatic: false,
-    },
-  });
-}
-
-return await $ctx.$repos.table_definition.find({
-  where: $ctx.$args.filter,
-});
-```
-
----
-
-## How Dynamic REST works
-
-### 🗺️ Flow:
-
-```
-Client → REST Request → RouteDetectMiddleware → DynamicService.execute()
-                                        ↑
-                                Có handler_code? → override toàn bộ logic (JS)
-```
-
----
-
-### REST Endpoint mặc định:
-
-| Method | Endpoint            | Mặc định                          |
-| ------ | ------------------- | --------------------------------- |
-| GET    | `/table_definition` | list + filter (bao gồm filter id) |
-| POST   | `/table_definition` | create                            |
-| PATCH  | `/table_definition` | update                            |
-| DELETE | `/table_definition` | delete                            |
-
----
-
-### Override logic (REST):
-
-- Nếu không có handler_code → DynamicService thực thi CRUD mặc định
-- Nếu có handler_code → override toàn bộ logic (JS)
-
-### Ví dụ override REST GET `/my-account`:
-
-```js
-return await $ctx.$repos.user.find({
-  where: {
-    id: { _eq: $ctx.$user.id },
-  },
-});
-```
-
-### Ví dụ override REST POST `/publish-post`:
-
-```js
-if (!$ctx.$user) throw new Error('Unauthorized');
-
-const post = await $ctx.$repos.post.find({
-  where: { id: $ctx.$body.id },
-});
-
-if (post.data[0].authorId !== $ctx.$user.id) {
-  throw new Error('Not your post');
-}
-
-await $ctx.$repos.post.update($ctx.$body.id, {
-  published: true,
-});
-
-return { success: true };
-```
-
----
-
-## 👫 Định vị Dynamiq
-
-- **No-code** → dựng API nhanh
-- **Low-code** → override logic cực dễ
-- **Permission action-level**: REST + GraphQL
-- **Scale-out multi-instance**
-- **Meta-driven UI** → không cần code UI cứng
-- **Snapshot & Restore**
-
----
-
-## 👥 Người dùng mục tiêu
-
-1️⃣ Dev cá nhân / team nhỏ cần backend nhanh\
-2️⃣ App lớn, SaaS cần scale-out multi-instance\
-3️⃣ Nền tảng cloud cần dynamic schema per-tenant
+_Documentation last updated: August 5, 2025_
