@@ -8,40 +8,37 @@ Enfyra Backend uses JWT (JSON Web Tokens) for authentication and implements role
 
 ### 1. Login Process
 
-```bash
-# Login to get JWT token
-curl -X POST http://localhost:1105/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@example.com",
-    "password": "password123"
-  }'
+**REST API:**
+
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "enfyra@admin.com",
+  "password": "1234"
+}
 ```
 
 **Response:**
 
 ```json
 {
-  "success": true,
-  "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": {
-      "id": 1,
-      "email": "admin@example.com",
-      "role": "admin",
-      "permissions": ["read", "write", "delete"]
-    }
-  }
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expTime": 1754378861000,
+  "statusCode": 201,
+  "message": "Success"
 }
 ```
 
 ### 2. Using JWT Token
 
-```bash
-# Include token in Authorization header
-curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
-  http://localhost:1105/posts
+**REST API:**
+
+```http
+GET /posts
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 ## JWT Strategy
@@ -417,19 +414,19 @@ describe('Authentication', () => {
     const response = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
-        email: 'admin@example.com',
-        password: 'password123',
+        email: 'enfyra@admin.com',
+        password: '1234',
       })
       .expect(200);
 
-    expect(response.body.data.accessToken).toBeDefined();
+    expect(response.body.accessToken).toBeDefined();
   });
 
   it('should reject invalid credentials', async () => {
     await request(app.getHttpServer())
       .post('/auth/login')
       .send({
-        email: 'admin@example.com',
+        email: 'enfyra@admin.com',
         password: 'wrongpassword',
       })
       .expect(401);

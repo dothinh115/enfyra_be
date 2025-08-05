@@ -63,13 +63,14 @@ POST /{table_name}
 
 **Example:**
 
-```bash
-curl -X POST http://localhost:1105/posts \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Hello World",
-    "content": "This is my first post"
-  }'
+```http
+POST /posts
+Content-Type: application/json
+
+{
+  "title": "Hello World",
+  "content": "This is my first post"
+}
 ```
 
 #### Update Record
@@ -80,12 +81,13 @@ PATCH /{table_name}/{id}
 
 **Example:**
 
-```bash
-curl -X PATCH http://localhost:1105/posts/1 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Updated Title"
-  }'
+```http
+PATCH /posts/1
+Content-Type: application/json
+
+{
+  "title": "Updated Title"
+}
 ```
 
 #### Delete Record
@@ -96,8 +98,8 @@ DELETE /{table_name}/{id}
 
 **Example:**
 
-```bash
-curl -X DELETE http://localhost:1105/posts/1
+```http
+DELETE /posts/1
 ```
 
 ### Filter Operators
@@ -125,7 +127,6 @@ curl -X DELETE http://localhost:1105/posts/1
 
 ```json
 {
-  "success": true,
   "data": [
     {
       "id": 1,
@@ -136,13 +137,14 @@ curl -X DELETE http://localhost:1105/posts/1
     }
   ],
   "meta": {
-    "totalCount": 1,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 1
-  }
+    "totalCount": 4
+  },
+  "statusCode": 200,
+  "message": "Success"
 }
 ```
+
+**Note**: The `meta` object is only included when `meta` parameter is specified in the request.
 
 #### Error Response
 
@@ -317,44 +319,45 @@ POST /table_definition
 
 **Example:**
 
-```bash
-curl -X POST http://localhost:1105/table_definition \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "posts",
-    "columns": [
-      {
-        "name": "id",
-        "type": "int",
-        "isPrimary": true,
-        "isAutoIncrement": true
-      },
-      {
-        "name": "title",
-        "type": "varchar",
-        "length": 255,
-        "isNullable": false
-      },
-      {
-        "name": "content",
-        "type": "text",
-        "isNullable": true
-      },
-      {
-        "name": "authorId",
-        "type": "int",
-        "isNullable": false
-      }
-    ],
-    "relations": [
-      {
-        "name": "author",
-        "type": "many-to-one",
-        "targetTable": "users",
-        "foreignKey": "authorId"
-      }
-    ]
-  }'
+```http
+POST /table_definition
+Content-Type: application/json
+
+{
+  "name": "posts",
+  "columns": [
+    {
+      "name": "id",
+      "type": "int",
+      "isPrimary": true,
+      "isAutoIncrement": true
+    },
+    {
+      "name": "title",
+      "type": "varchar",
+      "length": 255,
+      "isNullable": false
+    },
+    {
+      "name": "content",
+      "type": "text",
+      "isNullable": true
+    },
+    {
+      "name": "authorId",
+      "type": "int",
+      "isNullable": false
+    }
+  ],
+  "relations": [
+    {
+      "name": "author",
+      "type": "many-to-one",
+      "targetTable": "users",
+      "foreignKey": "authorId"
+    }
+  ]
+}
 ```
 
 ### Update Table

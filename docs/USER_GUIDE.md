@@ -8,206 +8,214 @@ Enfyra Backend is an API-first platform that allows you to create and manage API
 
 ### 1. Login to System
 
-```bash
-# Login to get token
-curl -X POST http://localhost:1105/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "enfyra@admin.com",
-    "password": "1234"
-  }'
+**REST API:**
+
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "enfyra@admin.com",
+  "password": "1234"
+}
 ```
 
 **Result:**
 
 ```json
 {
-  "success": true,
-  "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": {
-      "id": 1,
-      "email": "admin@example.com",
-      "role": "admin"
-    }
-  }
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expTime": 1754378861000,
+  "statusCode": 201,
+  "message": "Success"
 }
 ```
 
 ### 2. Use Token for Other APIs
 
-```bash
-# Save token to variable
-TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+**REST API:**
 
-# Use token in requests
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:1105/posts
+```http
+GET /posts
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 ## Create Data Tables
 
 ### Create Simple Table
 
-```bash
-# Create "products" table with basic columns
-curl -X POST http://localhost:1105/table_definition \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "products",
-    "columns": [
-      {
-        "name": "id",
-        "type": "int",
-        "isPrimary": true,
-        "isAutoIncrement": true
-      },
-      {
-        "name": "name",
-        "type": "varchar",
-        "length": 255,
-        "isNullable": false
-      },
-      {
-        "name": "price",
-        "type": "decimal",
-        "precision": 10,
-        "scale": 2
-      },
-      {
-        "name": "description",
-        "type": "text"
-      },
-      {
-        "name": "createdAt",
-        "type": "datetime"
-      }
-    ]
-  }'
+**REST API:**
+
+```http
+POST /table_definition
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "name": "posts",
+  "columns": [
+    {
+      "name": "id",
+      "type": "int",
+      "isPrimary": true,
+      "isAutoIncrement": true
+    },
+    {
+      "name": "title",
+      "type": "varchar",
+      "length": 255,
+      "isNullable": false
+    },
+    {
+      "name": "content",
+      "type": "text"
+    },
+    {
+      "name": "createdAt",
+      "type": "datetime"
+    }
+  ]
+}
 ```
 
 ### Create Table with Relations
 
-```bash
-# Create "categories" table first
-curl -X POST http://localhost:1105/table_definition \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "categories",
-    "columns": [
-      {
-        "name": "id",
-        "type": "int",
-        "isPrimary": true,
-        "isAutoIncrement": true
-      },
-      {
-        "name": "name",
-        "type": "varchar",
-        "length": 255
-      }
-    ]
-  }'
+**REST API:**
 
-# Create "products" table with relation to "categories"
-curl -X POST http://localhost:1105/table_definition \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "products",
-    "columns": [
-      {
-        "name": "id",
-        "type": "int",
-        "isPrimary": true,
-        "isAutoIncrement": true
-      },
-      {
-        "name": "name",
-        "type": "varchar",
-        "length": 255
-      },
-      {
-        "name": "price",
-        "type": "decimal",
-        "precision": 10,
-        "scale": 2
-      },
-      {
-        "name": "categoryId",
-        "type": "int"
-      }
-    ],
-    "relations": [
-      {
-        "name": "category",
-        "type": "many-to-one",
-        "targetTable": "categories",
-        "foreignKey": "categoryId"
-      }
-    ]
-  }'
+1. Create categories table:
+
+```http
+POST /table_definition
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "name": "categories",
+  "columns": [
+    {
+      "name": "id",
+      "type": "int",
+      "isPrimary": true,
+      "isAutoIncrement": true
+    },
+    {
+      "name": "name",
+      "type": "varchar",
+      "length": 255
+    }
+  ]
+}
+```
+
+2. Create posts table with relation:
+
+```http
+POST /table_definition
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "name": "posts",
+  "columns": [
+    {
+      "name": "id",
+      "type": "int",
+      "isPrimary": true,
+      "isAutoIncrement": true
+    },
+    {
+      "name": "title",
+      "type": "varchar",
+      "length": 255
+    },
+    {
+      "name": "content",
+      "type": "text"
+    },
+    {
+      "name": "categoryId",
+      "type": "int"
+    }
+  ],
+  "relations": [
+    {
+      "name": "category",
+      "type": "many-to-one",
+      "targetTable": "categories",
+      "foreignKey": "categoryId"
+    }
+  ]
+}
 ```
 
 ## Data Operations
 
 ### 1. Create Data (CREATE)
 
-```bash
-# Create new product
-curl -X POST http://localhost:1105/products \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "iPhone 15",
-    "price": 999.99,
-    "description": "Latest iPhone model"
-  }'
+**REST API:**
+
+```http
+POST /posts
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "title": "My First Post",
+  "content": "This is the content of my first post"
+}
 ```
 
 ### 2. Read Data (READ)
 
-#### Get All Products
+#### Get All Posts
 
-```bash
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:1105/products
+**REST API:**
+
+```http
+GET /posts
+Authorization: Bearer <your-token>
 ```
 
-#### Get Product by ID
+#### Get Post by ID
 
-```bash
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:1105/products/1
+**REST API:**
+
+```http
+GET /posts/1
+Authorization: Bearer <your-token>
 ```
 
-#### Get Product with Relations
+#### Get Post with Relations
 
-```bash
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?include=category"
+**REST API:**
+
+```http
+GET /posts?include=category
+Authorization: Bearer <your-token>
 ```
 
 ### 3. Update Data (UPDATE)
 
-```bash
-# Update product
-curl -X PATCH http://localhost:1105/products/1 \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "price": 899.99
-  }'
+**REST API:**
+
+```http
+PATCH /posts/1
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "title": "Updated Post Title"
+}
 ```
 
 ### 4. Delete Data (DELETE)
 
-```bash
-# Delete product
-curl -X DELETE http://localhost:1105/products/1 \
-  -H "Authorization: Bearer $TOKEN"
+**REST API:**
+
+```http
+DELETE /posts/1
+Authorization: Bearer <your-token>
 ```
 
 ## Filter and Search Data
@@ -216,136 +224,171 @@ curl -X DELETE http://localhost:1105/products/1 \
 
 #### Exact Search
 
-```bash
-# Find products with exact name
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?filter[name][_eq]=iPhone 15"
+**REST API:**
+
+```http
+GET /posts?filter[title][_eq]=Hello World
+Authorization: Bearer <your-token>
 ```
 
 #### Contains Search
 
-```bash
-# Find products with name containing "iPhone"
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?filter[name][_contains]=iPhone"
+**REST API:**
+
+```http
+GET /posts?filter[title][_contains]=Hello
+Authorization: Bearer <your-token>
 ```
 
 #### Range Search
 
-```bash
-# Find products with price between 500 and 1000
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?filter[price][_between]=500,1000"
+**REST API:**
+
+```http
+GET /posts?filter[id][_between]=1,10
+Authorization: Bearer <your-token>
 ```
 
 #### List Search
 
-```bash
-# Find products with name in list
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?filter[name][_in]=iPhone 15,iPhone 14,Samsung Galaxy"
+**REST API:**
+
+```http
+GET /posts?filter[title][_in]=Hello World,Test Post,Another Post
+Authorization: Bearer <your-token>
 ```
 
 ### Combine Multiple Conditions
 
-```bash
-# Find products with price > 500 and name containing "iPhone"
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?filter[price][_gt]=500&filter[name][_contains]=iPhone"
+**REST API:**
+
+```http
+GET /posts?filter[id][_gt]=1&filter[title][_contains]=Hello
+Authorization: Bearer <your-token>
 ```
 
 ## Sort Data
 
 ### Sort by Single Column
 
-```bash
-# Sort by price ascending
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?sort[price]=asc"
+**REST API:**
 
-# Sort by price descending
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?sort[price]=desc"
+```http
+GET /posts?sort[createdAt]=asc
+Authorization: Bearer <your-token>
+```
+
+```http
+GET /posts?sort[createdAt]=desc
+Authorization: Bearer <your-token>
 ```
 
 ### Sort by Multiple Columns
 
-```bash
-# Sort by category first, then by price
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?sort[categoryId]=asc&sort[price]=desc"
+**REST API:**
+
+```http
+GET /posts?sort[categoryId]=asc&sort[createdAt]=desc
+Authorization: Bearer <your-token>
 ```
 
 ## Pagination
 
 ### Basic Pagination
 
-```bash
-# Get first page, 10 products per page
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?page=1&limit=10"
+**REST API:**
 
-# Get second page
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?page=2&limit=10"
+```http
+GET /posts?page=1&limit=10
+Authorization: Bearer <your-token>
+```
+
+```http
+GET /posts?page=2&limit=10
+Authorization: Bearer <your-token>
 ```
 
 ### Get All Data
 
-```bash
-# Get all products (no pagination)
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?limit=0"
+**REST API:**
+
+```http
+GET /posts?limit=0
+Authorization: Bearer <your-token>
 ```
 
 ## Select Specific Fields
 
-```bash
-# Get only ID and product name
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?fields=id,name"
+**REST API:**
 
-# Get ID, name, price and category
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/products?fields=id,name,price,category"
+```http
+GET /posts?fields=id,title
+Authorization: Bearer <your-token>
+```
+
+```http
+GET /posts?fields=id,title,content,createdAt
+Authorization: Bearer <your-token>
 ```
 
 ## Using GraphQL
 
 ### Basic Query
 
-```bash
-# Query all posts
-curl -X POST http://localhost:1105/graphql \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "query { posts { data { id title content createdAt updatedAt } } }"
-  }'
+**GraphQL:**
+
+```graphql
+query {
+  posts {
+    data {
+      id
+      title
+      content
+      createdAt
+      updatedAt
+    }
+  }
+}
 ```
 
 ### Query with Filter
 
-```bash
-# Query posts with title containing "hello"
-curl -X POST http://localhost:1105/graphql \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "query { posts(filter: { title: { _contains: \"hello\" } }) { data { id title content createdAt updatedAt } } }"
-  }'
+**GraphQL:**
+
+```graphql
+query {
+  posts(filter: { title: { _contains: "hello" } }) {
+    data {
+      id
+      title
+      content
+      createdAt
+      updatedAt
+    }
+  }
+}
 ```
 
 ### Query with Relations
 
-```bash
-# Query posts with user information (if relation exists)
-curl -X POST http://localhost:1105/graphql \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "query { posts { data { id title content createdAt updatedAt user { id email } } } }"
-  }'
+**GraphQL:**
+
+```graphql
+query {
+  posts {
+    data {
+      id
+      title
+      content
+      createdAt
+      updatedAt
+      user {
+        id
+        email
+      }
+    }
+  }
+}
 ```
 
 **Note**: GraphQL schema includes all fields including timestamp fields (createdAt, updatedAt) that are automatically generated by TypeORM.
@@ -356,65 +399,74 @@ curl -X POST http://localhost:1105/graphql \
 
 ### Create Multiple Posts at Once
 
-```bash
-# Create post list
-for i in {1..10}; do
-  curl -X POST http://localhost:1105/posts \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "{
-      \"title\": \"Post $i\",
-      \"content\": \"Content for post $i - $(date)\"
-    }"
-done
+**REST API:**
+
+```http
+POST /posts
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "title": "Post 1",
+  "content": "Content for post 1"
+}
+```
+
+```http
+POST /posts
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "title": "Post 2",
+  "content": "Content for post 2"
+}
 ```
 
 ### Create Data from JSON File
 
-```bash
-# Create posts.json file
-cat > posts.json << 'EOF'
-[
-  {
-    "title": "Getting Started with Enfyra",
-    "content": "Learn how to use the Enfyra platform for building dynamic APIs"
-  },
-  {
-    "title": "Advanced Filtering Techniques",
-    "content": "Explore advanced filtering and querying capabilities"
-  },
-  {
-    "title": "GraphQL Integration Guide",
-    "content": "Complete guide to using GraphQL with Enfyra"
-  }
-]
-EOF
+**REST API:**
 
-# Import data
-while IFS= read -r line; do
-  curl -X POST http://localhost:1105/posts \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "$line"
-done < posts.json
+```http
+POST /posts
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "title": "Getting Started with Enfyra",
+  "content": "Learn how to use the Enfyra platform for building dynamic APIs"
+}
+```
+
+```http
+POST /posts
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "title": "Advanced Filtering Techniques",
+  "content": "Explore advanced filtering and querying capabilities"
+}
 ```
 
 ## Table Management
 
 ### View Table List
 
-```bash
-# Get list of all tables
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:1105/table_definition
+**REST API:**
+
+```http
+GET /table_definition
+Authorization: Bearer <your-token>
 ```
 
 ### View Table Structure
 
-```bash
-# Get detailed information of "posts" table
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:1105/table_definition/11
+**REST API:**
+
+```http
+GET /table_definition/11
+Authorization: Bearer <your-token>
 ```
 
 ### Update Table Structure
@@ -452,40 +504,47 @@ curl -X PATCH http://localhost:1105/table_definition/11 \
 
 ### Delete Table
 
-```bash
-# Delete Table (cẩn thận - sẽ mất tất cả dữ liệu)
-curl -X DELETE http://localhost:1105/table_definition/11 \
-  -H "Authorization: Bearer $TOKEN"
+**REST API:**
+
+```http
+DELETE /table_definition/11
+Authorization: Bearer <your-token>
 ```
+
+**Warning**: This will permanently delete the table and all its data.
 
 ## Statistics and Reports
 
 ### Get Record Count
 
-```bash
-# Get total count of posts
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/posts?meta=totalCount&limit=0"
+**REST API:**
+
+```http
+GET /posts?meta=totalCount&limit=0
+Authorization: Bearer <your-token>
 ```
 
 ### Filter by Count Condition
 
-```bash
-# Get posts where related records count > 2 (example with relations)
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/posts?filter[count.posts.id][_gt]=2"
+**REST API:**
+
+```http
+GET /posts?filter[count.comments.id][_gt]=2
+Authorization: Bearer <your-token>
 ```
 
 ### Filter by Aggregate Conditions
 
-```bash
-# Filter posts where related records count > 2 (example with relations)
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/posts?filter[count.posts.id][_gt]=2"
+**REST API:**
 
-# Filter posts where related records sum > 100 (example with numeric relations)
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/posts?filter[sum.comments.id][_gt]=100"
+```http
+GET /posts?filter[count.comments.id][_gt]=2
+Authorization: Bearer <your-token>
+```
+
+```http
+GET /posts?filter[sum.comments.id][_gt]=100
+Authorization: Bearer <your-token>
 ```
 
 **Note**:
@@ -559,11 +618,16 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### 1. Use jq to process JSON
 
+**Install jq:**
+
 ```bash
-# Install jq
 # macOS: brew install jq
 # Ubuntu: sudo apt install jq
+```
 
+**Process JSON responses:**
+
+```bash
 # Get only post titles
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:1105/posts | jq '.data[].title'
@@ -575,8 +639,9 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### 2. Create aliases for common commands
 
+**Add to ~/.bashrc or ~/.zshrc:**
+
 ```bash
-# Thêm vào ~/.bashrc hoặc ~/.zshrc
 alias enfyra-login='curl -X POST http://localhost:1105/auth/login -H "Content-Type: application/json" -d '"'"'{"email": "enfyra@admin.com", "password": "1234"}'"'"' | jq -r ".accessToken"'
 
 alias enfyra-posts='curl -H "Authorization: Bearer $(enfyra-login)" http://localhost:1105/posts'
@@ -584,9 +649,10 @@ alias enfyra-posts='curl -H "Authorization: Bearer $(enfyra-login)" http://local
 
 ### 3. Use scripts for automation
 
+**script.sh:**
+
 ```bash
 #!/bin/bash
-# script.sh
 
 # Login and get token
 TOKEN=$(curl -s -X POST http://localhost:1105/auth/login \
@@ -612,34 +678,40 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Blog Management System
 
-```bash
-# 1. Create users table
-curl -X POST http://localhost:1105/table_definition \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "users",
-    "columns": [
-      {"name": "id", "type": "int", "isPrimary": true, "isAutoIncrement": true},
-      {"name": "email", "type": "varchar", "length": 255},
-      {"name": "name", "type": "varchar", "length": 255}
-    ]
-  }'
+**1. Create users table:**
 
-# 2. Create comments table
-curl -X POST http://localhost:1105/table_definition \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "comments",
-    "columns": [
-      {"name": "id", "type": "int", "isPrimary": true, "isAutoIncrement": true},
-      {"name": "content", "type": "text"},
-      {"name": "postId", "type": "int"},
-      {"name": "userId", "type": "int"}
-    ],
-    "relations": [
-      {
+```http
+POST /table_definition
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "name": "users",
+  "columns": [
+    {"name": "id", "type": "int", "isPrimary": true, "isAutoIncrement": true},
+    {"name": "email", "type": "varchar", "length": 255},
+    {"name": "name", "type": "varchar", "length": 255}
+  ]
+}
+```
+
+**2. Create comments table:**
+
+```http
+POST /table_definition
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "name": "comments",
+  "columns": [
+    {"name": "id", "type": "int", "isPrimary": true, "isAutoIncrement": true},
+    {"name": "content", "type": "text"},
+    {"name": "postId", "type": "int"},
+    {"name": "userId", "type": "int"}
+  ],
+  "relations": [
+    {
         "name": "post",
         "type": "many-to-one",
         "targetTable": "posts",
@@ -652,31 +724,45 @@ curl -X POST http://localhost:1105/table_definition \
         "foreignKey": "userId"
       }
     ]
-  }'
+  }
+}
+```
 
-# 3. Add Sample Data
-curl -X POST http://localhost:1105/users \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"email": "john@example.com", "name": "John Doe"}'
+**3. Add Sample Data:**
 
-curl -X POST http://localhost:1105/comments \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "Great post!",
-    "postId": 1,
-    "userId": 1
-  }'
+```http
+POST /users
+Authorization: Bearer <your-token>
+Content-Type: application/json
 
-# 4. Query data
-# Get posts with comments
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/posts?include=comments"
+{
+  "email": "john@example.com",
+  "name": "John Doe"
+}
+```
 
-# Get posts with comment count > 0
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:1105/posts?filter[count.comments.id][_gt]=0"
+```http
+POST /comments
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{
+  "content": "Great post!",
+  "postId": 1,
+  "userId": 1
+}
+```
+
+**4. Query data:**
+
+```http
+GET /posts?include=comments
+Authorization: Bearer <your-token>
+```
+
+```http
+GET /posts?filter[count.comments.id][_gt]=0
+Authorization: Bearer <your-token>
 ```
 
 ## Support

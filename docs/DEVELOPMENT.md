@@ -201,14 +201,24 @@ if ($ctx.$user.role !== 'admin') {
 
 3. **Test Endpoint**
 
-```bash
-# Test REST API
-curl "http://localhost:1105/products"
+**REST API:**
 
-# Test GraphQL
-curl -X POST http://localhost:1105/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query": "query { products { data { id name price } } }"}'
+```http
+GET /posts
+```
+
+**GraphQL:**
+
+```graphql
+query {
+  posts {
+    data {
+      id
+      title
+      content
+    }
+  }
+}
 ```
 
 ### Adding Custom Logic

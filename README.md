@@ -135,23 +135,28 @@ REFRESH_TOKEN_REMEMBER_EXP=7d
 
 ### Create a Table
 
-```bash
-curl -X POST http://localhost:1105/table_definition \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "posts",
-    "columns": [
-      {"name": "id", "type": "int", "isPrimary": true, "isAutoIncrement": true},
-      {"name": "title", "type": "varchar", "length": 255},
-      {"name": "content", "type": "text"}
-    ]
-  }'
+**REST API:**
+
+```http
+POST /table_definition
+Content-Type: application/json
+
+{
+  "name": "posts",
+  "columns": [
+    {"name": "id", "type": "int", "isPrimary": true, "isAutoIncrement": true},
+    {"name": "title", "type": "varchar", "length": 255},
+    {"name": "content", "type": "text"}
+  ]
+}
 ```
 
 ### Query with Filters
 
-```bash
-curl "http://localhost:1105/posts?filter[title][_contains]=hello&sort[createdAt]=desc&page=1&limit=10"
+**REST API:**
+
+```http
+GET /posts?filter[title][_contains]=hello&sort[createdAt]=desc&page=1&limit=10
 ```
 
 ### GraphQL Query
