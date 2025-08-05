@@ -1,7 +1,12 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Request } from 'express';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
+import {
+  ScriptExecutionException,
+  ScriptTimeoutException,
+  ResourceNotFoundException,
+} from '../exceptions/custom-exceptions';
 
 @Injectable()
 export class DynamicService {
@@ -19,23 +24,23 @@ export class DynamicService {
       user: any;
     },
   ) {
+    // Calculate timeout outside try block so it's available in catch
+    const isTableDefinitionOperation =
+      req.routeData.mainTable?.name === 'table_definition' ||
+      req.routeData.targetTables?.some(
+        (table) => table.name === 'table_definition',
+      );
+    const timeout = isTableDefinitionOperation ? 30000 : 10000;
+
     try {
       const userHandler = req.routeData.handler?.trim();
       const defaultHandler = this.getDefaultHandler(req.method);
 
       if (!userHandler && !defaultHandler) {
-        throw new BadRequestException('No corresponding handler found');
+        throw new ResourceNotFoundException('Handler', req.method);
       }
 
       const scriptCode = userHandler || defaultHandler;
-
-      // Increase timeout for table_definition operations
-      const isTableDefinitionOperation =
-        req.routeData.mainTable?.name === 'table_definition' ||
-        req.routeData.targetTables?.some(
-          (table) => table.name === 'table_definition',
-        );
-      const timeout = isTableDefinitionOperation ? 30000 : 10000;
 
       const result = await this.handlerExecutorService.run(
         scriptCode,
@@ -45,10 +50,30 @@ export class DynamicService {
 
       return result;
     } catch (error) {
-      this.logger.error('❌ Error running handler:', error.message);
-      this.logger.debug(error.stack);
+      this.logger.error('❌ Error running handler:', {
+        message: error.message,
+        stack: error.stack,
+        method: req.method,
+        url: req.url,
+        handler: req.routeData?.handler,
+      });
 
-      throw new BadRequestException(`Script error: ${error.message}`);
+      // Re-throw custom exceptions as-is
+      if (error.constructor.name.includes('Exception')) {
+        throw error;
+      }
+
+      // Handle timeout errors specifically
+      if (error.message === 'Timeout') {
+        throw new ScriptTimeoutException(timeout, req.routeData?.handler);
+      }
+
+      // Handle other script errors
+      throw new ScriptExecutionException(
+        error.message,
+        req.routeData?.handler,
+        { method: req.method, url: req.url },
+      );
     }
   }
 

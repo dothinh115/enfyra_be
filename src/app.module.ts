@@ -1,5 +1,4 @@
 import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { DatabaseModule } from './database/database.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DynamicModule } from './dynamic/dynamic.module';
 import { TableModule } from './table/table.module';
@@ -8,7 +7,7 @@ import { RabbitMQRegistry } from './rabbitmq/rabbitmq.service';
 import { DataSourceModule } from './data-source/data-source.module';
 import { CommonModule } from './common/common.module';
 import { AutoModule } from './auto/auto.module';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
@@ -34,6 +33,7 @@ import { HandlerExecutorModule } from './handler-executor/hanler-executor.module
 import { RouteCacheService } from './redis/route-cache.service';
 import { ParseQueryMiddleware } from './middleware/parse-query.middleware';
 import { SystemProtectionService } from './dynamic-repo/system-protection.service';
+import { ErrorHandlingModule } from './error-handling/error-handling.module';
 
 @Global()
 @Module({
@@ -42,6 +42,7 @@ import { SystemProtectionService } from './dynamic-repo/system-protection.servic
       isGlobal: true,
       envFilePath: path.resolve(__dirname, '../.env'),
     }),
+    ErrorHandlingModule,
     TableModule,
     CommonModule,
     DataSourceModule,

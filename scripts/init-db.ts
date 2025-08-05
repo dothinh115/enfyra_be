@@ -3,7 +3,6 @@ import { Project, QuoteKind } from 'ts-morph';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DataSource } from 'typeorm';
-import { execSync } from 'child_process';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -125,9 +124,12 @@ async function writeEntitiesFromSnapshot() {
   });
 
   const entitiesDir = path.resolve(process.cwd(), 'src/entities');
+  const distEntitiesDir = path.resolve(process.cwd(), 'dist/src/entities');
 
   if (!fs.existsSync(entitiesDir))
     fs.mkdirSync(entitiesDir, { recursive: true });
+  if (!fs.existsSync(distEntitiesDir))
+    fs.mkdirSync(distEntitiesDir, { recursive: true });
 
   for (const [tableName, def] of Object.entries(metadata)) {
     const className = capitalize(tableName);
@@ -334,11 +336,60 @@ async function writeEntitiesFromSnapshot() {
     });
   }
 
+  // Save TypeScript files
   await Promise.all(project.getSourceFiles().map((file) => file.save()));
   console.log('✅ Entity generation completed.');
+
+  // Compile to JavaScript using ts-morph
+  await compileEntitiesToJS(project, distEntitiesDir);
+  console.log('✅ Entities compiled to JavaScript.');
 }
 
-async function main() {
+async function compileEntitiesToJS(project: Project, outputDir: string) {
+  // Create a new project for compilation
+  const compileProject = new Project({
+    compilerOptions: {
+      target: 3, // ES2020
+      module: 1, // CommonJS
+      strict: true,
+      esModuleInterop: true,
+      emitDecoratorMetadata: true,
+      experimentalDecorators: true,
+      skipLibCheck: true,
+      declaration: false,
+      outDir: outputDir,
+    },
+    useInMemoryFileSystem: true,
+  });
+
+  // Add all source files from the original project
+  for (const sourceFile of project.getSourceFiles()) {
+    const filePath = sourceFile.getFilePath();
+    const content = sourceFile.getFullText();
+    const relativePath = path.relative(
+      path.resolve(process.cwd(), 'src/entities'),
+      filePath
+    );
+    compileProject.createSourceFile(relativePath, content);
+  }
+
+  // Emit compiled JavaScript
+  const emitResult = compileProject.emitToMemory();
+  
+  // Write JS files to disk
+  for (const outputFile of emitResult.getFiles()) {
+    const jsFilePath = path.join(outputDir, outputFile.filePath);
+    const jsDir = path.dirname(jsFilePath);
+    
+    if (!fs.existsSync(jsDir)) {
+      fs.mkdirSync(jsDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(jsFilePath, outputFile.text, 'utf8');
+  }
+}
+
+export async function initializeDatabase() {
   const DB_TYPE = process.env.DB_TYPE as 'mysql';
   const DB_HOST = process.env.DB_HOST || 'localhost';
   const DB_PORT = parseInt(process.env.DB_PORT || '3306');
@@ -383,12 +434,6 @@ async function main() {
 
   await writeEntitiesFromSnapshot();
 
-  // Build entities sang JS
-  const buildScript = `node ${path.resolve(process.cwd(), 'scripts/build-entities.js')} -t ${path.resolve(process.cwd(), 'src/entities')} -o ${path.resolve(process.cwd(), 'dist/src/entities')}`;
-  console.log('🔄 Building entities to JS...');
-  execSync(buildScript, { stdio: 'inherit' });
-  console.log('✅ Entities built to JS successfully');
-
   await ensureDatabaseExists();
 
   const dataSource = new DataSource({
@@ -408,7 +453,10 @@ async function main() {
   await dataSource.destroy();
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// For direct execution
+if (require.main === module) {
+  initializeDatabase().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

@@ -5,13 +5,8 @@ import * as cors from 'cors';
 import * as express from 'express';
 import * as qs from 'qs';
 import { ConfigService } from '@nestjs/config';
-import * as path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { buildToJs } from './auto/utils/build-helper';
 import { GraphqlService } from './graphql/graphql.service';
-
-const execAsync = promisify(exec);
+import { initializeDatabase } from '../scripts/init-db';
 
 async function bootstrap() {
   const startTime = Date.now();
@@ -20,19 +15,12 @@ async function bootstrap() {
 
   // Sequential initialization - DB init must complete before build
   try {
-    // DB initialization first
+    // DB initialization first - direct import instead of node command
     const initStart = Date.now();
-    const script = `node ${path.resolve(__dirname, '../scripts/init-db.js')}`;
-    await execAsync(script);
+    await initializeDatabase();
     logger.log(`⏱️  DB Init: ${Date.now() - initStart}ms`);
-    
-    // Build JS entities after DB is ready
-    const buildStart = Date.now();
-    await buildToJs({
-      targetDir: path.resolve('src/entities'),
-      outDir: path.resolve('dist/src/entities'),
-    });
-    logger.log(`⏱️  Build JS: ${Date.now() - buildStart}ms`);
+
+    // Note: buildToJs is no longer needed since init-db now handles compilation
   } catch (err) {
     logger.error('Error during initialization:', err);
   }
@@ -78,12 +66,12 @@ async function bootstrap() {
   const initStart = Date.now();
   await app.init();
   logger.log(`⏱️  App Init (Bootstrap): ${Date.now() - initStart}ms`);
-  
+
   // Start listening
   const listenStart = Date.now();
   await app.listen(configService.get('PORT') || 1105);
   logger.log(`⏱️  HTTP Listen: ${Date.now() - listenStart}ms`);
-  
+
   const totalTime = Date.now() - startTime;
   logger.log(`🎉 Cold Start completed! Total time: ${totalTime}ms`);
 }

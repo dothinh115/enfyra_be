@@ -310,8 +310,19 @@ export function walkFilter({
             const p1 = `p${paramIndex++}`;
             const p2 = `p${paramIndex++}`;
             sql = `${currentAlias}.${lastField} BETWEEN :${p1} AND :${p2}`;
-            param[p1] = parseValue(fieldType, val[0]);
-            param[p2] = parseValue(fieldType, val[1]);
+
+            const val1 = parseValue(fieldType, val[0]);
+            const val2 = parseValue(fieldType, val[1]);
+
+            // Check if both values are valid numbers
+            if (isNaN(val1) || isNaN(val2)) {
+              throw new Error(
+                `_between operator requires 2 numeric values, got: [${val[0]}, ${val[1]}]`,
+              );
+            }
+
+            param[p1] = val1;
+            param[p2] = val2;
             break;
           }
           case '_is_null':

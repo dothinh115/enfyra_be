@@ -1,19 +1,122 @@
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { wrapCtx } from './utils/wrap-ctx';
 import { resolvePath } from './utils/resolve-path';
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  InternalServerErrorException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ExecutorPoolService } from './executor-pool.service';
 import { merge } from 'lodash';
+import {
+  ScriptTimeoutException,
+  ScriptExecutionException,
+  AuthenticationException,
+  AuthorizationException,
+  BusinessLogicException,
+} from '../exceptions/custom-exceptions';
 
 @Injectable()
 export class HandlerExecutorService {
+  private readonly logger = new Logger(HandlerExecutorService.name);
+
   constructor(private executorPoolService: ExecutorPoolService) {}
+
+  /**
+   * Create appropriate exception based on error path or status code
+   */
+  private createException(
+    errorPath?: string,
+    statusCode?: number,
+    message?: string,
+    code?: string,
+    details?: any,
+  ): any {
+    // Handle $errors calls from child process
+    if (errorPath?.includes('$errors')) {
+      switch (errorPath) {
+        case '$errors.throw400':
+          return new BusinessLogicException(message || 'Bad request');
+        case '$errors.throw401':
+          return new AuthenticationException(
+            message || 'Authentication required',
+          );
+        case '$errors.throw403':
+          return new AuthorizationException(
+            message || 'Insufficient permissions',
+          );
+        default:
+          return new ScriptExecutionException(message || 'Unknown error', code);
+      }
+    }
+
+    // Handle status code based errors
+    if (statusCode) {
+      switch (statusCode) {
+        case 400:
+          return new BusinessLogicException(message || 'Bad request');
+        case 401:
+          return new AuthenticationException(
+            message || 'Authentication required',
+          );
+        case 403:
+          return new AuthorizationException(
+            message || 'Insufficient permissions',
+          );
+        default:
+          return new ScriptExecutionException(
+            message || 'Unknown error',
+            code,
+            details,
+          );
+      }
+    }
+
+    // Default fallback
+    return new ScriptExecutionException(
+      message || 'Unknown error',
+      code,
+      details,
+    );
+  }
+
+  /**
+   * Log error with consistent format
+   */
+  private logError(
+    errorType: string,
+    message: string,
+    code: string,
+    additionalData?: any,
+  ): void {
+    this.logger.error(`Handler Executor ${errorType}`, {
+      message,
+      code: code.substring(0, 100), // Log first 100 chars of script
+      ...additionalData,
+    });
+  }
+
+  /**
+   * Handle child process error with cleanup
+   */
+  private handleChildError(
+    isDone: boolean,
+    child: any,
+    timeout: NodeJS.Timeout,
+    pool: any,
+    error: any,
+    errorType: string,
+    message: string,
+    code: string,
+    reject: (error: any) => void,
+    additionalData?: any,
+  ): boolean {
+    if (isDone) return true;
+
+    child.removeAllListeners();
+    clearTimeout(timeout);
+    pool.release(child);
+
+    this.logError(errorType, message, code, additionalData);
+    reject(error);
+    return true;
+  }
   async run(
     code: string,
     ctx: TDynamicContext,
@@ -30,29 +133,21 @@ export class HandlerExecutorService {
         try {
           await child.kill();
         } catch (e) {
-          console.warn('Failed to kill child on timeout', e);
+          this.logger.warn('Failed to kill child on timeout', e);
         }
-        reject(new Error('Timeout'));
+        reject(new ScriptTimeoutException(timeoutMs, code));
       }, timeoutMs);
 
       child.on('message', async (msg: any) => {
         if (isDone) return;
         if (msg.type === 'call') {
           if (msg.path.includes('$errors')) {
-            let error;
-            switch (msg.path) {
-              case '$errors.throw400':
-                error = new BadRequestException(...msg.args);
-                break;
-              case '$errors.throw401':
-                error = new UnauthorizedException();
-                break;
-              case '$errors.throw403':
-                error = new ForbiddenException();
-                break;
-              default:
-                error = new InternalServerErrorException();
-            }
+            const error = this.createException(
+              msg.path,
+              undefined,
+              msg.args[0],
+              code,
+            );
             reject(error);
           }
           try {
@@ -90,45 +185,74 @@ export class HandlerExecutorService {
           resolve(msg.data);
         }
         if (msg.type === 'error') {
-          isDone = true;
-          child.removeAllListeners();
-          let error = new InternalServerErrorException(msg.error.message);
-          if (msg.error.statusCode === 400)
-            error = new BadRequestException(msg.error.message);
-          else if (msg.error.statusCode === 401)
-            error = new UnauthorizedException();
-          else if (msg.error.statusCode === 403)
-            error = new ForbiddenException();
-          clearTimeout(timeout);
-          await pool.release(child);
+          const error = this.createException(
+            undefined,
+            msg.error.statusCode,
+            msg.error.message,
+            code,
+            {
+              statusCode: msg.error.statusCode,
+              stack: msg.error.stack,
+            },
+          );
 
-          reject(error);
+          isDone = this.handleChildError(
+            isDone,
+            child,
+            timeout,
+            pool,
+            error,
+            'Child Process Error',
+            msg.error.message,
+            code,
+            reject,
+            {
+              statusCode: msg.error.statusCode,
+              stack: msg.error.stack,
+            },
+          );
         }
       });
 
-      child.once('exit', async (code, signal) => {
-        if (isDone) return;
-        isDone = true;
-        child.removeAllListeners();
-        clearTimeout(timeout);
-        await pool.release(child);
-        reject(
-          new InternalServerErrorException(
-            `Child process exited with code ${code}, signal ${signal}`,
-          ),
+      child.once('exit', async (exitCode, signal) => {
+        const error = new ScriptExecutionException(
+          `Child process exited with code ${exitCode}, signal ${signal}`,
+          code,
+          { exitCode, signal },
+        );
+
+        isDone = this.handleChildError(
+          isDone,
+          child,
+          timeout,
+          pool,
+          error,
+          'Child Process Exit',
+          `Child process exited with code ${exitCode}, signal ${signal}`,
+          code,
+          reject,
+          { exitCode, signal },
         );
       });
 
       child.once('error', async (err) => {
-        if (isDone) return;
-        isDone = true;
-        child.removeAllListeners();
-        clearTimeout(timeout);
-        await pool.release(child);
-        reject(
-          new InternalServerErrorException(
-            `Child process error: ${err?.message || err}`,
-          ),
+        const error = new ScriptExecutionException(
+          `Child process error: ${err?.message || err}`,
+          code,
+          { originalError: err },
+        );
+
+        isDone = this.handleChildError(
+          isDone,
+          child,
+          timeout,
+          pool,
+          error,
+          'Child Process Error',
+          err?.message || err,
+          code,
+          reject,
+          { originalError: err },
         );
       });
 

@@ -137,7 +137,7 @@ export class TableHandlerService {
       return result;
     } catch (error) {
       console.error(error.stack || error.message || error);
-      throw new Error(`Error: "${error.message}"`);
+      throw error;
     } finally {
       await queryRunner.release();
     }
@@ -148,7 +148,7 @@ export class TableHandlerService {
       this.dataSourceService.getRepository('table_definition');
     const dataSource = this.dataSourceService.getDataSource();
     const queryRunner = dataSource.createQueryRunner();
-    
+
     try {
       const exists = await tableDefRepo.findOne({ where: { id } });
 
@@ -157,29 +157,57 @@ export class TableHandlerService {
       }
 
       await queryRunner.connect();
-      
+
       // ✅ Drop the actual database table first
       const tableName = exists.name;
       this.logger.log(`🗑️ Dropping database table: ${tableName}`);
-      
-      // Drop all foreign keys first to avoid constraint issues
-      const foreignKeys = await queryRunner.query(`
+
+      // Drop all foreign keys referencing this table first (ĐẾN bảng cần xóa)
+      const referencingFKs = await queryRunner.query(`
+        SELECT DISTINCT TABLE_NAME, CONSTRAINT_NAME
+        FROM information_schema.KEY_COLUMN_USAGE 
+        WHERE CONSTRAINT_SCHEMA = DATABASE()
+          AND REFERENCED_TABLE_NAME = '${tableName}'
+          AND CONSTRAINT_NAME LIKE 'FK_%'
+      `);
+
+      for (const fk of referencingFKs) {
+        try {
+          await queryRunner.query(
+            `ALTER TABLE \`${fk.TABLE_NAME}\` DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``,
+          );
+          this.logger.debug(
+            `Dropped referencing FK: ${fk.CONSTRAINT_NAME} from ${fk.TABLE_NAME}`,
+          );
+        } catch (fkError) {
+          this.logger.warn(
+            `Failed to drop referencing FK ${fk.CONSTRAINT_NAME}: ${fkError.message}`,
+          );
+        }
+      }
+
+      // Drop foreign keys FROM this table (TỪ bảng cần xóa)
+      const outgoingFKs = await queryRunner.query(`
         SELECT CONSTRAINT_NAME 
         FROM information_schema.KEY_COLUMN_USAGE 
         WHERE CONSTRAINT_SCHEMA = DATABASE()
           AND TABLE_NAME = '${tableName}'
           AND REFERENCED_TABLE_NAME IS NOT NULL
       `);
-      
-      for (const fk of foreignKeys) {
+
+      for (const fk of outgoingFKs) {
         try {
-          await queryRunner.query(`ALTER TABLE \`${tableName}\` DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``);
-          this.logger.debug(`Dropped foreign key: ${fk.CONSTRAINT_NAME}`);
+          await queryRunner.query(
+            `ALTER TABLE \`${tableName}\` DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``,
+          );
+          this.logger.debug(`Dropped outgoing FK: ${fk.CONSTRAINT_NAME}`);
         } catch (fkError) {
-          this.logger.warn(`Failed to drop FK ${fk.CONSTRAINT_NAME}: ${fkError.message}`);
+          this.logger.warn(
+            `Failed to drop outgoing FK ${fk.CONSTRAINT_NAME}: ${fkError.message}`,
+          );
         }
       }
-      
+
       // Drop the table
       const hasTable = await queryRunner.hasTable(tableName);
       if (hasTable) {
@@ -220,7 +248,10 @@ export class TableHandlerService {
       this.logger.log('✅ Unlocking schema');
       await this.schemaReloadService.unlockSchema();
     } catch (error) {
-      this.logger.error('❌ Error in afterEffect during schema synchronization:', error);
+      this.logger.error(
+        '❌ Error in afterEffect during schema synchronization:',
+        error,
+      );
       await this.schemaReloadService.unlockSchema();
       throw error;
     }

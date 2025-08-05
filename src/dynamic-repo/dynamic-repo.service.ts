@@ -160,12 +160,12 @@ export class DynamicRepoService {
 
       if (this.tableName === 'table_definition') {
         await this.tableHandlerService.delete(+id);
-        return 'Success';
+        return { message: 'Success', statusCode: 200 };
       }
 
       await this.repo.delete(id);
       await this.reload();
-      return `Delete successfully!`;
+      return { message: 'Delete successfully!', statusCode: 200 };
     } catch (error) {
       console.error('❌ Error in dynamic repo [delete]:', error);
       throw new BadRequestException(error.message);

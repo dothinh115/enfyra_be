@@ -115,16 +115,48 @@ export class CommonService {
     reqPath: string;
     prefix?: string;
   }) {
-    const cleanPrefix = prefix?.replace(/^\//, '').replace(/\/$/, '');
-    const cleanRoute = routePath.replace(/^\//, '');
+    if (!routePath || !reqPath) return null;
 
-    const fullPattern = cleanPrefix
-      ? `/${cleanPrefix}/${cleanRoute}`
-      : `/${cleanRoute}`;
-    const matcher = match(fullPattern, { decode: decodeURIComponent });
+    try {
+      const cleanPrefix = prefix?.replace(/^\//, '').replace(/\/$/, '');
+      const cleanRoute = routePath.replace(/^\//, '').replace(/\/$/, '');
+      const cleanReqPath = reqPath.replace(/^\//, '').replace(/\/$/, '');
 
-    const matched = matcher(reqPath);
-    return matched ? { params: matched.params } : false;
+      // Handle wildcard routes
+      if (cleanRoute.includes('*')) {
+        const wildcardPattern = cleanRoute.replace(/\*/g, '.*');
+        const fullPattern = cleanPrefix
+          ? `/${cleanPrefix}/${wildcardPattern}`
+          : `/${wildcardPattern}`;
+        const regex = new RegExp(`^${fullPattern}$`);
+        return regex.test(`/${cleanReqPath}`) ? { params: {} } : null;
+      }
+
+      const fullPattern = cleanPrefix
+        ? `/${cleanPrefix}/${cleanRoute}`
+        : `/${cleanRoute}`;
+
+      const matcher = match(fullPattern, { decode: decodeURIComponent });
+      const matched = matcher(`/${cleanReqPath}`);
+
+      if (matched) {
+        // Clean up query parameters from params
+        const cleanParams: Record<string, string> = {};
+        for (const [key, value] of Object.entries(matched.params)) {
+          if (typeof value === 'string') {
+            cleanParams[key] = value.split('?')[0]; // Remove query part
+          } else {
+            cleanParams[key] = String(value);
+          }
+        }
+        return { params: cleanParams };
+      }
+
+      return null;
+    } catch (error) {
+      // Handle malformed route paths gracefully
+      return null;
+    }
   }
 
   getAllTsFiles(dirPath: string): string[] {
@@ -141,8 +173,7 @@ export class CommonService {
 
   checkTsErrors(dirPath: string, tsconfigPath = 'tsconfig.json'): void {
     const configPath = ts.findConfigFile(tsconfigPath, ts.sys.fileExists);
-    if (!configPath)
-      throw new Error(`tsconfig not found at ${tsconfigPath}`);
+    if (!configPath) throw new Error(`tsconfig not found at ${tsconfigPath}`);
 
     const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
     const parsedConfig = ts.parseJsonConfigFileContent(
@@ -182,7 +213,9 @@ export class CommonService {
     }
 
     if (hasError)
-      throw new Error('One or more files with TypeScript errors have been deleted.');
+      throw new Error(
+        'One or more files with TypeScript errors have been deleted.',
+      );
   }
 
   async removeOldFile(filePathOrPaths: string | string[], logger: Logger) {
@@ -256,5 +289,148 @@ export class CommonService {
         this.assertNoSystemFlagDeepRecursive(val, currentPath);
       }
     }
+  }
+
+  parseRouteParams(routePath: string): string[] {
+    if (!routePath) return [];
+
+    const paramRegex = /:([^\/\?]+)/g;
+    const params: string[] = [];
+    let match;
+
+    while ((match = paramRegex.exec(routePath)) !== null) {
+      const paramName = match[1].replace('?', ''); // Remove optional marker
+      if (!params.includes(paramName)) {
+        params.push(paramName);
+      }
+    }
+
+    return params;
+  }
+
+  normalizeRoutePath(path: string): string {
+    if (!path) return '/';
+
+    // Ensure starts with /
+    let normalized = path.startsWith('/') ? path : `/${path}`;
+
+    // Remove trailing slash unless it's root
+    if (normalized.length > 1 && normalized.endsWith('/')) {
+      normalized = normalized.slice(0, -1);
+    }
+
+    return normalized;
+  }
+
+  validateIdentifier(identifier: string): boolean {
+    if (!identifier || typeof identifier !== 'string') return false;
+
+    // Check for SQL injection patterns
+    const dangerousPatterns = [
+      /drop\s+table/i,
+      /delete\s+from/i,
+      /insert\s+into/i,
+      /update\s+.+\s+set/i,
+      /create\s+table/i,
+      /alter\s+table/i,
+      /;\s*$/i, // Trailing semicolon
+      /--\s*$/i, // SQL comment
+      /\/\*.*\*\//i, // SQL comment block
+    ];
+
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(identifier)) return false;
+    }
+
+    // Check for reserved keywords
+    const reservedKeywords = [
+      'select',
+      'from',
+      'where',
+      'insert',
+      'update',
+      'delete',
+      'drop',
+      'create',
+      'alter',
+      'table',
+      'database',
+      'index',
+      'view',
+      'procedure',
+      'function',
+      'trigger',
+      'constraint',
+      'primary',
+      'foreign',
+      'key',
+      'unique',
+      'check',
+      'default',
+      'null',
+      'not',
+      'and',
+      'or',
+      'order',
+      'group',
+      'by',
+      'having',
+      'union',
+      'join',
+      'inner',
+      'outer',
+      'left',
+      'right',
+      'cross',
+      'natural',
+      'as',
+      'on',
+      'in',
+      'exists',
+      'between',
+      'like',
+      'is',
+      'case',
+      'when',
+      'then',
+      'else',
+      'end',
+      'distinct',
+      'top',
+      'limit',
+      'offset',
+      'fetch',
+    ];
+
+    if (reservedKeywords.includes(identifier.toLowerCase())) return false;
+
+    // Check for valid identifier pattern
+    const validPattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+    return validPattern.test(identifier);
+  }
+
+  sanitizeInput(input: string): string {
+    if (!input || typeof input !== 'string') return '';
+
+    // Remove SQL injection patterns
+    let sanitized = input
+      .replace(/drop\s+table/gi, '')
+      .replace(/delete\s+from/gi, '')
+      .replace(/insert\s+into/gi, '')
+      .replace(/update\s+.+\s+set/gi, '')
+      .replace(/create\s+table/gi, '')
+      .replace(/alter\s+table/gi, '')
+      .replace(/;\s*$/g, '') // Remove trailing semicolon
+      .replace(/--\s*$/g, '') // Remove SQL comment
+      .replace(/\/\*.*?\*\//g, '') // Remove SQL comment block
+      .replace(/union\s+select/gi, '')
+      .replace(/exec\s*\(/gi, '')
+      .replace(/execute\s*\(/gi, '')
+      .replace(/;/g, ''); // Remove all semicolons
+
+    // Remove potentially dangerous characters
+    sanitized = sanitized.replace(/[<>'"]/g, '');
+
+    return sanitized.trim();
   }
 }
