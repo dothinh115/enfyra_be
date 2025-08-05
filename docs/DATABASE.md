@@ -239,7 +239,7 @@ All filter operators work consistently across both databases:
 // These work the same in MySQL and PostgreSQL
 filter: {
   title: { _contains: 'hello' },
-  price: { _between: [100, 500] },
+  price: { _between: "100,500" },
   status: { _in: ['active', 'pending'] },
   deletedAt: { _is_null: true }
 }

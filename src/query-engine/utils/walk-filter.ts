@@ -275,7 +275,8 @@ export function walkFilter({
 
       if (found.kind === 'field') {
         const fieldType = found.type;
-        const parsedValue = parseValue(fieldType, val);
+        // Don't parse value yet for _between operator
+        const parsedValue = key === '_between' ? val : parseValue(fieldType, val);
 
         const isSQLite =
           currentMeta.connection.driver.options.type === 'sqlite';
@@ -311,14 +312,39 @@ export function walkFilter({
             const p2 = `p${paramIndex++}`;
             sql = `${currentAlias}.${lastField} BETWEEN :${p1} AND :${p2}`;
 
-            const val1 = parseValue(fieldType, val[0]);
-            const val2 = parseValue(fieldType, val[1]);
-
-            // Check if both values are valid numbers
-            if (isNaN(val1) || isNaN(val2)) {
+            let val1: any, val2: any;
+            
+            // Handle both string "value1,value2" and array [value1, value2] formats
+            if (typeof val === 'string') {
+              const parts = val.split(',');
+              if (parts.length !== 2) {
+                throw new Error(
+                  `_between operator requires exactly 2 comma-separated values, got: "${val}"`,
+                );
+              }
+              val1 = parseValue(fieldType, parts[0].trim());
+              val2 = parseValue(fieldType, parts[1].trim());
+            } else if (Array.isArray(val)) {
+              if (val.length !== 2) {
+                throw new Error(
+                  `_between operator requires exactly 2 values, got array with ${val.length} values`,
+                );
+              }
+              val1 = parseValue(fieldType, val[0]);
+              val2 = parseValue(fieldType, val[1]);
+            } else {
               throw new Error(
-                `_between operator requires 2 numeric values, got: [${val[0]}, ${val[1]}]`,
+                `_between operator requires either a comma-separated string or array of 2 values, got: ${typeof val}`,
               );
+            }
+
+            // For numeric types, validate the parsed values
+            if (fieldType && ['int', 'integer', 'smallint', 'bigint', 'decimal', 'numeric', 'float', 'double'].includes(fieldType.toLowerCase())) {
+              if (isNaN(val1) || isNaN(val2)) {
+                throw new Error(
+                  `_between operator requires valid numeric values for field type ${fieldType}`,
+                );
+              }
             }
 
             param[p1] = val1;

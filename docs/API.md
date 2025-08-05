@@ -31,7 +31,7 @@ GET /{table_name}
 **Query Parameters:**
 
 - `filter[field][operator]=value` - Filter records
-- `sort[field]=asc|desc` - Sort records
+- `sort=field|-field` - Sort records (prefix with `-` for descending)
 - `page=number` - Page number (default: 1)
 - `limit=number` - Records per page (default: 10, 0 for all)
 - `fields=field1,field2` - Select specific fields
@@ -40,7 +40,7 @@ GET /{table_name}
 **Example:**
 
 ```bash
-curl "http://localhost:1105/posts?filter[title][_contains]=hello&sort[createdAt]=desc&page=1&limit=10"
+curl "http://localhost:1105/posts?filter[title][_contains]=hello&sort=-createdAt&page=1&limit=10"
 ```
 
 #### Get Single Record
@@ -104,6 +104,8 @@ DELETE /posts/1
 
 ### Filter Operators
 
+The Enfyra API uses MongoDB-like operators for filtering. Below is a quick reference:
+
 | Operator       | Description           | Example                               |
 | -------------- | --------------------- | ------------------------------------- |
 | `_eq`          | Equal                 | `filter[status][_eq]=published`       |
@@ -119,7 +121,15 @@ DELETE /posts/1
 | `_contains`    | Contains text         | `filter[title][_contains]=hello`      |
 | `_starts_with` | Starts with           | `filter[title][_starts_with]=hello`   |
 | `_ends_with`   | Ends with             | `filter[title][_ends_with]=world`     |
-| `_not`         | Not (group)           | `filter[_not][status][_eq]=draft`     |
+| `_and`         | AND logic             | `filter[_and][0][age][_gte]=18`       |
+| `_or`          | OR logic              | `filter[_or][0][role][_eq]=admin`     |
+| `_not`         | NOT logic             | `filter[_not][status][_eq]=draft`     |
+
+**Note**: For `_between` operator, you can use either:
+- Comma-separated string: `filter[price][_between]=100,500`
+- Array format (in JSON body): `{ "price": { "_between": [100, 500] } }`
+
+For comprehensive documentation on query operators, complex filters, aggregations, and SQL equivalents, see [Query Engine Documentation](./QUERY_ENGINE.md).
 
 ### Response Format
 
@@ -297,17 +307,49 @@ mutation {
 
 ### Filter Operators (GraphQL)
 
-Same operators as REST API, but in GraphQL format:
+GraphQL uses the same operators as the REST API. Here are some examples:
 
 ```graphql
 filter: {
-  title: { _contains: "hello" }
+  # Comparison operators
   status: { _eq: "published" }
-  price: { _between: [100, 500] }
+  age: { _gte: 18 }
+  price: { _between: [100, 500] }  # Can also use "100,500"
+  
+  # Text search
+  title: { _contains: "hello" }
+  email: { _starts_with: "admin" }
+  
+  # Array operators
   category: { _in: ["tech", "business"] }
+  status: { _not_in: ["deleted", "suspended"] }
+  
+  # Null checks
   deletedAt: { _is_null: true }
+  
+  # Logical operators
+  _and: [
+    { status: { _eq: "active" } }
+    { role: { _neq: "guest" } }
+  ]
+  _or: [
+    { priority: { _eq: "high" } }
+    { dueDate: { _lt: "2024-01-01" } }
+  ]
+  
+  # Relation filters
+  author: {
+    name: { _contains: "John" }
+  }
+  
+  # Aggregation filters
+  posts: {
+    _count: { _gt: 5 }
+  }
 }
 ```
+
+For detailed documentation, see [Query Engine Documentation](./QUERY_ENGINE.md).
 
 ## Table Management API
 
@@ -463,29 +505,51 @@ Aggregate filters allow you to filter records based on aggregate conditions of r
 
 ### Count Filter
 
+Filter based on the count of related records:
+
 ```http
-GET /posts?filter[count.comments.id][_gt]=2
+# Users with more than 5 posts
+GET /users?filter[posts][_count][_gt]=5
+
+# Users with no posts
+GET /users?filter[posts][_count][_eq]=0
 ```
 
 ### Sum Filter
 
+Filter based on the sum of a field in related records:
+
 ```http
-GET /users?filter[sum.orders.total][_gt]=1000
+# Users whose orders total more than $1000
+GET /users?filter[orders][_sum][total][_gt]=1000
 ```
 
 ### Average Filter
 
+Filter based on the average of a field in related records:
+
 ```http
-GET /products?filter[avg.reviews.rating][_gte]=4.5
+# Products with average rating >= 4.5
+GET /products?filter[reviews][_avg][rating][_gte]=4.5
 ```
 
 ### Min/Max Filter
 
+Filter based on minimum or maximum values in related records:
+
 ```http
-GET /products?filter[min.price][_lt]=100&filter[max.price][_gt]=50
+# Users whose minimum order is at least $50
+GET /users?filter[orders][_min][total][_gte]=50
+
+# Products whose maximum price variant is less than $100
+GET /products?filter[variants][_max][price][_lt]=100
 ```
 
-**Note**: Aggregate filters work with relations, not direct table fields. The format is `filter[aggregate.relation.field][operator]=value`.
+**Note**: Aggregate filters work with relations. The format follows the pattern:
+- Count: `filter[relation][_count][operator]=value`
+- Sum/Avg/Min/Max: `filter[relation][_aggregate][field][operator]=value`
+
+For more examples and detailed documentation, see [Query Engine Documentation](./QUERY_ENGINE.md).
 
 ## Error Codes
 

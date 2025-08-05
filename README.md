@@ -156,7 +156,7 @@ Content-Type: application/json
 **REST API:**
 
 ```http
-GET /posts?filter[title][_contains]=hello&sort[createdAt]=desc&page=1&limit=10
+GET /posts?filter[title][_contains]=hello&sort=-createdAt&page=1&limit=10
 ```
 
 ### GraphQL Query

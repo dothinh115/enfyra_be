@@ -246,7 +246,10 @@ Authorization: Bearer <your-token>
 
 ```http
 GET /posts?filter[id][_between]=1,10
+```http
+GET /posts?filter[createdAt][_between]=2023-01-01,2023-12-31
 Authorization: Bearer <your-token>
+```Authorization: Bearer <your-token>
 ```
 
 #### List Search
@@ -274,12 +277,12 @@ Authorization: Bearer <your-token>
 **REST API:**
 
 ```http
-GET /posts?sort[createdAt]=asc
+GET /posts?sort=createdAt
 Authorization: Bearer <your-token>
 ```
 
 ```http
-GET /posts?sort[createdAt]=desc
+GET /posts?sort=-createdAt
 Authorization: Bearer <your-token>
 ```
 
@@ -288,7 +291,7 @@ Authorization: Bearer <your-token>
 **REST API:**
 
 ```http
-GET /posts?sort[categoryId]=asc&sort[createdAt]=desc
+GET /posts?sort=categoryId,-createdAt
 Authorization: Bearer <your-token>
 ```
 
