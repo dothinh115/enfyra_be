@@ -17,6 +17,8 @@ The Enfyra Query Engine provides a powerful and flexible way to query data using
 
 ## REST API Usage
 
+All parameters are passed via query string (URL parameters), even for complex queries.
+
 ### Basic Queries
 
 ```http
@@ -28,79 +30,101 @@ GET /users?filter={"status":{"_eq":"active"}}
 
 # Sort users by creation date (descending)
 GET /users?sort=-createdAt&limit=20
+
+# Multiple sort fields
+GET /users?sort=name,-createdAt&limit=20
 ```
 
-### Complex POST Queries
+### Complex Queries with Filters
 
-For complex filters, use POST with JSON body:
+Complex filters are passed as URL-encoded JSON in the query string:
 
 ```http
-POST /users/search
-Content-Type: application/json
+# Filter with AND conditions
+GET /users?filter={"_and":[{"status":{"_eq":"active"}},{"age":{"_gte":18}}]}&fields=id,name,email&sort=-createdAt
+
+# Filter with OR conditions
+GET /users?filter={"_or":[{"role":{"_eq":"admin"}},{"role":{"_eq":"moderator"}}]}
+
+# Nested relation filters
+GET /posts?filter={"author":{"name":{"_contains":"john"}},"status":{"_eq":"published"}}&fields=id,title,author.name
+
+# Filter with multiple operators
+GET /products?filter={"price":{"_gte":100,"_lte":500},"category":{"_in":["electronics","computers"]}}
+```
+
+### URL Encoding
+
+Since complex filters are JSON objects, they must be URL-encoded:
+
+```javascript
+// JavaScript example
+const filter = {
+  "_and": [
+    {"status": {"_eq": "active"}},
+    {"age": {"_gte": 18}}
+  ]
+};
+
+const url = `/users?filter=${encodeURIComponent(JSON.stringify(filter))}`;
+// Result: /users?filter=%7B%22_and%22%3A%5B%7B%22status%22%3A%7B%22_eq%22%3A%22active%22%7D%7D%2C%7B%22age%22%3A%7B%22_gte%22%3A18%7D%7D%5D%7D
+```
+
+
+## GraphQL API Usage
+
+GraphQL queries also use the same query parameters structure:
+
+```graphql
+query {
+  users(
+    filter: "{\"status\":{\"_eq\":\"active\"}}"
+    fields: "id,name,email,role.name"
+    sort: "name,-createdAt"
+    page: 1
+    limit: 10
+  ) {
+    data
+    meta
+  }
+}
+```
+
+Or with GraphQL variables:
+
+```graphql
+query GetUsers($filter: String, $fields: String, $sort: String, $page: Int, $limit: Int) {
+  users(filter: $filter, fields: $fields, sort: $sort, page: $page, limit: $limit) {
+    data
+    meta
+  }
+}
+```
+
+Variables:
+```json
 {
-  "filter": {
-    "_and": [
-      {"status": {"_eq": "active"}},
-      {"age": {"_gte": 18}},
-      {"role": {"_in": ["admin", "moderator"]}}
-    ]
-  },
-  "fields": "id,name,email,role.name",
-  "sort": ["name", "-createdAt"],
+  "filter": "{\"status\":{\"_eq\":\"active\"},\"age\":{\"_gte\":18}}",
+  "fields": "id,name,email",
+  "sort": "-createdAt",
   "page": 1,
   "limit": 20
 }
 ```
 
-### REST API Parameters
+## Query Parameters
+
+All query parameters are passed as URL query strings:
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
-| `filter[field][operator]` | string | Filter conditions | `filter[status][_eq]=active` |
+| `filter` | JSON string | Filter conditions | `filter={"status":{"_eq":"active"}}` |
 | `fields` | string | Comma-separated field list | `fields=id,name,email` |
-| `sort` | string | Comma-separated sort fields | `sort=name,-createdAt` |
+| `sort` | string | Comma-separated sort fields (- for DESC) | `sort=name,-createdAt` |
 | `page` | number | Page number (1-based) | `page=2` |
 | `limit` | number | Records per page | `limit=20` |
 | `meta` | string | Meta information to include | `meta=totalCount,filterCount` |
-| `deep` | object | Deep relation options (JSON only) | See examples below |
-
-### GraphQL Format
-
-```graphql
-query {
-  table_name(
-    filter: { /* filter conditions */ }
-    sort: ["createdAt", "-updatedAt"]
-    page: 1
-    limit: 10
-  ) {
-    data {
-      id
-      name
-      email
-    }
-    meta {
-      totalCount
-      filterCount
-    }
-  }
-}
-```
-
-## Basic Query Structure
-
-**JavaScript:**
-```javascript
-const result = await queryEngine.find({
-  tableName: 'users',
-  filter: { /* filter conditions */ },
-  fields: 'id,name,email',  // or ['id', 'name', 'email']
-  sort: ['createdAt', '-updatedAt'],  // - prefix for DESC
-  page: 1,
-  limit: 10,
-  meta: 'totalCount,filterCount'
-});
-```
+| `deep` | JSON string | Deep relation options | `deep={"posts":{"limit":5}}` |
 
 ## Comparison Operators
 
@@ -893,21 +917,47 @@ fields: '*'
 
 ## Deep Relations
 
-### Deep Query with Filters and Pagination
+The `deep` parameter allows nested queries on relations. **Important**: Each level inside `deep` is a complete query environment with all the same parameters available at the root level.
 
+### Structure
+```javascript
+deep: {
+  relationName: {
+    // This is a complete query environment, same as root
+    fields: "...",     // Field selection for this relation
+    filter: {...},     // Filters for this relation
+    sort: "...",       // Sorting for this relation
+    limit: 10,         // Limit for this relation
+    page: 1,           // Pagination for this relation
+    meta: "...",       // Meta data for this relation
+    deep: {            // Nested deep queries
+      // More nested relations...
+    }
+  }
+}
+```
+
+### Example with Multiple Levels
+
+```http
+GET /users?fields=id,name&deep={"posts":{"fields":"id,title,views","filter":{"views":{"_gt":100}},"sort":"-views","limit":5,"deep":{"comments":{"fields":"id,content","filter":{"approved":{"_eq":true}},"limit":3}}}}
+```
+
+URL-decoded for readability:
 ```javascript
 {
-  tableName: 'users',
-  fields: 'id,name',
+  fields: "id,name",
   deep: {
     posts: {
-      fields: ['id', 'title', 'views'],
+      // Full query environment for posts
+      fields: "id,title,views",
       filter: { views: { _gt: 100 } },
-      sort: ['-views'],
+      sort: "-views",
       limit: 5,
       deep: {
         comments: {
-          fields: ['id', 'content'],
+          // Full query environment for comments
+          fields: "id,content",
           filter: { approved: { _eq: true } },
           limit: 3
         }
@@ -918,8 +968,9 @@ fields: '*'
 ```
 
 This creates a nested structure where:
-- Each user includes their top 5 most-viewed posts (with > 100 views)
-- Each post includes up to 3 approved comments
+- Root query: Get users with id and name
+- For each user's posts relation: Get top 5 posts with > 100 views, sorted by views
+- For each post's comments relation: Get up to 3 approved comments
 
 ## Complex Examples
 
