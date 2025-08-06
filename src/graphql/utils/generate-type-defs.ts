@@ -27,6 +27,10 @@ export function generateTypeDefsFromTables(
   tables: any[],
   metadatas: EntityMetadata[],
 ): string {
+  console.log('🔧 Starting GraphQL schema generation...');
+  console.log('📋 Tables count:', tables.length);
+  console.log('📊 Metadata count:', metadatas.length);
+  
   let typeDefs = '';
   let queryDefs = '';
   let resultDefs = '';
@@ -39,6 +43,7 @@ export function generateTypeDefsFromTables(
     }
 
     const typeName = table.name;
+    console.log(`\n🏗️  Processing table: ${typeName}`);
 
     // Skip if already processed
     if (processedTypes.has(typeName)) {
@@ -48,6 +53,7 @@ export function generateTypeDefsFromTables(
     processedTypes.add(typeName);
 
     typeDefs += `\ntype ${typeName} {\n`;
+    console.log(`📝 Added type definition start for: ${typeName}`);
 
     // Lấy đúng EntityMetadata
     const entityMeta = metadatas.find((meta) => meta.tableName === table.name);
@@ -100,25 +106,31 @@ export function generateTypeDefsFromTables(
 
       const relName = rel.propertyName;
       const targetType = rel.inverseEntityMetadata.tableName;
+      
+      console.log(`🔗 Processing relation: ${relName} -> ${targetType}`);
 
       // Validate target type name
       if (!targetType || typeof targetType !== 'string' || targetType.trim() === '') {
-        console.warn('Skipping relation with invalid target type:', relName, targetType);
+        console.warn('❌ Skipping relation with invalid target type:', relName, targetType);
         continue;
       }
 
       // Skip if target type same as current type (circular reference)
       if (targetType === typeName) {
-        console.warn('Skipping circular reference:', relName, targetType);
+        console.warn('⚠️ Skipping circular reference:', relName, targetType);
         continue;
       }
 
       const isArray = rel.isOneToMany || rel.isManyToMany;
 
       if (isArray) {
-        typeDefs += `  ${relName}: [${targetType}!]!\n`;
+        const fieldDef = `  ${relName}: [${targetType}!]!\n`;
+        console.log(`📝 Adding array relation field: ${fieldDef.trim()}`);
+        typeDefs += fieldDef;
       } else {
-        typeDefs += `  ${relName}: ${targetType}\n`;
+        const fieldDef = `  ${relName}: ${targetType}\n`;
+        console.log(`📝 Adding single relation field: ${fieldDef.trim()}`);
+        typeDefs += fieldDef;
       }
     }
 
@@ -159,5 +171,11 @@ type Query {
 ${queryDefs}
 }
 `;
+  
+  console.log('✅ GraphQL schema generation completed');
+  console.log('📏 Final schema length:', fullTypeDefs.length);
+  console.log('📄 Generated schema preview (first 500 chars):');
+  console.log(fullTypeDefs.substring(0, 500));
+  
   return fullTypeDefs;
 }
