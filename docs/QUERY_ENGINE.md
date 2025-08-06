@@ -2,18 +2,67 @@
 
 ## Overview
 
-The Enfyra Query Engine provides a powerful and flexible way to query data using MongoDB-like operators through REST and GraphQL APIs. It translates these operators into optimized SQL queries with support for complex filtering, relations, aggregations, and more.
+The Enfyra Query Engine provides a powerful and flexible way to query data using MongoDB-like operators through REST and GraphQL APIs. It features:
 
-**⚠️ Important**: The Query Engine should only be accessed through the REST and GraphQL APIs, not called directly in code.
+✨ **Automatic Smart Joins**: The engine automatically creates optimal JOIN queries when you filter or select fields from related tables - no manual JOIN needed!
+
+🚀 **Optimized Performance**: All queries are translated into efficient SQL with proper indexing and join strategies.
+
+🔗 **Deep Relations**: Support for nested data loading with independent query control at each level.
 
 ## Table of Contents
 
+- [Auto-Join Feature](#auto-join-feature)
 - [REST API Usage](#rest-api-usage)
 - [GraphQL API Usage](#graphql-api-usage)  
 - [Query Parameters](#query-parameters)
 - [Filter Operations](#filter-operations)
+- [Deep Relations & Use Cases](#deep-relations--use-cases)
 - [Complex Examples](#complex-examples)
 - [Performance Tips](#performance-tips)
+
+## Auto-Join Feature
+
+The Query Engine automatically creates JOIN queries when you reference related tables. No manual JOIN configuration needed!
+
+### Automatic JOIN on Field Selection
+
+```http
+# Select user with role name - AUTO JOIN with roles table
+GET /users?fields=id,name,email,role.name,role.permissions
+
+# Select post with author details - AUTO JOIN with users table
+GET /posts?fields=title,content,author.name,author.email
+```
+
+### Automatic JOIN on Filtering
+
+```http
+# Find posts by author name - AUTO JOIN with users table
+GET /posts?filter={"author":{"name":{"_contains":"john"}}}
+
+# Find users with admin role - AUTO JOIN with roles table  
+GET /users?filter={"role":{"name":{"_eq":"admin"}}}
+
+# Complex multi-level JOIN - AUTO JOIN users -> posts -> comments
+GET /users?filter={"posts":{"comments":{"approved":{"_eq":true}}}}
+```
+
+### Automatic JOIN on Sorting
+
+```http
+# Sort posts by author name - AUTO JOIN with users table
+GET /posts?sort=author.name,-createdAt
+
+# Sort orders by customer email - AUTO JOIN with customers table
+GET /orders?sort=customer.email,orderDate
+```
+
+The engine optimizes these JOINs automatically:
+- Uses LEFT JOIN for optional relations
+- Uses INNER JOIN when filtering requires the relation to exist
+- Avoids duplicate JOINs when same relation is used multiple times
+- Creates proper join conditions based on foreign keys
 
 ## REST API Usage
 
@@ -121,8 +170,8 @@ All query parameters are passed as URL query strings:
 | `filter` | JSON string | Filter conditions | `filter={"status":{"_eq":"active"}}` |
 | `fields` | string | Comma-separated field list | `fields=id,name,email` |
 | `sort` | string | Comma-separated sort fields (- for DESC) | `sort=name,-createdAt` |
-| `page` | number | Page number (1-based) | `page=2` |
-| `limit` | number | Records per page | `limit=20` |
+| `page` | number | Page number (1-based, default: 1) | `page=2` |
+| `limit` | number | Records per page (default: 10, use 0 for all) | `limit=20` or `limit=0` |
 | `meta` | string | Meta information to include | `meta=totalCount,filterCount` |
 | `deep` | JSON string | Deep relation options | `deep={"posts":{"limit":5}}` |
 
@@ -915,62 +964,153 @@ query {
 fields: '*'
 ```
 
-## Deep Relations
+## Deep Relations & Use Cases
 
-The `deep` parameter allows nested queries on relations. **Important**: Each level inside `deep` is a complete query environment with all the same parameters available at the root level.
+The `deep` parameter enables loading nested relations with independent query control at each level. Each level is a complete query environment with all parameters (fields, filter, sort, limit, page, meta, deep).
 
-### Structure
-```javascript
-deep: {
-  relationName: {
-    // This is a complete query environment, same as root
-    fields: "...",     // Field selection for this relation
-    filter: {...},     // Filters for this relation
-    sort: "...",       // Sorting for this relation
-    limit: 10,         // Limit for this relation
-    page: 1,           // Pagination for this relation
-    meta: "...",       // Meta data for this relation
-    deep: {            // Nested deep queries
-      // More nested relations...
-    }
-  }
-}
-```
+### When to Use Deep vs Auto-Join
 
-### Example with Multiple Levels
+**Use Auto-Join (default) when:**
+- You need a few fields from a related table
+- You're filtering/sorting by related fields
+- Relations are one-to-one or many-to-one
+- You want to avoid N+1 queries
+
+**Use Deep when:**
+- You need to load collections (one-to-many) with specific limits
+- You want to paginate related records independently
+- You need different filters at each relation level
+- You need nested collections (e.g., posts → comments)
+
+**⚠️ Important N+1 Warning**: Deep queries execute separate queries for each parent record. Use Deep only when necessary!
+
+### Use Case 1: Blog Dashboard
+Load authors with their recent popular posts and top comments:
 
 ```http
-GET /users?fields=id,name&deep={"posts":{"fields":"id,title,views","filter":{"views":{"_gt":100}},"sort":"-views","limit":5,"deep":{"comments":{"fields":"id,content","filter":{"approved":{"_eq":true}},"limit":3}}}}
+GET /authors?limit=20&fields=id,name,avatar&deep={"posts":{"fields":"id,title,views,createdAt","filter":{"status":{"_eq":"published"},"views":{"_gt":1000}},"sort":"-views","limit":5,"deep":{"comments":{"fields":"id,content,likes","filter":{"spam":{"_eq":false}},"sort":"-likes","limit":3}}}}
 ```
 
-URL-decoded for readability:
-```javascript
+**Query breakdown:**
+- 1 query: Get 20 authors (explicit limit=20)
+- 20 queries: Get top 5 posts per author  
+- ~100 queries: Get top 3 comments per post (assuming 5 posts × 20 authors)
+- Total: ~121 queries (controlled by explicit root limit)
+
+**Result structure:**
+```json
 {
-  fields: "id,name",
-  deep: {
-    posts: {
-      // Full query environment for posts
-      fields: "id,title,views",
-      filter: { views: { _gt: 100 } },
-      sort: "-views",
-      limit: 5,
-      deep: {
-        comments: {
-          // Full query environment for comments
-          fields: "id,content",
-          filter: { approved: { _eq: true } },
-          limit: 3
+  "data": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "avatar": "...",
+      "posts": [
+        {
+          "id": 101,
+          "title": "Popular Post",
+          "views": 5000,
+          "comments": [
+            {"id": 1001, "content": "Great!", "likes": 50},
+            {"id": 1002, "content": "Helpful", "likes": 30}
+          ]
         }
-      }
+        // ... up to 5 posts
+      ]
     }
-  }
+  ]
 }
 ```
 
-This creates a nested structure where:
-- Root query: Get users with id and name
-- For each user's posts relation: Get top 5 posts with > 100 views, sorted by views
-- For each post's comments relation: Get up to 3 approved comments
+### Use Case 2: Detail Page (Good use of Deep)
+Load single customer detail with recent orders and items - N+1 is acceptable for single record:
+
+```http
+GET /customers/123?fields=*&deep={"orders":{"fields":"id,orderNumber,total,status,createdAt","filter":{"createdAt":{"_gte":"2024-01-01"}},"sort":"-createdAt","limit":10,"deep":{"items":{"fields":"*,product.name,product.image","limit":100}}}}
+```
+
+This is OK because:
+- Only 1 customer record (1 query)
+- Orders for that customer (1 query for all orders with limit 10)
+- Items for each order (up to 10 queries, one per order)
+- Total: ~12 queries for complete detail view
+
+Note: Each level of deep executes 1 query per parent record, not 1 query total
+
+### Use Case 3: Social Media Feed
+Load user with friends and their recent activities:
+
+```http
+GET /users/me?fields=id,name&deep={"friends":{"fields":"id,name,avatar","filter":{"status":{"_eq":"active"}},"limit":20,"deep":{"posts":{"fields":"id,content,createdAt,likesCount","filter":{"createdAt":{"_gte":"2024-08-01"}},"sort":"-createdAt","limit":3}}}}
+```
+
+### Use Case 4: Admin Dashboard - User Management
+Load users with their roles, permissions, and activity logs:
+
+```http
+GET /users?fields=id,email,lastLogin&filter={"status":{"_eq":"active"}}&deep={"role":{"fields":"*,permissions.*"},"activityLogs":{"fields":"action,timestamp,ipAddress","sort":"-timestamp","limit":10},"sessions":{"fields":"device,lastActivity","filter":{"active":{"_eq":true}}}}
+```
+
+### Performance Consideration
+
+**⚠️ N+1 Query Warning**: Deep queries create N+1 query problems:
+- Fetching 10 users with deep posts: 1 query for users + 10 queries for posts = 11 total
+- Fetching 100 products with deep reviews: 1 query for products + 100 queries for reviews = 101 total
+- Nested deep multiplies: 10 users → posts → comments = 1 + 10 + (posts per user × 10) queries!
+
+**Why N+1 is Unavoidable for Pagination:**
+
+When you need independent limits per parent record, N+1 queries are the only solution:
+
+```javascript
+// ❌ This won't work with _in approach:
+// Want: "5 recent posts per user" for 10 users
+
+// SQL with _in would be:
+// SELECT * FROM posts WHERE userId IN (1,2,3...10) ORDER BY createdAt DESC LIMIT 50
+
+// Problem: Might return 50 posts from user #1, 0 posts from others
+// Cannot guarantee 5 posts per user with single query
+```
+
+**The only solution is N+1:**
+```http
+# ✅ This guarantees 5 posts per user:
+GET /users?deep={"posts":{"limit":5,"sort":"-createdAt"}}
+
+# Executes:
+# 1 query: SELECT * FROM users  
+# N queries: SELECT * FROM posts WHERE userId = ? ORDER BY createdAt DESC LIMIT 5
+```
+
+**Best Practices:**
+1. Use Auto-Join instead of Deep when you don't need per-record limits
+2. Deep is acceptable when viewing a single detail record (e.g., `/users/123`)
+3. Deep is necessary when you need "top N records per parent"
+4. Always set `limit` on collections to control data size
+5. **⚠️ CRITICAL: Always limit root level records when using Deep!**
+
+```javascript
+// ✅ DEFAULT: Only 10 users due to default limit=10
+GET /users?deep={"posts":{"limit":5}}
+// Result: 10 users × 5 posts = ~15 queries (safe)
+
+// ❌ DANGER: Getting ALL users with limit=0 
+GET /users?limit=0&deep={"posts":{"limit":5}}
+// Result: ALL users × 5 posts = potentially thousands of queries!
+
+// ✅ EXPLICIT: Control exact number of root records
+GET /users?limit=20&deep={"posts":{"limit":5}}
+// Result: 20 users × 5 posts = ~25 queries (controlled)
+```
+
+```javascript
+// ❌ Bad - might load thousands of records
+deep: { posts: { fields: "*" } }
+
+// ✅ Good - controlled data loading
+deep: { posts: { fields: "id,title", limit: 20 } }
+```
 
 ## Complex Examples
 
