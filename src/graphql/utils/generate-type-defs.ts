@@ -101,6 +101,12 @@ export function generateTypeDefsFromTables(
       const relName = rel.propertyName;
       const targetType = rel.inverseEntityMetadata.tableName;
 
+      // Validate target type name
+      if (!targetType || typeof targetType !== 'string' || targetType.trim() === '') {
+        console.warn('Skipping relation with invalid target type:', relName, targetType);
+        continue;
+      }
+
       // Skip if target type same as current type (circular reference)
       if (targetType === typeName) {
         console.warn('Skipping circular reference:', relName, targetType);
