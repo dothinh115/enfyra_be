@@ -1,5 +1,11 @@
 # Enfyra Backend - API-First Dynamic Platform
 
+## License
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** - a strong copyleft license that ensures all modifications and derivatives remain open source.
+
+For details, see [LICENSE](./LICENSE).
+
 ## Overview
 
 Enfyra Backend is an API-first platform that enables dynamic creation and management of API endpoints, database schemas, and business logic through configuration. The system is built on NestJS with TypeScript and supports both MySQL and PostgreSQL databases.
