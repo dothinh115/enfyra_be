@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import { Logger } from '@nestjs/common';
 import { createDataSource } from '../../data-source/data-source';
 import { CommonService } from '../../common/common.service';
-
+import { DataSource } from 'typeorm';
 const logger = new Logger('MigrationHelper');
 
 // Helper function to clean up orphaned tables and constraints
@@ -227,7 +227,6 @@ async function runMigrationDirect() {
     const entities = await commonService.loadDynamicEntities(entityDir);
 
     // Create DataSource with explicit migration configuration
-    const { DataSource } = await import('typeorm');
     const dataSource = new DataSource({
       type: process.env.DB_TYPE as 'mysql',
       host: process.env.DB_HOST,

@@ -30,7 +30,7 @@ export function generateTypeDefsFromTables(
   console.log('🔧 Starting GraphQL schema generation...');
   console.log('📋 Tables count:', tables.length);
   console.log('📊 Metadata count:', metadatas.length);
-  
+
   let typeDefs = '';
   let queryDefs = '';
   let resultDefs = '';
@@ -57,7 +57,53 @@ export function generateTypeDefsFromTables(
 
     // Lấy đúng EntityMetadata
     const entityMeta = metadatas.find((meta) => meta.tableName === table.name);
-    if (!entityMeta) continue;
+    if (!entityMeta) {
+      console.warn(
+        `❌ No entity metadata found for table: ${typeName} — using table.columns only`,
+      );
+
+      // Nếu có columns từ table thì dùng luôn
+      if (table.columns && table.columns.length > 0) {
+        for (const column of table.columns) {
+          const fieldName = column?.name;
+          const columnType = column?.type;
+
+          if (
+            !fieldName ||
+            typeof fieldName !== 'string' ||
+            !/^[A-Za-z_][A-Za-z0-9_]*$/.test(fieldName)
+          ) {
+            console.warn('⚠️ Skipping column with invalid name:', fieldName);
+            continue;
+          }
+
+          if (!columnType || typeof columnType !== 'string') {
+            console.warn('⚠️ Skipping column with invalid type:', columnType);
+            continue;
+          }
+
+          const gqlType = mapColumnTypeToGraphQL(columnType);
+          const isRequired = !column.isNullable ? '!' : '';
+
+          const finalType =
+            column.isPrimary && gqlType === 'ID'
+              ? 'ID!'
+              : `${gqlType}${isRequired}`;
+
+          typeDefs += `  ${fieldName}: ${finalType}\n`;
+        }
+        typeDefs += `}\n`;
+        continue;
+      }
+
+      // Nếu không có column nào, bỏ qua
+      console.warn(`❌ No columns in table "${typeName}", skipping...`);
+      typeDefs = typeDefs.slice(
+        0,
+        typeDefs.lastIndexOf(`type ${typeName} {\n`),
+      ); // Xoá phần mở đầu
+      continue;
+    }
 
     // Scalar columns
     for (const column of table.columns || []) {
@@ -106,12 +152,20 @@ export function generateTypeDefsFromTables(
 
       const relName = rel.propertyName;
       const targetType = rel.inverseEntityMetadata.tableName;
-      
+
       console.log(`🔗 Processing relation: ${relName} -> ${targetType}`);
 
       // Validate target type name
-      if (!targetType || typeof targetType !== 'string' || targetType.trim() === '') {
-        console.warn('❌ Skipping relation with invalid target type:', relName, targetType);
+      if (
+        !targetType ||
+        typeof targetType !== 'string' ||
+        targetType.trim() === ''
+      ) {
+        console.warn(
+          '❌ Skipping relation with invalid target type:',
+          relName,
+          targetType,
+        );
         continue;
       }
 
@@ -171,11 +225,11 @@ type Query {
 ${queryDefs}
 }
 `;
-  
+
   console.log('✅ GraphQL schema generation completed');
   console.log('📏 Final schema length:', fullTypeDefs.length);
   console.log('📄 Generated schema preview (first 500 chars):');
   console.log(fullTypeDefs.substring(0, 500));
-  
+
   return fullTypeDefs;
 }
