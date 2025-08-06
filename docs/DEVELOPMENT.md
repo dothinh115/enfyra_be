@@ -36,7 +36,7 @@ DB_HOST=localhost
 DB_PORT=3306                     # 3306 for MySQL, 5432 for PostgreSQL
 DB_USERNAME=root
 DB_PASSWORD=your_password
-DB_DATABASE=enfyra_cms
+DB_NAME=enfyra_cms
 
 # PostgreSQL specific (if using PostgreSQL)
 # DB_SSL=true                    # Enable SSL for PostgreSQL
@@ -47,8 +47,10 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 
 # JWT
-JWT_SECRET=your-secret-key
-JWT_EXPIRES_IN=1d
+SECRET_KEY=your-secret-key
+ACCESS_TOKEN_EXP=15m
+REFRESH_TOKEN_NO_REMEMBER_EXP=1d
+REFRESH_TOKEN_REMEMBER_EXP=7d
 
 # Server
 PORT=1105
@@ -608,15 +610,6 @@ npm run build:prod
 pm2 start ecosystem.config.js --env production
 ```
 
-### Docker Deployment
-
-```bash
-# Build Docker image
-docker build -t enfyra-backend .
-
-# Run container
-docker run -p 1105:1105 enfyra-backend
-```
 
 ## Troubleshooting
 

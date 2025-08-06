@@ -33,7 +33,7 @@ DB_HOST=localhost
 DB_PORT=3306                     # 3306 for MySQL, 5432 for PostgreSQL
 DB_USERNAME=root                 # or postgres for PostgreSQL
 DB_PASSWORD=your_password
-DB_DATABASE=enfyra_cms
+DB_NAME=enfyra_cms
 
 # PostgreSQL Specific Settings
 DB_SSL=true                      # Enable SSL for PostgreSQL (optional)
@@ -52,7 +52,7 @@ const dataSource = new DataSource({
   port: parseInt(process.env.DB_PORT),
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
+  database: process.env.DB_NAME,
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   synchronize: process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
@@ -74,7 +74,7 @@ const dataSource = new DataSource({
   port: parseInt(process.env.DB_PORT),
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
+  database: process.env.DB_NAME,
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   synchronize: process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
@@ -493,48 +493,10 @@ sudo systemctl restart postgresql
 
 ## Switching Between Databases
 
-### From MySQL to PostgreSQL
+To switch between MySQL and PostgreSQL:
 
-1. **Export data from MySQL**
+1. **Export data from current database** using native tools (mysqldump or pg_dump)
+2. **Update environment variables** for the new database type and connection details
+3. **Import data to new database** (manual transformation required due to SQL dialect differences)
 
-```bash
-mysqldump -u root -p enfyra_cms > mysql_backup.sql
-```
-
-2. **Update environment variables**
-
-```bash
-DB_TYPE=postgres
-DB_PORT=5432
-DB_USERNAME=postgres
-```
-
-3. **Import data to PostgreSQL** (requires data transformation)
-
-```bash
-# Use tools like pgloader or manual transformation
-pgloader mysql://user:pass@localhost/enfyra_cms postgresql://user:pass@localhost/enfyra_cms
-```
-
-### From PostgreSQL to MySQL
-
-1. **Export data from PostgreSQL**
-
-```bash
-pg_dump -U postgres enfyra_cms > postgres_backup.sql
-```
-
-2. **Update environment variables**
-
-```bash
-DB_TYPE=mysql
-DB_PORT=3306
-DB_USERNAME=root
-```
-
-3. **Import data to MySQL** (requires data transformation)
-
-```bash
-# Use tools like pgloader or manual transformation
-pgloader postgresql://user:pass@localhost/enfyra_cms mysql://user:pass@localhost/enfyra_cms
-```
+Note: Data transformation between MySQL and PostgreSQL requires careful handling of data types and SQL syntax differences.

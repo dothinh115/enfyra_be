@@ -577,54 +577,70 @@ When you create or modify tables through the `table_definition` API, the system 
 
 This process is handled by the `syncAll` method in `MetadataSyncService`.
 
-## SDK Examples
+## Raw API Examples
 
-### JavaScript/TypeScript
+### JavaScript/Fetch
 
 ```javascript
-import { EnfyraClient } from '@enfyra/sdk';
-
-const client = new EnfyraClient({
-  baseUrl: 'http://localhost:1105',
-  token: 'your-jwt-token',
+// Login to get token
+const loginResponse = await fetch('http://localhost:1105/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    email: 'enfyra@admin.com',
+    password: '1234'
+  })
 });
+
+const { accessToken } = await loginResponse.json();
 
 // List posts
-const posts = await client.posts.find({
-  filter: { title: { _contains: 'hello' } },
-  sort: { createdAt: 'desc' },
-  page: 1,
-  limit: 10,
-});
+const postsResponse = await fetch(
+  'http://localhost:1105/posts?filter[title][_contains]=hello&sort=-createdAt&page=1&limit=10',
+  {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`
+    }
+  }
+);
+const posts = await postsResponse.json();
 
 // Create post
-const post = await client.posts.create({
-  title: 'Hello World',
-  content: 'This is my first post',
+const createResponse = await fetch('http://localhost:1105/posts', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${accessToken}`
+  },
+  body: JSON.stringify({
+    title: 'Hello World',
+    content: 'This is my first post'
+  })
 });
+const newPost = await createResponse.json();
 ```
 
-### Python
+### cURL Examples
 
-```python
-from enfyra import EnfyraClient
-
-client = EnfyraClient(
-    base_url='http://localhost:1105',
-    token='your-jwt-token'
-)
+```bash
+# Login to get token
+TOKEN=$(curl -X POST http://localhost:1105/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "enfyra@admin.com", "password": "1234"}' \
+  | jq -r '.accessToken')
 
 # List posts
-posts = client.posts.find(
-    filter={'title': {'_contains': 'hello'}},
-    sort={'createdAt': 'desc'},
-    page=1,
-    limit=10
-)
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:1105/posts?filter[title][_contains]=hello&sort=-createdAt&page=1&limit=10"
 
 # Create post
-post = client.posts.create({
-    'title': 'Hello World',
-    'content': 'This is my first post'
-})
+curl -X POST http://localhost:1105/posts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "title": "Hello World",
+    "content": "This is my first post"
+  }'
 ```

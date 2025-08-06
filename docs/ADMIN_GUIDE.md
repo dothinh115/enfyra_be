@@ -48,7 +48,7 @@ sudo systemctl enable redis-server
 sudo npm install -g pm2
 
 # Install useful tools
-sudo apt install -y curl wget git htop nginx
+sudo apt install -y curl wget git
 ```
 
 #### CentOS/RHEL
@@ -188,62 +188,19 @@ save 60 10000
 sudo systemctl restart redis-server
 ```
 
-### Configure Nginx (Reverse Proxy)
-
-```bash
-# Create Nginx configuration
-sudo nano /etc/nginx/sites-available/enfyra
-
-# Configuration content:
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://localhost:1105;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-
-# Enable site
-sudo ln -s /etc/nginx/sites-available/enfyra /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-### Configure SSL with Let's Encrypt
-
-```bash
-# Install Certbot
-sudo apt install certbot python3-certbot-nginx
-
-# Create SSL certificate
-sudo certbot --nginx -d your-domain.com
-
-# Auto renew
-sudo crontab -e
-# Add line: 0 12 * * * /usr/bin/certbot renew --quiet
-```
 
 ## Deployment
 
 ### Development Deployment
 
 ```bash
-# Build ứng dụng
+# Build application
 npm run build
 
-# Chạy với PM2
+# Run with PM2
 pm2 start ecosystem.config.js --env development
 
-# Lưu cấu hình PM2
+# Save PM2 configuration
 pm2 save
 pm2 startup
 ```
@@ -251,13 +208,13 @@ pm2 startup
 ### Production Deployment
 
 ```bash
-# Build cho production
+# Build for production
 npm run build:prod
 
-# Chạy với PM2
+# Run with PM2
 pm2 start ecosystem.config.js --env production
 
-# Kiểm tra status
+# Check status
 pm2 status
 pm2 logs enfyra-backend
 ```
@@ -268,7 +225,7 @@ pm2 logs enfyra-backend
 # Build Docker image
 docker build -t enfyra-backend .
 
-# Chạy container
+# Run container
 docker run -d \
   --name enfyra-backend \
   -p 1105:1105 \
@@ -276,7 +233,7 @@ docker run -d \
   --restart unless-stopped \
   enfyra-backend
 
-# Hoặc sử dụng Docker Compose
+# Or use Docker Compose
 docker-compose up -d
 ```
 
@@ -285,33 +242,25 @@ docker-compose up -d
 ### PM2 Monitoring
 
 ```bash
-# Xem dashboard
+# View dashboard
 pm2 monit
 
-# Xem logs
+# View logs
 pm2 logs enfyra-backend
 
-# Xem thông tin chi tiết
+# View detailed info
 pm2 show enfyra-backend
 
-# Restart ứng dụng
+# Restart application
 pm2 restart enfyra-backend
 
-# Reload ứng dụng (zero-downtime)
+# Reload application (zero-downtime)
 pm2 reload enfyra-backend
 ```
 
 ### System Monitoring
 
 ```bash
-# Cài đặt monitoring tools
-sudo apt install -y htop iotop nethogs
-
-# Monitor system resources
-htop
-iotop
-nethogs
-
 # Monitor disk usage
 df -h
 du -sh /var/log/*
@@ -326,14 +275,14 @@ cat /proc/meminfo
 #### MySQL
 
 ```sql
--- Kiểm tra connections
+-- Check connections
 SHOW STATUS LIKE 'Threads_connected';
 
--- Kiểm tra slow queries
+-- Check slow queries
 SHOW VARIABLES LIKE 'slow_query_log';
 SHOW VARIABLES LIKE 'long_query_time';
 
--- Kiểm tra table sizes
+-- Check table sizes
 SELECT
   table_name,
   ROUND(((data_length + index_length) / 1024 / 1024), 2) AS 'Size (MB)'
@@ -345,16 +294,16 @@ ORDER BY (data_length + index_length) DESC;
 #### PostgreSQL
 
 ```sql
--- Kiểm tra connections
+-- Check connections
 SELECT count(*) FROM pg_stat_activity;
 
--- Kiểm tra slow queries
+-- Check slow queries
 SELECT query, mean_time, calls
 FROM pg_stat_statements
 ORDER BY mean_time DESC
 LIMIT 10;
 
--- Kiểm tra table sizes
+-- Check table sizes
 SELECT
   schemaname,
   tablename,
@@ -367,10 +316,10 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 ### Log Management
 
 ```bash
-# Cấu hình log rotation
+# Configure log rotation
 sudo nano /etc/logrotate.d/enfyra
 
-# Nội dung:
+# Content:
 /var/log/enfyra/*.log {
     daily
     missingok
@@ -384,103 +333,37 @@ sudo nano /etc/logrotate.d/enfyra
     endscript
 }
 
-# Tạo thư mục logs
+# Create logs directory
 sudo mkdir -p /var/log/enfyra
 sudo chown www-data:www-data /var/log/enfyra
 ```
 
 ## Backup and Recovery
 
-### Database Backup
+### Manual Database Backup
 
 #### MySQL Backup
 
 ```bash
-#!/bin/bash
-# backup-mysql.sh
+# Create backup directory
+mkdir -p /backup/mysql
 
+# Manual database backup
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/backup/mysql"
-DB_NAME="enfyra_cms"
-
-# Tạo thư mục backup
-mkdir -p $BACKUP_DIR
-
-# Backup database
-mysqldump -u enfyra -p'your_password' $DB_NAME > $BACKUP_DIR/enfyra_$DATE.sql
-
-# Nén file backup
-gzip $BACKUP_DIR/enfyra_$DATE.sql
-
-# Xóa backup cũ hơn 30 ngày
-find $BACKUP_DIR -name "enfyra_*.sql.gz" -mtime +30 -delete
-
-echo "Backup completed: enfyra_$DATE.sql.gz"
+mysqldump -u enfyra -p enfyra_cms > /backup/mysql/enfyra_$DATE.sql
+gzip /backup/mysql/enfyra_$DATE.sql
 ```
 
 #### PostgreSQL Backup
 
 ```bash
-#!/bin/bash
-# backup-postgres.sh
+# Create backup directory
+mkdir -p /backup/postgres
 
+# Manual database backup
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/backup/postgres"
-DB_NAME="enfyra_cms"
-
-# Tạo thư mục backup
-mkdir -p $BACKUP_DIR
-
-# Backup database
-pg_dump -U enfyra $DB_NAME > $BACKUP_DIR/enfyra_$DATE.sql
-
-# Nén file backup
-gzip $BACKUP_DIR/enfyra_$DATE.sql
-
-# Xóa backup cũ hơn 30 ngày
-find $BACKUP_DIR -name "enfyra_*.sql.gz" -mtime +30 -delete
-
-echo "Backup completed: enfyra_$DATE.sql.gz"
-```
-
-### Application Backup
-
-```bash
-#!/bin/bash
-# backup-app.sh
-
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/backup/app"
-APP_DIR="/opt/enfyra_be"
-
-# Tạo thư mục backup
-mkdir -p $BACKUP_DIR
-
-# Backup application files
-tar -czf $BACKUP_DIR/enfyra_app_$DATE.tar.gz -C $APP_DIR .
-
-# Backup environment file
-cp $APP_DIR/.env $BACKUP_DIR/env_$DATE
-
-# Xóa backup cũ hơn 30 ngày
-find $BACKUP_DIR -name "enfyra_app_*.tar.gz" -mtime +30 -delete
-find $BACKUP_DIR -name "env_*" -mtime +30 -delete
-
-echo "Application backup completed: enfyra_app_$DATE.tar.gz"
-```
-
-### Automated Backup
-
-```bash
-# Tạo cron job cho backup tự động
-sudo crontab -e
-
-# Thêm các dòng sau:
-# Backup database hàng ngày lúc 2:00 AM
-0 2 * * * /opt/enfyra_be/scripts/backup-mysql.sh
-
-# Backup application hàng tuần vào Chủ nhật lúc 3:00 AM
-0 3 * * 0 /opt/enfyra_be/scripts/backup-app.sh
+pg_dump -U enfyra enfyra_cms > /backup/postgres/enfyra_$DATE.sql
+gzip /backup/postgres/enfyra_$DATE.sql
 ```
 
 ### Recovery
@@ -513,67 +396,26 @@ pm2 restart enfyra-backend
 ### Firewall Configuration
 
 ```bash
-# Cài đặt UFW
+# Install UFW
 sudo apt install ufw
 
-# Cấu hình firewall
+# Configure firewall
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 
-# Mở các port cần thiết
+# Open required ports
 sudo ufw allow ssh
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw allow 1105/tcp  # Chỉ nếu cần truy cập trực tiếp
+sudo ufw allow 1105/tcp  # Only if direct access is needed
 
-# Kích hoạt firewall
+# Enable firewall
 sudo ufw enable
 ```
 
 ### SSL/TLS Configuration
 
-```bash
-# Cấu hình SSL trong Nginx
-sudo nano /etc/nginx/sites-available/enfyra
-
-# Thêm cấu hình SSL:
-server {
-    listen 443 ssl http2;
-    server_name your-domain.com;
-
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
-    ssl_prefer_server_ciphers off;
-
-    # Security headers
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Frame-Options DENY always;
-    add_header X-Content-Type-Options nosniff always;
-    add_header X-XSS-Protection "1; mode=block" always;
-
-    location / {
-        proxy_pass http://localhost:1105;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-
-# Redirect HTTP to HTTPS
-server {
-    listen 80;
-    server_name your-domain.com;
-    return 301 https://$server_name$request_uri;
-}
-```
+For SSL/TLS configuration, you will need to configure your reverse proxy (such as Nginx or Apache) based on your specific deployment setup. The application runs on port 1105 by default.
 
 ### Database Security
 
@@ -612,7 +454,7 @@ SET GLOBAL innodb_buffer_pool_size = 1073741824; -- 1GB
 SET GLOBAL innodb_log_file_size = 268435456; -- 256MB
 SET GLOBAL innodb_flush_log_at_trx_commit = 2;
 
--- Tạo indexes cho các cột thường query
+-- Create indexes cho các cột thường query
 CREATE INDEX idx_products_name ON products(name);
 CREATE INDEX idx_products_price ON products(price);
 CREATE INDEX idx_products_category ON products(categoryId);
@@ -627,7 +469,7 @@ ALTER SYSTEM SET shared_buffers = '256MB';
 -- Cấu hình effective_cache_size
 ALTER SYSTEM SET effective_cache_size = '1GB';
 
--- Tạo indexes
+-- Create indexes
 CREATE INDEX idx_products_name ON products(name);
 CREATE INDEX idx_products_price ON products(price);
 CREATE INDEX idx_products_category ON products(category_id);
@@ -706,9 +548,8 @@ pm2 restart enfyra-backend
 #### 5. High CPU usage
 
 ```bash
-# Kiểm tra CPU usage
+# Check CPU usage
 top
-htop
 
 # Kiểm tra slow queries
 # MySQL
@@ -726,43 +567,29 @@ WHERE (now() - pg_stat_activity.query_start) > interval '5 minutes';
 # Xem application logs
 pm2 logs enfyra-backend --lines 100
 
-# Xem system logs
-sudo journalctl -u nginx -f
+# View system logs
 sudo journalctl -u mysql -f
 sudo journalctl -u redis-server -f
 
-# Xem error logs
-sudo tail -f /var/log/nginx/error.log
+# View database error logs
 sudo tail -f /var/log/mysql/error.log
 ```
 
 ### Health Checks
 
 ```bash
-#!/bin/bash
-# health-check.sh
+# Manual health checks
 
-# Kiểm tra application
-if curl -f http://localhost:1105/health > /dev/null 2>&1; then
-    echo "Application: OK"
-else
-    echo "Application: FAILED"
-    # Gửi alert
-fi
+# Check application
+curl -f http://localhost:1105/health
 
-# Kiểm tra database
-if mysql -u enfyra -p'password' -e "SELECT 1" > /dev/null 2>&1; then
-    echo "Database: OK"
-else
-    echo "Database: FAILED"
-fi
+# Check database connection
+mysql -u enfyra -p -e "SELECT 1"
+# or for PostgreSQL
+psql -U enfyra enfyra_cms -c "SELECT 1"
 
-# Kiểm tra Redis
-if redis-cli ping > /dev/null 2>&1; then
-    echo "Redis: OK"
-else
-    echo "Redis: FAILED"
-fi
+# Check Redis
+redis-cli ping
 ```
 
 ## Maintenance
@@ -770,39 +597,24 @@ fi
 ### Regular Maintenance Tasks
 
 ```bash
-#!/bin/bash
-# maintenance.sh
+# Manual maintenance tasks
 
 # 1. Database maintenance
 mysql -u enfyra -p enfyra_cms -e "OPTIMIZE TABLE products, categories, orders;"
-# hoặc
+# or for PostgreSQL
 psql -U enfyra enfyra_cms -c "VACUUM ANALYZE;"
 
-# 2. Log rotation
-sudo logrotate /etc/logrotate.d/enfyra
+# 2. Clean old log files
+sudo find /var/log -name "*.log.1" -mtime +7 -delete
 
-# 3. Clean old backups
+# 3. Clean old backups (if you create them)
 find /backup -name "*.gz" -mtime +30 -delete
 
 # 4. Update system packages
 sudo apt update && sudo apt upgrade -y
 
-# 5. Restart services
-sudo systemctl restart nginx
+# 5. Restart application
 pm2 reload enfyra-backend
-```
-
-### Scheduled Maintenance
-
-```bash
-# Thêm vào crontab
-sudo crontab -e
-
-# Maintenance hàng tuần vào Chủ nhật lúc 4:00 AM
-0 4 * * 0 /opt/enfyra_be/scripts/maintenance.sh
-
-# Health check mỗi 5 phút
-*/5 * * * * /opt/enfyra_be/scripts/health-check.sh
 ```
 
 ## Disaster Recovery
@@ -817,27 +629,26 @@ sudo crontab -e
 ### Recovery Procedures
 
 ```bash
-#!/bin/bash
-# disaster-recovery.sh
+# Manual disaster recovery steps
 
-# 1. Stop services
+# 1. Stop application
 pm2 stop enfyra-backend
-sudo systemctl stop nginx
 
-# 2. Restore database
-mysql -u enfyra -p enfyra_cms < /backup/latest/enfyra.sql
+# 2. Restore database from backup
+mysql -u enfyra -p enfyra_cms < /backup/enfyra_backup.sql
+# or for PostgreSQL
+psql -U enfyra enfyra_cms < /backup/enfyra_backup.sql
 
-# 3. Restore application
-tar -xzf /backup/latest/enfyra_app.tar.gz -C /opt/enfyra_be/
+# 3. Restore application files if needed
+# (Application code should come from git repository)
+git pull origin main
+npm install
+npm run build
 
-# 4. Restore configuration
-cp /backup/latest/env /opt/enfyra_be/.env
-
-# 5. Start services
-sudo systemctl start nginx
+# 4. Start application
 pm2 start enfyra-backend
 
-# 6. Verify recovery
+# 5. Verify recovery
 curl -f http://localhost:1105/health
 ```
 
@@ -845,11 +656,7 @@ curl -f http://localhost:1105/health
 
 ### Monitoring Tools
 
-- **PM2**: Application monitoring
-- **htop**: System monitoring
-- **MySQL Workbench**: Database management
-- **Redis Commander**: Redis management
-- **Grafana**: Advanced monitoring (optional)
+- **PM2**: Application monitoring and process management
 
 ### Documentation
 
@@ -867,4 +674,4 @@ curl -f http://localhost:1105/health
 
 ---
 
-_Hướng dẫn này được cập nhật lần cuối: Tháng 8, 2025_
+_This guide was last updated: August 2025_
