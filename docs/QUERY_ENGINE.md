@@ -2,42 +2,53 @@
 
 ## Overview
 
-The Enfyra Query Engine provides a powerful and flexible way to query data using MongoDB-like operators. It translates these operators into optimized SQL queries with support for complex filtering, relations, aggregations, and more.
+The Enfyra Query Engine provides a powerful and flexible way to query data using MongoDB-like operators through REST and GraphQL APIs. It translates these operators into optimized SQL queries with support for complex filtering, relations, aggregations, and more.
+
+**⚠️ Important**: The Query Engine should only be accessed through the REST and GraphQL APIs, not called directly in code.
 
 ## Table of Contents
 
-- [Basic Query Structure](#basic-query-structure)
-- [Comparison Operators](#comparison-operators)
-- [Text Search Operators](#text-search-operators)
-- [Logical Operators](#logical-operators)
-- [Array Operators](#array-operators)
-- [Null Checks](#null-checks)
-- [Aggregation Operators](#aggregation-operators)
-- [Relations and Joins](#relations-and-joins)
-- [Sorting](#sorting)
-- [Pagination](#pagination)
-- [Field Selection](#field-selection)
-- [Deep Relations](#deep-relations)
+- [REST API Usage](#rest-api-usage)
+- [GraphQL API Usage](#graphql-api-usage)  
+- [Query Parameters](#query-parameters)
+- [Filter Operations](#filter-operations)
 - [Complex Examples](#complex-examples)
+- [Performance Tips](#performance-tips)
 
-## Quick Reference
+## REST API Usage
 
-### REST API Format
+### Basic Queries
 
 ```http
-# Basic GET request
-GET /table_name?filter[field][operator]=value&sort=field&page=1&limit=10
+# Get all users with basic pagination
+GET /users?fields=id,name,email&limit=10&page=1
 
-# Complex filters using JSON body (POST)
-POST /table_name/search
+# Filter users by status
+GET /users?filter={"status":{"_eq":"active"}}
+
+# Sort users by creation date (descending)
+GET /users?sort=-createdAt&limit=20
+```
+
+### Complex POST Queries
+
+For complex filters, use POST with JSON body:
+
+```http
+POST /users/search
 Content-Type: application/json
 {
-  "filter": { /* filter conditions */ },
-  "fields": "id,name,email",
-  "sort": ["createdAt", "-updatedAt"],
+  "filter": {
+    "_and": [
+      {"status": {"_eq": "active"}},
+      {"age": {"_gte": 18}},
+      {"role": {"_in": ["admin", "moderator"]}}
+    ]
+  },
+  "fields": "id,name,email,role.name",
+  "sort": ["name", "-createdAt"],
   "page": 1,
-  "limit": 10,
-  "meta": "totalCount,filterCount"
+  "limit": 20
 }
 ```
 
