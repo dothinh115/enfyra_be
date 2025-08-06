@@ -96,7 +96,6 @@ export class GraphqlService implements OnApplicationBootstrap {
         graphiql: true,
       });
     } catch (error) {
-      console.error('Error reloading GraphQL schema:', error);
       throw error;
     }
   }

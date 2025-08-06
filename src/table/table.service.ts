@@ -125,13 +125,28 @@ export class TableHandlerService {
       if (deletedColumnIds.length) await columnRepo.delete(deletedColumnIds);
       if (deletedRelationIds.length)
         await relationRepo.delete(deletedRelationIds);
+      console.log(body);
 
-      const result = await tableRepo.save(
-        tableRepo.create({
-          ...body,
-          id: exists.id,
-        }),
-      );
+      // Update existing table properties
+      Object.assign(exists, body);
+      
+      // Ensure new relations are properly linked to the table
+      if (body.relations) {
+        exists.relations = body.relations.map(rel => ({
+          ...rel,
+          sourceTable: exists.id,
+        }));
+      }
+      
+      // Ensure new columns are properly linked to the table
+      if (body.columns) {
+        exists.columns = body.columns.map(col => ({
+          ...col,
+          table: exists.id,
+        }));
+      }
+      
+      const result = await tableRepo.save(exists);
 
       await this.afterEffect({ entityName: result.name, type: 'update' });
       return result;
