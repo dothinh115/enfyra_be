@@ -23,6 +23,7 @@ export class TableHandlerService {
     const dataSource = this.dataSourceService.getDataSource();
     const tableEntity =
       this.dataSourceService.entityClassMap.get('table_definition');
+    const tableRepo = dataSource.getRepository(tableEntity);
     const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
 
@@ -50,16 +51,32 @@ export class TableHandlerService {
         throw new Error(`The primary column "id" must be of type int or uuid.`);
       }
 
-      const primaryCount = body.columns.filter((col: any) => col.isPrimary).length;
+      const primaryCount = body.columns.filter(
+        (col: any) => col.isPrimary,
+      ).length;
       if (primaryCount !== 1) {
         throw new Error(`Only one column is allowed to have isPrimary = true.`);
       }
 
       validateUniquePropertyNames(body.columns || [], body.relations || []);
 
-      const result: any = await dataSource
-        .getRepository(tableEntity)
-        .save(dataSource.getRepository(tableEntity).create(body));
+      const newTable = { ...body };
+
+      if (body.columns) {
+        newTable.columns = body.columns.map((col) => {
+          const { table, ...colWithoutTable } = col;
+          return colWithoutTable;
+        });
+      }
+
+      if (body.relations) {
+        newTable.relations = body.relations.map((rel) => {
+          const { sourceTable, ...relWithoutSourceTable } = rel;
+          return relWithoutSourceTable;
+        });
+      }
+
+      const result: any = await tableRepo.save(newTable);
 
       await this.afterEffect({ entityName: result.name, type: 'create' });
 
@@ -129,23 +146,23 @@ export class TableHandlerService {
 
       // Update existing table properties
       Object.assign(exists, body);
-      
+
       // Ensure new relations are properly linked to the table
       if (body.relations) {
-        exists.relations = body.relations.map(rel => ({
+        exists.relations = body.relations.map((rel) => ({
           ...rel,
           sourceTable: exists.id,
         }));
       }
-      
+
       // Ensure new columns are properly linked to the table
       if (body.columns) {
-        exists.columns = body.columns.map(col => ({
+        exists.columns = body.columns.map((col) => ({
           ...col,
           table: exists.id,
         }));
       }
-      
+
       const result = await tableRepo.save(exists);
 
       await this.afterEffect({ entityName: result.name, type: 'update' });
