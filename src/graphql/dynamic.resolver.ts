@@ -17,6 +17,7 @@ import { GLOBAL_ROUTES_KEY } from '../utils/constant';
 import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
 import { RouteCacheService } from '../redis/route-cache.service';
 import { SystemProtectionService } from '../dynamic-repo/system-protection.service';
+import { ScriptErrorFactory } from '../utils/script-error-factory';
 
 @Injectable()
 export class DynamicResolver {
@@ -95,14 +96,7 @@ export class DynamicResolver {
     const dynamicFindMap = Object.fromEntries(dynamicFindEntries);
 
     const handlerCtx: any = {
-      $errors: {
-        throw400: (msg: string) => {
-          throwGqlError('400', msg);
-        },
-        throw401: () => {
-          throwGqlError('401', 'unauthorized');
-        },
-      },
+      $errors: ScriptErrorFactory.createErrorHandlers(),
       $helpers: {
         jwt: (payload: any, ext: string) =>
           this.jwtService.sign(payload, { expiresIn: ext }),

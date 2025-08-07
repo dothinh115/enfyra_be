@@ -16,6 +16,7 @@ import { QueryEngine } from '../query-engine/query-engine.service';
 import { RouteCacheService } from '../redis/route-cache.service';
 import { SystemProtectionService } from '../dynamic-repo/system-protection.service';
 import { BcryptService } from '../auth/bcrypt.service';
+import { ScriptErrorFactory } from '../utils/script-error-factory';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
@@ -77,7 +78,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
 
       const context: TDynamicContext = {
         $body: req.body,
-        $errors: {},
+        $errors: ScriptErrorFactory.createErrorHandlers(),
         $logs(...args) {},
         $helpers: {
           $jwt: (payload: any, exp: string) =>
