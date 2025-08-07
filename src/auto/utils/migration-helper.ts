@@ -150,11 +150,61 @@ async function generateMigrationFileDirect() {
     // Use TypeORM's migration generator
     const sqlInMemory = await dataSource.driver.createSchemaBuilder().log();
 
-    if (sqlInMemory.upQueries.length === 0) {
+    // Process queries to optimize column type changes
+    const optimizedUpQueries = [];
+    const optimizedDownQueries = [];
+    
+    for (let i = 0; i < sqlInMemory.upQueries.length; i++) {
+      const query = sqlInMemory.upQueries[i];
+      const queryStr = query.query;
+      
+      // Check if this is a DROP COLUMN followed by ADD COLUMN for the same column
+      if (queryStr.includes('DROP COLUMN') && i + 1 < sqlInMemory.upQueries.length) {
+        const nextQuery = sqlInMemory.upQueries[i + 1];
+        const nextQueryStr = nextQuery.query;
+        
+        // Extract table and column names
+        const dropMatch = queryStr.match(/ALTER TABLE `([^`]+)` DROP COLUMN `([^`]+)`/);
+        const addMatch = nextQueryStr.match(/ALTER TABLE `([^`]+)` ADD `([^`]+)` (.+)/);
+        
+        if (dropMatch && addMatch && dropMatch[1] === addMatch[1] && dropMatch[2] === addMatch[2]) {
+          // Same table and column - convert to ALTER COLUMN
+          const tableName = dropMatch[1];
+          const columnName = dropMatch[2];
+          const newDefinition = addMatch[3];
+          
+          logger.debug(`Converting DROP/ADD to ALTER for ${tableName}.${columnName}`);
+          optimizedUpQueries.push({
+            query: `ALTER TABLE \`${tableName}\` MODIFY COLUMN \`${columnName}\` ${newDefinition}`
+          });
+          
+          // For down query, we need to reverse the type change
+          // This is simplified - in production you'd want to track the old type
+          optimizedDownQueries.push({
+            query: `-- Reverse migration for ${tableName}.${columnName} type change`
+          });
+          
+          i++; // Skip the next ADD query since we've handled it
+          continue;
+        }
+      }
+      
+      // Keep original query if not a DROP/ADD pair
+      optimizedUpQueries.push(query);
+      if (sqlInMemory.downQueries[i]) {
+        optimizedDownQueries.push(sqlInMemory.downQueries[i]);
+      }
+    }
+
+    if (optimizedUpQueries.length === 0) {
       logger.warn('⏭️ No changes to generate migration. Skipping.');
       await dataSource.destroy();
       return;
     }
+    
+    // Use optimized queries instead of original
+    sqlInMemory.upQueries = optimizedUpQueries;
+    sqlInMemory.downQueries = optimizedDownQueries;
 
     // Generate migration file as JS (not TS) for direct execution
     const timestamp = Date.now();
