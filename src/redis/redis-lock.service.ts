@@ -46,9 +46,14 @@ export class RedisLockService {
         return 0
       end`;
     const serializedValue = this.serialize(value);
-    const deleted = await this.redis.eval(lua, 1, key, serializedValue);
-    console.log(`[RedisLockService] RELEASE ${key} => ${deleted}`);
-    return deleted === 1;
+    try {
+      const deleted = await this.redis.eval(lua, 1, key, serializedValue);
+      console.log(`[RedisLockService] RELEASE ${key} => ${deleted}`);
+      return deleted === 1;
+    } catch (error) {
+      console.log(`[RedisLockService] RELEASE ${key} => ERROR:`, error.message);
+      return false;
+    }
   }
 
   async get<T = any>(key: string): Promise<T | null> {

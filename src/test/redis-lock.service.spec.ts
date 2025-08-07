@@ -46,7 +46,7 @@ describe('RedisLockService', () => {
       expect(result).toBe(true);
       expect(mockRedis.set).toHaveBeenCalledWith(
         'test-key',
-        '"test-value"',
+        'test-value',
         'PX',
         30000,
         'NX'

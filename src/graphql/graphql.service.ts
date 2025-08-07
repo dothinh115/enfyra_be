@@ -37,7 +37,7 @@ export class GraphqlService implements OnApplicationBootstrap {
 
       visited.add(tableId as any);
 
-      for (const rel of meta.relations) {
+      for (const rel of meta.relations || []) {
         const relPath = [...path, rel.propertyName];
         const aliasKey = ['table', ...relPath].join('_');
         const joinPath = `${alias}.${rel.propertyName}`;

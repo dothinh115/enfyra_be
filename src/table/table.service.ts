@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { isEqual } from 'lodash';
+// import { isEqual } from 'lodash'; // Unused import removed
 import { DataSourceService } from '../data-source/data-source.service';
 import { MetadataSyncService } from '../metadata/metadata-sync.service';
 import { SchemaReloadService } from '../schema/schema-reload.service';
@@ -37,7 +37,7 @@ export class TableHandlerService {
       }
 
       const idCol = body.columns.find(
-        (col) => col.name === 'id' && col.isPrimary,
+        (col: any) => col.name === 'id' && col.isPrimary,
       );
       if (!idCol) {
         throw new Error(
@@ -50,7 +50,7 @@ export class TableHandlerService {
         throw new Error(`The primary column "id" must be of type int or uuid.`);
       }
 
-      const primaryCount = body.columns.filter((col) => col.isPrimary).length;
+      const primaryCount = body.columns.filter((col: any) => col.isPrimary).length;
       if (primaryCount !== 1) {
         throw new Error(`Only one column is allowed to have isPrimary = true.`);
       }
@@ -108,7 +108,7 @@ export class TableHandlerService {
         throw new Error(`Table ${body.name} does not exist.`);
       }
 
-      if (!body.columns?.some((col) => col.isPrimary)) {
+      if (!body.columns?.some((col: any) => col.isPrimary)) {
         throw new Error(
           `Table must contain an id column with isPrimary = true!`,
         );

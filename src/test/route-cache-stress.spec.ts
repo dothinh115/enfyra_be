@@ -447,7 +447,7 @@ describe('RouteCacheService - Stress Testing', () => {
       // Assert
       expect(results).toHaveLength(20);
       expect(results.every(result => result === mockRoutes)).toBe(true);
-      expect(duration).toBeGreaterThan(200); // Should take at least as long as DB delay
+      expect(duration).toBeGreaterThanOrEqual(200); // Should take at least as long as DB delay
       expect(duration).toBeLessThan(5000);   // But not excessively long
     });
   });

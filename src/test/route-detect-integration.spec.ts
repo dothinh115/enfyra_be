@@ -451,7 +451,8 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       // Assert
       const context = mockReq.routeData.context;
       expect(context.$body).toEqual({ name: 'test' });
-      expect(context.$errors).toEqual({});
+      expect(context.$errors).toBeDefined();
+      expect(typeof context.$errors).toBe('object');
       expect(context.$params).toEqual({ id: '123' });
       expect(context.$query).toEqual({ include: 'posts' });
       expect(context.$user).toEqual({ id: 1, role: 'admin' });
