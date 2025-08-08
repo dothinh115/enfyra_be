@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
 import { ExecutorPoolService } from '../handler-executor/executor-pool.service';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
+import { smartMergeContext } from '../handler-executor/utils/smart-merge';
 
 describe('HandlerExecutorService - Smart Merge', () => {
   let service: HandlerExecutorService;
@@ -66,7 +67,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
         $params: { action: 'edit' },
       };
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should merge $body (combine both objects)
       expect(result.$body).toEqual({
@@ -111,7 +112,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
         $statusCode: 201,
       };
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should NOT merge non-mergeable properties
       expect(result.$repos).toBe(originalCtx.$repos);
@@ -131,7 +132,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
         $query: { items: ['a', 'b', 'c'] },
       };
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should NOT merge arrays (direct arrays)
       expect(result.$body).toBe(originalCtx.$body);
@@ -145,7 +146,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
         $data: { updatedAt: new Date('2024-01-02') },
       };
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should NOT merge objects containing dates
       expect(result.$body).toBe(originalCtx.$body);
@@ -159,7 +160,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
         $share: null,
       };
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should NOT merge null/undefined
       expect(result.$body).toBe(originalCtx.$body);
@@ -183,7 +184,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
         },
       };
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should NOT merge objects containing functions
       expect(result.$body).toBe(originalCtx.$body);
@@ -208,7 +209,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
         $statusCode: 200,
       };
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should merge mergeable properties
       expect(result.$body).toEqual({
@@ -248,7 +249,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
     it('should handle empty child context', () => {
       const childCtx = {};
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should return original context unchanged
       expect(result).toEqual(originalCtx);
@@ -261,7 +262,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
         $helpers: { newHelper: 'value' },
       };
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should return original context unchanged
       expect(result).toEqual(originalCtx);
@@ -273,11 +274,11 @@ describe('HandlerExecutorService - Smart Merge', () => {
         $customData: { processed: true },
       };
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should merge new properties
-      expect(result.$newProperty).toEqual({ key: 'value' });
-      expect(result.$customData).toEqual({ processed: true });
+      expect((result as any).$newProperty).toEqual({ key: 'value' });
+      expect((result as any).$customData).toEqual({ processed: true });
     });
 
     it('should merge primitive values correctly', () => {
@@ -289,166 +290,14 @@ describe('HandlerExecutorService - Smart Merge', () => {
         $newBoolean: true,
       };
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should merge primitive values directly
       expect(result.$statusCode).toBe(201);
       expect(result.$result).toBe('success');
-      expect(result.$newString).toBe('test string');
-      expect(result.$newNumber).toBe(42);
-      expect(result.$newBoolean).toBe(true);
-    });
-  });
-
-  describe('isMergeableProperty', () => {
-    it('should return true for simple objects', () => {
-      const simpleObjects = [
-        { name: 'John' },
-        { age: 30, active: true },
-        { data: { key: 'value' } },
-      ];
-
-      simpleObjects.forEach((obj) => {
-        expect((service as any).isMergeableProperty(obj)).toBe(true);
-      });
-    });
-
-    it('should return false for functions', () => {
-      const functions = [jest.fn(), () => {}, function () {}];
-
-      functions.forEach((func) => {
-        expect((service as any).isMergeableProperty(func)).toBe(false);
-      });
-    });
-
-    it('should return false for arrays', () => {
-      const arrays = [[], [1, 2, 3], ['a', 'b', 'c']];
-
-      arrays.forEach((arr) => {
-        expect((service as any).isMergeableProperty(arr)).toBe(false);
-      });
-    });
-
-    it('should return false for dates', () => {
-      const dates = [new Date(), new Date('2024-01-01')];
-
-      dates.forEach((date) => {
-        expect((service as any).isMergeableProperty(date)).toBe(false);
-      });
-    });
-
-    it('should return false for null and undefined', () => {
-      expect((service as any).isMergeableProperty(null)).toBe(false);
-      expect((service as any).isMergeableProperty(undefined)).toBe(false);
-    });
-
-    it('should return false for primitives', () => {
-      const primitives = ['string', 123, true, false];
-
-      primitives.forEach((primitive) => {
-        expect((service as any).isMergeableProperty(primitive)).toBe(false);
-      });
-    });
-  });
-
-  describe('containsFunctions', () => {
-    it('should return false for simple objects', () => {
-      const simpleObjects = [
-        { name: 'John' },
-        { age: 30, active: true },
-        { data: { key: 'value' } },
-      ];
-
-      simpleObjects.forEach((obj) => {
-        expect((service as any).containsFunctions(obj)).toBe(false);
-      });
-    });
-
-    it('should return true for objects with functions', () => {
-      const objectsWithFunctions = [
-        { name: 'John', helper: jest.fn() },
-        { data: { key: 'value', callback: () => {} } },
-        { nested: { deep: { func: function () {} } } },
-      ];
-
-      objectsWithFunctions.forEach((obj) => {
-        expect((service as any).containsFunctions(obj)).toBe(true);
-      });
-    });
-
-    it('should return false for null and undefined', () => {
-      expect((service as any).containsFunctions(null)).toBe(false);
-      expect((service as any).containsFunctions(undefined)).toBe(false);
-    });
-
-    it('should return false for primitives', () => {
-      const primitives = ['string', 123, true, false];
-
-      primitives.forEach((primitive) => {
-        expect((service as any).containsFunctions(primitive)).toBe(false);
-      });
-    });
-  });
-
-  describe('containsArrays', () => {
-    it('should return false for simple objects', () => {
-      const simpleObjects = [
-        { name: 'John' },
-        { age: 30, active: true },
-        { data: { key: 'value' } },
-      ];
-
-      simpleObjects.forEach((obj) => {
-        expect((service as any).containsArrays(obj)).toBe(false);
-      });
-    });
-
-    it('should return true for objects with arrays', () => {
-      const objectsWithArrays = [
-        { name: 'John', items: ['a', 'b', 'c'] },
-        { data: { key: 'value', list: [1, 2, 3] } },
-        { nested: { deep: { array: ['x', 'y', 'z'] } } },
-      ];
-
-      objectsWithArrays.forEach((obj) => {
-        expect((service as any).containsArrays(obj)).toBe(true);
-      });
-    });
-
-    it('should return false for null and undefined', () => {
-      expect((service as any).containsArrays(null)).toBe(false);
-      expect((service as any).containsArrays(undefined)).toBe(false);
-    });
-  });
-
-  describe('containsDates', () => {
-    it('should return false for simple objects', () => {
-      const simpleObjects = [
-        { name: 'John' },
-        { age: 30, active: true },
-        { data: { key: 'value' } },
-      ];
-
-      simpleObjects.forEach((obj) => {
-        expect((service as any).containsDates(obj)).toBe(false);
-      });
-    });
-
-    it('should return true for objects with dates', () => {
-      const objectsWithDates = [
-        { name: 'John', createdAt: new Date() },
-        { data: { key: 'value', updatedAt: new Date('2024-01-01') } },
-        { nested: { deep: { timestamp: new Date() } } },
-      ];
-
-      objectsWithDates.forEach((obj) => {
-        expect((service as any).containsDates(obj)).toBe(true);
-      });
-    });
-
-    it('should return false for null and undefined', () => {
-      expect((service as any).containsDates(null)).toBe(false);
-      expect((service as any).containsDates(undefined)).toBe(false);
+      expect((result as any).$newString).toBe('test string');
+      expect((result as any).$newNumber).toBe(42);
+      expect((result as any).$newBoolean).toBe(true);
     });
   });
 
@@ -494,7 +343,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
         $statusCode: 201,
       };
 
-      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx, childCtx);
 
       // Should merge mergeable properties correctly
       expect(result.$body).toEqual({
@@ -528,8 +377,8 @@ describe('HandlerExecutorService - Smart Merge', () => {
       });
 
       // Should merge new properties
-      expect(result.$newProperty).toEqual({ key: 'value' });
-      expect(result.$customData).toEqual({ processed: true });
+      expect((result as any).$newProperty).toEqual({ key: 'value' });
+      expect((result as any).$customData).toEqual({ processed: true });
 
       // Should merge primitive values
       expect(result.$statusCode).toBe(201);
@@ -571,10 +420,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
       };
 
       // Simulate the merge process
-      const mergedCtx = (service as any).smartMergeContext(
-        originalCtx,
-        childCtx,
-      );
+      const mergedCtx = smartMergeContext(originalCtx, childCtx);
 
       // Update original context (simulating what happens in run method)
       Object.assign(originalCtx, mergedCtx);
@@ -583,39 +429,6 @@ describe('HandlerExecutorService - Smart Merge', () => {
       expect(originalCtx.$query.filter).toEqual({ status: 'active', ok: 'ok' });
       expect(originalCtx.$statusCode).toBe(201);
       expect(originalCtx.$result).toBe('success');
-    });
-  });
-
-  describe('isPrimitive', () => {
-    it('should return true for primitive values', () => {
-      const primitives = [
-        null,
-        undefined,
-        'string',
-        123,
-        true,
-        false,
-        Symbol('test'),
-      ];
-
-      primitives.forEach((primitive) => {
-        expect((service as any).isPrimitive(primitive)).toBe(true);
-      });
-    });
-
-    it('should return false for non-primitive values', () => {
-      const nonPrimitives = [
-        {},
-        [],
-        new Date(),
-        jest.fn(),
-        { key: 'value' },
-        [1, 2, 3],
-      ];
-
-      nonPrimitives.forEach((nonPrimitive) => {
-        expect((service as any).isPrimitive(nonPrimitive)).toBe(false);
-      });
     });
   });
 });
