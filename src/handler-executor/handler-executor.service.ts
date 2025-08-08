@@ -1,19 +1,9 @@
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { wrapCtx } from './utils/wrap-ctx';
-import { resolvePath } from './utils/resolve-path';
 import { Injectable, Logger } from '@nestjs/common';
 import { ExecutorPoolService } from './executor-pool.service';
-import { smartMergeContext } from './utils/smart-merge';
 import { ErrorHandler } from './utils/error-handler';
 import { ChildProcessManager } from './utils/child-process-manager';
-import { merge } from 'lodash';
-import {
-  ScriptTimeoutException,
-  ScriptExecutionException,
-  AuthenticationException,
-  AuthorizationException,
-  BusinessLogicException,
-} from '../exceptions/custom-exceptions';
 
 @Injectable()
 export class HandlerExecutorService {
