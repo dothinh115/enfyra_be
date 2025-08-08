@@ -150,45 +150,148 @@ async function generateMigrationFileDirect() {
     // Use TypeORM's migration generator
     const sqlInMemory = await dataSource.driver.createSchemaBuilder().log();
 
-    // Process queries to optimize column type changes
+    // Process queries to optimize column type changes and renames
     const optimizedUpQueries = [];
     const optimizedDownQueries = [];
-    
+
     for (let i = 0; i < sqlInMemory.upQueries.length; i++) {
       const query = sqlInMemory.upQueries[i];
       const queryStr = query.query;
-      
-      // Check if this is a DROP COLUMN followed by ADD COLUMN for the same column
-      if (queryStr.includes('DROP COLUMN') && i + 1 < sqlInMemory.upQueries.length) {
+
+      // Check if this is a DROP COLUMN followed by ADD COLUMN for the same column (type change or rename)
+      if (
+        queryStr.includes('DROP COLUMN') &&
+        i + 1 < sqlInMemory.upQueries.length
+      ) {
         const nextQuery = sqlInMemory.upQueries[i + 1];
         const nextQueryStr = nextQuery.query;
-        
-        // Extract table and column names
-        const dropMatch = queryStr.match(/ALTER TABLE `([^`]+)` DROP COLUMN `([^`]+)`/);
-        const addMatch = nextQueryStr.match(/ALTER TABLE `([^`]+)` ADD `([^`]+)` (.+)/);
-        
-        if (dropMatch && addMatch && dropMatch[1] === addMatch[1] && dropMatch[2] === addMatch[2]) {
-          // Same table and column - convert to ALTER COLUMN
+
+        // Extract table and column names with more robust regex
+        const dropMatch = queryStr.match(
+          /ALTER TABLE [`"]?([^`"\s]+)[`"]?\s+DROP COLUMN [`"]?([^`"\s]+)[`"]?/i,
+        );
+        const addMatch = nextQueryStr.match(
+          /ALTER TABLE [`"]?([^`"\s]+)[`"]?\s+ADD [`"]?([^`"\s]+)[`"]?\s+(.+)/i,
+        );
+
+        if (dropMatch && addMatch && dropMatch[1] === addMatch[1]) {
           const tableName = dropMatch[1];
-          const columnName = dropMatch[2];
-          const newDefinition = addMatch[3];
-          
-          logger.debug(`Converting DROP/ADD to ALTER for ${tableName}.${columnName}`);
-          optimizedUpQueries.push({
-            query: `ALTER TABLE \`${tableName}\` MODIFY COLUMN \`${columnName}\` ${newDefinition}`
-          });
-          
-          // For down query, we need to reverse the type change
-          // This is simplified - in production you'd want to track the old type
-          optimizedDownQueries.push({
-            query: `-- Reverse migration for ${tableName}.${columnName} type change`
-          });
-          
+          const oldColumnName = dropMatch[2];
+          const newColumnName = addMatch[2];
+          const newDefinition = addMatch[3].trim();
+
+          // Validate that we have valid names
+          if (!tableName || !oldColumnName || !newColumnName) {
+            logger.warn(
+              `Invalid column names detected, skipping optimization: ${queryStr}`,
+            );
+            optimizedUpQueries.push(query);
+            if (sqlInMemory.downQueries[i]) {
+              optimizedDownQueries.push(sqlInMemory.downQueries[i]);
+            }
+            continue;
+          }
+
+          // Check if this is a valid DROP/ADD pair (same table, consecutive queries)
+          const isConsecutivePair =
+            queryStr.includes(`DROP COLUMN`) &&
+            nextQueryStr.includes(`ADD`) &&
+            dropMatch[1] === addMatch[1];
+
+          if (!isConsecutivePair) {
+            logger.debug(
+              `Not a consecutive DROP/ADD pair, keeping original query`,
+            );
+            optimizedUpQueries.push(query);
+            if (sqlInMemory.downQueries[i]) {
+              optimizedDownQueries.push(sqlInMemory.downQueries[i]);
+            }
+            continue;
+          }
+
+          if (oldColumnName === newColumnName) {
+            // Same column name - this is a type change, convert to MODIFY COLUMN
+            logger.debug(
+              `Converting DROP/ADD to MODIFY for ${tableName}.${oldColumnName}`,
+            );
+
+            // Handle different database types
+            const dbType = dataSource.options.type;
+            let modifyQuery: string;
+
+            if (dbType === 'mysql') {
+              modifyQuery = `ALTER TABLE \`${tableName}\` MODIFY COLUMN \`${oldColumnName}\` ${newDefinition}`;
+            } else if (dbType === 'postgres') {
+              modifyQuery = `ALTER TABLE "${tableName}" ALTER COLUMN "${oldColumnName}" TYPE ${newDefinition}`;
+            } else {
+              // Fallback to original queries for unsupported database types
+              logger.warn(
+                `Unsupported database type ${dbType} for column modification, using original queries`,
+              );
+              optimizedUpQueries.push(query);
+              optimizedUpQueries.push(nextQuery);
+              if (sqlInMemory.downQueries[i]) {
+                optimizedDownQueries.push(sqlInMemory.downQueries[i]);
+              }
+              if (sqlInMemory.downQueries[i + 1]) {
+                optimizedDownQueries.push(sqlInMemory.downQueries[i + 1]);
+              }
+              i++; // Skip the next query
+              continue;
+            }
+
+            optimizedUpQueries.push({ query: modifyQuery });
+
+            // For down query, we need to reverse the type change
+            // This is a simplified approach - in production you'd want to track the old type
+            optimizedDownQueries.push({
+              query: `-- Reverse migration for ${tableName}.${oldColumnName} type change (manual intervention required)`,
+            });
+          } else {
+            // Different column names - this is a rename, convert to RENAME COLUMN
+            logger.debug(
+              `Converting DROP/ADD to RENAME for ${tableName}.${oldColumnName} -> ${newColumnName}`,
+            );
+
+            // Handle different database types for RENAME COLUMN
+            const dbType = dataSource.options.type;
+            let renameQuery: string;
+            let reverseRenameQuery: string;
+
+            if (dbType === 'mysql') {
+              // MySQL 8.0+ supports RENAME COLUMN
+              renameQuery = `ALTER TABLE \`${tableName}\` RENAME COLUMN \`${oldColumnName}\` TO \`${newColumnName}\``;
+              reverseRenameQuery = `ALTER TABLE \`${tableName}\` RENAME COLUMN \`${newColumnName}\` TO \`${oldColumnName}\``;
+            } else if (dbType === 'postgres') {
+              // PostgreSQL supports RENAME COLUMN
+              renameQuery = `ALTER TABLE "${tableName}" RENAME COLUMN "${oldColumnName}" TO "${newColumnName}"`;
+              reverseRenameQuery = `ALTER TABLE "${tableName}" RENAME COLUMN "${newColumnName}" TO "${oldColumnName}"`;
+            } else {
+              // For unsupported database types, use the original DROP/ADD approach
+              logger.warn(
+                `Unsupported database type ${dbType} for column rename, using original DROP/ADD approach`,
+              );
+              optimizedUpQueries.push(query);
+              optimizedUpQueries.push(nextQuery);
+              if (sqlInMemory.downQueries[i]) {
+                optimizedDownQueries.push(sqlInMemory.downQueries[i]);
+              }
+              if (sqlInMemory.downQueries[i + 1]) {
+                optimizedDownQueries.push(sqlInMemory.downQueries[i + 1]);
+              }
+              i++; // Skip the next query
+              continue;
+            }
+
+            optimizedUpQueries.push({ query: renameQuery });
+            optimizedDownQueries.push({ query: reverseRenameQuery });
+          }
+
           i++; // Skip the next ADD query since we've handled it
           continue;
         }
       }
-      
+
       // Keep original query if not a DROP/ADD pair
       optimizedUpQueries.push(query);
       if (sqlInMemory.downQueries[i]) {
@@ -201,7 +304,7 @@ async function generateMigrationFileDirect() {
       await dataSource.destroy();
       return;
     }
-    
+
     // Use optimized queries instead of original
     sqlInMemory.upQueries = optimizedUpQueries;
     sqlInMemory.downQueries = optimizedDownQueries;
