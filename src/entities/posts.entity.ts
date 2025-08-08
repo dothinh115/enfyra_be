@@ -5,8 +5,8 @@ import { User_definition } from './user_definition.entity';
 export class Posts {
     @PrimaryGeneratedColumn('increment')
     id: number;
-    @Column({ type: "text", nullable: true })
-    content: string;
+    @Column({ type: "varchar", nullable: true })
+    abc: string;
     @Column({ type: "varchar", nullable: true })
     title: string;
     @Index()

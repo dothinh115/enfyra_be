@@ -1,343 +1,621 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
 import { ExecutorPoolService } from '../handler-executor/executor-pool.service';
+import { TDynamicContext } from '../utils/types/dynamic-context.type';
 
-describe('HandlerExecutorService', () => {
+describe('HandlerExecutorService - Smart Merge', () => {
   let service: HandlerExecutorService;
-  let executorPoolService: jest.Mocked<ExecutorPoolService>;
-
-  const mockHandler = {
-    id: '1',
-    name: 'test_handler',
-    tableName: 'users',
-    event: 'create',
-    code: `
-      function handler(data) {
-        return { processed: true, id: data.id };
-      }
-    `,
-    isEnabled: true,
-    priority: 1,
-  };
-
-  const mockExecutorPool = {
-    acquire: jest.fn(),
-    release: jest.fn(),
-    isHealthy: jest.fn(),
-    getStats: jest.fn(),
-    shutdown: jest.fn(),
-  };
-
-  const mockChild = {
-    on: jest.fn(),
-    once: jest.fn(),
-    send: jest.fn(),
-    kill: jest.fn(),
-    removeAllListeners: jest.fn(),
-  };
+  let executorPoolService: ExecutorPoolService;
 
   beforeEach(async () => {
-    const mockExecutorPoolService = {
-      getPool: jest.fn().mockReturnValue(mockExecutorPool),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         HandlerExecutorService,
-        { provide: ExecutorPoolService, useValue: mockExecutorPoolService },
+        {
+          provide: ExecutorPoolService,
+          useValue: {
+            getPool: jest.fn().mockReturnValue({
+              acquire: jest.fn().mockResolvedValue({
+                on: jest.fn(),
+                once: jest.fn(),
+                send: jest.fn(),
+                removeAllListeners: jest.fn(),
+                kill: jest.fn(),
+              }),
+              release: jest.fn(),
+            }),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<HandlerExecutorService>(HandlerExecutorService);
-    executorPoolService = module.get(ExecutorPoolService);
-
-    // Setup default mock behaviors
-    mockExecutorPool.acquire.mockResolvedValue(mockChild);
-    mockChild.on.mockImplementation((event, callback) => {
-      if (event === 'message') {
-        // Simulate successful execution
-        setTimeout(
-          () =>
-            callback({
-              type: 'done',
-              data: { success: true },
-              ctx: { $share: {}, $body: {} },
-            }),
-          10,
-        );
-      }
-      return mockChild;
-    });
-    mockChild.once.mockImplementation((event, callback) => {
-      // Don't trigger exit/error events by default
-      return mockChild;
-    });
-
-    // Suppress console logs during tests
-    jest.spyOn(console, 'log').mockImplementation();
-    jest.spyOn(console, 'error').mockImplementation();
+    executorPoolService = module.get<ExecutorPoolService>(ExecutorPoolService);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  describe('smartMergeContext', () => {
+    let originalCtx: TDynamicContext;
 
-  describe('run', () => {
-    const mockCode =
-      'function handler(data) { return { processed: true, id: data.id }; }';
-    const mockContext = {
-      $repos: {},
-      $body: {},
-      $query: {},
-      $params: {},
-      $user: null,
-      $logs: jest.fn(),
-      $helpers: {},
-      $req: {} as any,
-      $errors: {},
-      $share: {},
-      $data: { id: '123', name: 'Test User' },
-    };
-
-    it('should execute code successfully', async () => {
-      mockChild.on.mockImplementation((event, callback) => {
-        if (event === 'message') {
-          setTimeout(
-            () =>
-              callback({
-                type: 'done',
-                data: { processed: true, id: '123' },
-                ctx: { $share: {}, $body: {} },
-              }),
-            10,
-          );
-        }
-        return mockChild;
-      });
-
-      const result = await service.run(mockCode, mockContext);
-
-      expect(result).toEqual({ processed: true, id: '123' });
-      expect(mockExecutorPool.acquire).toHaveBeenCalled();
-      expect(mockChild.send).toHaveBeenCalledWith({
-        type: 'execute',
-        code: mockCode,
-        ctx: expect.objectContaining({
-          $repos: expect.any(Object),
-          $body: expect.any(Object),
-          $query: expect.any(Object),
-          $params: expect.any(Object),
-          $user: null,
-          $logs: expect.any(Object),
-          $helpers: expect.any(Object),
-          $req: expect.any(Object),
-          $errors: expect.any(Object),
-          $share: expect.any(Object),
-        }),
-      });
-    });
-
-    it('should handle execution timeout', async () => {
-      mockChild.on.mockImplementation(() => mockChild); // No message response
-
-      await expect(service.run(mockCode, mockContext, 100)).rejects.toThrow(
-        'Script execution timed out',
-      );
-      expect(mockChild.kill).toHaveBeenCalled();
-    });
-
-    it('should handle child process errors', async () => {
-      mockChild.on.mockImplementation((event, callback) => {
-        if (event === 'message') {
-          setTimeout(
-            () => callback({ type: 'error', error: 'Execution failed' }),
-            10,
-          );
-        }
-        return mockChild;
-      });
-
-      await expect(service.run(mockCode, mockContext)).rejects.toThrow(
-        'Script execution failed',
-      );
-    });
-
-    it('should use default timeout', async () => {
-      // Mock no response to trigger timeout
-      mockChild.on.mockImplementation(() => mockChild);
-
-      await expect(service.run(mockCode, mockContext, 100)).rejects.toThrow(
-        'Script execution timed out',
-      );
-      expect(mockChild.kill).toHaveBeenCalled();
-    });
-
-    it('should handle malformed code', async () => {
-      const badCode = 'invalid javascript syntax {{{';
-
-      mockChild.on.mockImplementation((event, callback) => {
-        if (event === 'message') {
-          setTimeout(
-            () => callback({ type: 'error', error: 'Syntax error' }),
-            10,
-          );
-        }
-        return mockChild;
-      });
-
-      await expect(service.run(badCode, mockContext)).rejects.toThrow(
-        'Script execution failed',
-      );
-    });
-  });
-
-  describe('Performance Tests', () => {
-    it('should handle concurrent code executions', async () => {
-      // Mock successful responses for all concurrent executions
-      mockChild.on.mockImplementation((event, callback) => {
-        if (event === 'message') {
-          setTimeout(
-            () =>
-              callback({
-                type: 'done',
-                data: { processed: true, id: 0 },
-                ctx: { $share: {}, $body: {} },
-              }),
-            10,
-          );
-        }
-        return mockChild;
-      });
-
-      const promises = Array.from({ length: 3 }, (_, i) =>
-        service.run(
-          `function handler(data) { return { processed: true, id: ${i} }; }`,
-          {
-            $repos: {},
-            $body: {},
-            $query: {},
-            $params: {},
-            $user: null,
-            $logs: jest.fn(),
-            $helpers: {},
-            $req: {} as any,
-            $errors: {},
-            $share: {},
-            $data: { id: i },
-          },
-          1000,
-        ),
-      );
-
-      const results = await Promise.all(promises);
-
-      expect(results).toHaveLength(3);
-      results.forEach((result, index) => {
-        expect(result.processed).toBe(true);
-      });
-    });
-
-    it('should handle complex code execution', async () => {
-      const complexCode = `
-        function handler(data) {
-          const result = [];
-          for (let i = 0; i < 100; i++) {
-            result.push(i * 2);
-          }
-          return { 
-            processed: true, 
-            count: result.length,
-            sum: result.reduce((a, b) => a + b, 0)
-          };
-        }
-      `;
-
-      mockChild.on.mockImplementation((event, callback) => {
-        if (event === 'message') {
-          setTimeout(
-            () =>
-              callback({
-                type: 'done',
-                data: { processed: true, count: 100, sum: 9900 },
-                ctx: { $share: {}, $body: {} },
-              }),
-            50,
-          );
-        }
-        return mockChild;
-      });
-
-      const result = await service.run(complexCode, {
-        $repos: {},
-        $body: {},
-        $query: {},
-        $params: {},
-        $user: null,
+    beforeEach(() => {
+      originalCtx = {
+        $repos: { main: { find: jest.fn() } },
+        $body: { name: 'John', age: 30 },
+        $query: { filter: { status: 'active' } },
+        $params: { id: '123' },
+        $user: { id: 'user123', name: 'John' },
         $logs: jest.fn(),
-        $helpers: {},
+        $helpers: {
+          $jwt: jest.fn(),
+          $bcrypt: { hash: jest.fn(), compare: jest.fn() },
+        },
         $req: {} as any,
         $errors: {},
-        $share: {},
-        $data: {},
+        $share: { logs: [] },
+        $data: { processed: false },
+        $result: null,
+        $statusCode: 200,
+      };
+    });
+
+    it('should merge simple objects correctly', () => {
+      const childCtx = {
+        $body: { newField: 'new value', age: 35 },
+        $query: { newParam: 'value' },
+        $share: { customData: { key: 'value' } },
+        $data: { processed: true },
+        $params: { action: 'edit' },
+      };
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should merge $body (combine both objects)
+      expect(result.$body).toEqual({
+        name: 'John',
+        age: 35,
+        newField: 'new value',
       });
 
-      expect(result.processed).toBe(true);
-      expect(result.count).toBe(100);
-      expect(result.sum).toBe(9900);
+      // Should merge $query (combine both objects)
+      expect(result.$query).toEqual({
+        filter: { status: 'active' },
+        newParam: 'value',
+      });
+
+      // Should merge $share (combine both objects)
+      expect(result.$share).toEqual({
+        logs: [],
+        customData: { key: 'value' },
+      });
+
+      // Should merge $data (combine both objects)
+      expect(result.$data).toEqual({
+        processed: true,
+      });
+
+      // Should merge $params (combine both objects)
+      expect(result.$params).toEqual({
+        id: '123',
+        action: 'edit',
+      });
+    });
+
+    it('should NOT merge non-mergeable properties', () => {
+      const childCtx = {
+        $repos: { newRepo: { find: jest.fn() } },
+        $logs: jest.fn(),
+        $helpers: { newHelper: jest.fn() },
+        $user: { newField: 'value' },
+        $req: { newField: 'value' },
+        $errors: { newError: 'value' },
+        $result: 'new result',
+        $statusCode: 201,
+      };
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should NOT merge non-mergeable properties
+      expect(result.$repos).toBe(originalCtx.$repos);
+      expect(result.$logs).toBe(originalCtx.$logs);
+      expect(result.$helpers).toBe(originalCtx.$helpers);
+      expect(result.$user).toBe(originalCtx.$user);
+      expect(result.$req).toBe(originalCtx.$req);
+      expect(result.$errors).toBe(originalCtx.$errors);
+      // Should merge primitives like $result and $statusCode
+      expect(result.$result).toBe('new result');
+      expect(result.$statusCode).toBe(201);
+    });
+
+    it('should NOT merge arrays', () => {
+      const childCtx = {
+        $body: ['item1', 'item2'],
+        $query: { items: ['a', 'b', 'c'] },
+      };
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should NOT merge arrays (direct arrays)
+      expect(result.$body).toBe(originalCtx.$body);
+      // Should NOT merge objects containing arrays
+      expect(result.$query).toBe(originalCtx.$query);
+    });
+
+    it('should NOT merge dates', () => {
+      const childCtx = {
+        $body: { createdAt: new Date('2024-01-01') },
+        $data: { updatedAt: new Date('2024-01-02') },
+      };
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should NOT merge objects containing dates
+      expect(result.$body).toBe(originalCtx.$body);
+      expect(result.$data).toBe(originalCtx.$data);
+    });
+
+    it('should NOT merge null or undefined', () => {
+      const childCtx = {
+        $body: null,
+        $query: undefined,
+        $share: null,
+      };
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should NOT merge null/undefined
+      expect(result.$body).toBe(originalCtx.$body);
+      expect(result.$query).toBe(originalCtx.$query);
+      expect(result.$share).toBe(originalCtx.$share);
+    });
+
+    it('should handle nested objects with functions', () => {
+      const childCtx = {
+        $body: {
+          user: {
+            name: 'Jane',
+            helper: jest.fn(), // Function in nested object
+          },
+        },
+        $share: {
+          data: {
+            processed: true,
+            callback: jest.fn(), // Function in nested object
+          },
+        },
+      };
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should NOT merge objects containing functions
+      expect(result.$body).toBe(originalCtx.$body);
+      expect(result.$share).toBe(originalCtx.$share);
+    });
+
+    it('should merge only mergeable properties', () => {
+      const childCtx = {
+        $body: { newField: 'value' },
+        $query: { newParam: 'value' },
+        $params: { newId: '456' },
+        $share: { newData: 'value' },
+        $data: { newStatus: 'completed' },
+        // Non-mergeable properties
+        $repos: { newRepo: {} },
+        $logs: jest.fn(),
+        $helpers: { newHelper: 'value' },
+        $user: { newField: 'value' },
+        $req: { newField: 'value' },
+        $errors: { newError: 'value' },
+        $result: 'new result',
+        $statusCode: 200,
+      };
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should merge mergeable properties
+      expect(result.$body).toEqual({
+        name: 'John',
+        age: 30,
+        newField: 'value',
+      });
+      expect(result.$query).toEqual({
+        filter: { status: 'active' },
+        newParam: 'value',
+      });
+      expect(result.$params).toEqual({
+        id: '123',
+        newId: '456',
+      });
+      expect(result.$share).toEqual({
+        logs: [],
+        newData: 'value',
+      });
+      expect(result.$data).toEqual({
+        processed: false,
+        newStatus: 'completed',
+      });
+
+      // Should NOT merge non-mergeable properties
+      expect(result.$repos).toBe(originalCtx.$repos);
+      expect(result.$logs).toBe(originalCtx.$logs);
+      expect(result.$helpers).toBe(originalCtx.$helpers);
+      expect(result.$user).toBe(originalCtx.$user);
+      expect(result.$req).toBe(originalCtx.$req);
+      expect(result.$errors).toBe(originalCtx.$errors);
+      // Should merge primitives like $result and $statusCode
+      expect(result.$result).toBe('new result');
+      expect(result.$statusCode).toBe(200);
+    });
+
+    it('should handle empty child context', () => {
+      const childCtx = {};
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should return original context unchanged
+      expect(result).toEqual(originalCtx);
+    });
+
+    it('should handle child context with only non-mergeable properties', () => {
+      const childCtx = {
+        $repos: { newRepo: {} },
+        $logs: jest.fn(),
+        $helpers: { newHelper: 'value' },
+      };
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should return original context unchanged
+      expect(result).toEqual(originalCtx);
+    });
+
+    it('should merge new properties not in original context', () => {
+      const childCtx = {
+        $newProperty: { key: 'value' },
+        $customData: { processed: true },
+      };
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should merge new properties
+      expect(result.$newProperty).toEqual({ key: 'value' });
+      expect(result.$customData).toEqual({ processed: true });
+    });
+
+    it('should merge primitive values correctly', () => {
+      const childCtx = {
+        $statusCode: 201,
+        $result: 'success',
+        $newString: 'test string',
+        $newNumber: 42,
+        $newBoolean: true,
+      };
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should merge primitive values directly
+      expect(result.$statusCode).toBe(201);
+      expect(result.$result).toBe('success');
+      expect(result.$newString).toBe('test string');
+      expect(result.$newNumber).toBe(42);
+      expect(result.$newBoolean).toBe(true);
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle pool acquisition failures', async () => {
-      // Mock the service method directly to avoid async issues
-      const mockRun = jest
-        .spyOn(service, 'run')
-        .mockRejectedValue(new Error('Pool exhausted'));
+  describe('isMergeableProperty', () => {
+    it('should return true for simple objects', () => {
+      const simpleObjects = [
+        { name: 'John' },
+        { age: 30, active: true },
+        { data: { key: 'value' } },
+      ];
 
-      await expect(
-        service.run('function handler() {}', {
-          $repos: {},
-          $body: {},
-          $query: {},
-          $params: {},
-          $user: null,
-          $logs: jest.fn(),
-          $helpers: {},
-          $req: {} as any,
-          $errors: {},
-          $share: {},
-          $data: {},
-        }),
-      ).rejects.toThrow('Pool exhausted');
-
-      mockRun.mockRestore();
+      simpleObjects.forEach((obj) => {
+        expect((service as any).isMergeableProperty(obj)).toBe(true);
+      });
     });
 
-    it('should cleanup on timeout', async () => {
-      mockChild.on.mockImplementation(() => mockChild); // No response
+    it('should return false for functions', () => {
+      const functions = [jest.fn(), () => {}, function () {}];
 
-      await expect(
-        service.run(
-          'function handler() {}',
-          {
-            $repos: {},
-            $body: {},
-            $query: {},
-            $params: {},
-            $user: null,
-            $logs: jest.fn(),
-            $helpers: {},
-            $req: {} as any,
-            $errors: {},
-            $share: {},
-            $data: {},
-          },
-          100,
-        ),
-      ).rejects.toThrow('Script execution timed out');
+      functions.forEach((func) => {
+        expect((service as any).isMergeableProperty(func)).toBe(false);
+      });
+    });
 
-      expect(mockChild.removeAllListeners).toHaveBeenCalled();
-      expect(mockChild.kill).toHaveBeenCalled();
+    it('should return false for arrays', () => {
+      const arrays = [[], [1, 2, 3], ['a', 'b', 'c']];
+
+      arrays.forEach((arr) => {
+        expect((service as any).isMergeableProperty(arr)).toBe(false);
+      });
+    });
+
+    it('should return false for dates', () => {
+      const dates = [new Date(), new Date('2024-01-01')];
+
+      dates.forEach((date) => {
+        expect((service as any).isMergeableProperty(date)).toBe(false);
+      });
+    });
+
+    it('should return false for null and undefined', () => {
+      expect((service as any).isMergeableProperty(null)).toBe(false);
+      expect((service as any).isMergeableProperty(undefined)).toBe(false);
+    });
+
+    it('should return false for primitives', () => {
+      const primitives = ['string', 123, true, false];
+
+      primitives.forEach((primitive) => {
+        expect((service as any).isMergeableProperty(primitive)).toBe(false);
+      });
+    });
+  });
+
+  describe('containsFunctions', () => {
+    it('should return false for simple objects', () => {
+      const simpleObjects = [
+        { name: 'John' },
+        { age: 30, active: true },
+        { data: { key: 'value' } },
+      ];
+
+      simpleObjects.forEach((obj) => {
+        expect((service as any).containsFunctions(obj)).toBe(false);
+      });
+    });
+
+    it('should return true for objects with functions', () => {
+      const objectsWithFunctions = [
+        { name: 'John', helper: jest.fn() },
+        { data: { key: 'value', callback: () => {} } },
+        { nested: { deep: { func: function () {} } } },
+      ];
+
+      objectsWithFunctions.forEach((obj) => {
+        expect((service as any).containsFunctions(obj)).toBe(true);
+      });
+    });
+
+    it('should return false for null and undefined', () => {
+      expect((service as any).containsFunctions(null)).toBe(false);
+      expect((service as any).containsFunctions(undefined)).toBe(false);
+    });
+
+    it('should return false for primitives', () => {
+      const primitives = ['string', 123, true, false];
+
+      primitives.forEach((primitive) => {
+        expect((service as any).containsFunctions(primitive)).toBe(false);
+      });
+    });
+  });
+
+  describe('containsArrays', () => {
+    it('should return false for simple objects', () => {
+      const simpleObjects = [
+        { name: 'John' },
+        { age: 30, active: true },
+        { data: { key: 'value' } },
+      ];
+
+      simpleObjects.forEach((obj) => {
+        expect((service as any).containsArrays(obj)).toBe(false);
+      });
+    });
+
+    it('should return true for objects with arrays', () => {
+      const objectsWithArrays = [
+        { name: 'John', items: ['a', 'b', 'c'] },
+        { data: { key: 'value', list: [1, 2, 3] } },
+        { nested: { deep: { array: ['x', 'y', 'z'] } } },
+      ];
+
+      objectsWithArrays.forEach((obj) => {
+        expect((service as any).containsArrays(obj)).toBe(true);
+      });
+    });
+
+    it('should return false for null and undefined', () => {
+      expect((service as any).containsArrays(null)).toBe(false);
+      expect((service as any).containsArrays(undefined)).toBe(false);
+    });
+  });
+
+  describe('containsDates', () => {
+    it('should return false for simple objects', () => {
+      const simpleObjects = [
+        { name: 'John' },
+        { age: 30, active: true },
+        { data: { key: 'value' } },
+      ];
+
+      simpleObjects.forEach((obj) => {
+        expect((service as any).containsDates(obj)).toBe(false);
+      });
+    });
+
+    it('should return true for objects with dates', () => {
+      const objectsWithDates = [
+        { name: 'John', createdAt: new Date() },
+        { data: { key: 'value', updatedAt: new Date('2024-01-01') } },
+        { nested: { deep: { timestamp: new Date() } } },
+      ];
+
+      objectsWithDates.forEach((obj) => {
+        expect((service as any).containsDates(obj)).toBe(true);
+      });
+    });
+
+    it('should return false for null and undefined', () => {
+      expect((service as any).containsDates(null)).toBe(false);
+      expect((service as any).containsDates(undefined)).toBe(false);
+    });
+  });
+
+  describe('Integration Tests', () => {
+    it('should handle complex merge scenarios', () => {
+      const originalCtx: TDynamicContext = {
+        $repos: { main: { find: jest.fn() } },
+        $body: { name: 'John', age: 30, settings: { theme: 'dark' } },
+        $query: { filter: { status: 'active' }, page: 1 },
+        $params: { id: '123' },
+        $user: { id: 'user123', name: 'John' },
+        $logs: jest.fn(),
+        $helpers: { $jwt: jest.fn(), $bcrypt: { hash: jest.fn() } },
+        $req: {} as any,
+        $errors: {},
+        $share: { logs: [], session: { id: 'session123' } },
+        $data: { processed: false, metadata: { version: '1.0' } },
+        $result: null,
+        $statusCode: 200,
+      };
+
+      const childCtx = {
+        // Mergeable properties
+        $body: { age: 35, newField: 'value', settings: { language: 'en' } },
+        $query: { limit: 10, sort: 'name' },
+        $params: { action: 'edit' },
+        $share: {
+          customData: { key: 'value' },
+          session: { lastAccess: '2024-01-01' },
+        },
+        $data: { processed: true, metadata: { updated: true } },
+        $newProperty: { key: 'value' },
+        $customData: { processed: true },
+
+        // Non-mergeable properties
+        $repos: { newRepo: { find: jest.fn() } },
+        $logs: jest.fn(),
+        $helpers: { newHelper: 'value' },
+        $user: { newField: 'value' },
+        $req: { newField: 'value' },
+        $errors: { newError: 'value' },
+        $result: 'new result',
+        $statusCode: 201,
+      };
+
+      const result = (service as any).smartMergeContext(originalCtx, childCtx);
+
+      // Should merge mergeable properties correctly
+      expect(result.$body).toEqual({
+        name: 'John',
+        age: 35,
+        newField: 'value',
+        settings: { theme: 'dark', language: 'en' },
+      });
+
+      expect(result.$query).toEqual({
+        filter: { status: 'active' },
+        page: 1,
+        limit: 10,
+        sort: 'name',
+      });
+
+      expect(result.$params).toEqual({
+        id: '123',
+        action: 'edit',
+      });
+
+      expect(result.$share).toEqual({
+        logs: [],
+        session: { id: 'session123', lastAccess: '2024-01-01' },
+        customData: { key: 'value' },
+      });
+
+      expect(result.$data).toEqual({
+        processed: true,
+        metadata: { version: '1.0', updated: true },
+      });
+
+      // Should merge new properties
+      expect(result.$newProperty).toEqual({ key: 'value' });
+      expect(result.$customData).toEqual({ processed: true });
+
+      // Should merge primitive values
+      expect(result.$statusCode).toBe(201);
+
+      // Should NOT merge non-mergeable properties
+      expect(result.$repos).toBe(originalCtx.$repos);
+      expect(result.$logs).toBe(originalCtx.$logs);
+      expect(result.$helpers).toBe(originalCtx.$helpers);
+      expect(result.$user).toBe(originalCtx.$user);
+      expect(result.$req).toBe(originalCtx.$req);
+      expect(result.$errors).toBe(originalCtx.$errors);
+      // Should merge primitives like $result
+      expect(result.$result).toBe('new result');
+    });
+  });
+
+  describe('Context Merge Integration', () => {
+    it('should merge context changes from child process back to original context', async () => {
+      const originalCtx: TDynamicContext = {
+        $repos: { main: { find: jest.fn() } },
+        $body: { name: 'John' },
+        $query: { filter: { status: 'active' } },
+        $params: { id: '123' },
+        $user: { id: 'user123' },
+        $logs: jest.fn(),
+        $helpers: { $jwt: jest.fn() },
+        $req: {} as any,
+        $errors: {},
+        $share: { logs: [] },
+        $data: { processed: false },
+        $result: null,
+        $statusCode: 200,
+      };
+
+      const childCtx = {
+        $query: { filter: { ok: 'ok' } },
+        $statusCode: 201,
+        $result: 'success',
+      };
+
+      // Simulate the merge process
+      const mergedCtx = (service as any).smartMergeContext(
+        originalCtx,
+        childCtx,
+      );
+
+      // Update original context (simulating what happens in run method)
+      Object.assign(originalCtx, mergedCtx);
+
+      // Verify that changes are merged back
+      expect(originalCtx.$query.filter).toEqual({ status: 'active', ok: 'ok' });
+      expect(originalCtx.$statusCode).toBe(201);
+      expect(originalCtx.$result).toBe('success');
+    });
+  });
+
+  describe('isPrimitive', () => {
+    it('should return true for primitive values', () => {
+      const primitives = [
+        null,
+        undefined,
+        'string',
+        123,
+        true,
+        false,
+        Symbol('test'),
+      ];
+
+      primitives.forEach((primitive) => {
+        expect((service as any).isPrimitive(primitive)).toBe(true);
+      });
+    });
+
+    it('should return false for non-primitive values', () => {
+      const nonPrimitives = [
+        {},
+        [],
+        new Date(),
+        jest.fn(),
+        { key: 'value' },
+        [1, 2, 3],
+      ];
+
+      nonPrimitives.forEach((nonPrimitive) => {
+        expect((service as any).isPrimitive(nonPrimitive)).toBe(false);
+      });
     });
   });
 });

@@ -18,9 +18,6 @@ export class HandlerExecutorService {
 
   constructor(private executorPoolService: ExecutorPoolService) {}
 
-  /**
-   * Create appropriate exception based on error path or status code
-   */
   private createException(
     errorPath?: string,
     statusCode?: number,
@@ -172,12 +169,12 @@ export class HandlerExecutorService {
         if (msg.type === 'done') {
           isDone = true;
           child.removeAllListeners();
-          if (msg.ctx.$share) {
-            ctx.$share = merge({}, ctx.$share, msg.ctx.$share);
-          }
 
-          if (msg.ctx.$body) {
-            ctx.$body = merge({}, ctx.$body, msg.ctx.$body);
+          // SMART MERGE CONTEXT - ONLY MERGE SIMPLE OBJECTS
+          if (msg.ctx) {
+            const mergedCtx = this.smartMergeContext(ctx, msg.ctx);
+            // Update the original context with merged changes
+            Object.assign(ctx, mergedCtx);
           }
 
           clearTimeout(timeout);
@@ -262,5 +259,123 @@ export class HandlerExecutorService {
         code,
       });
     });
+  }
+
+  // SMART MERGE CONTEXT - ONLY MERGE SIMPLE OBJECTS
+  private smartMergeContext(
+    originalCtx: TDynamicContext,
+    childCtx: any,
+  ): TDynamicContext {
+    const mergedCtx = { ...originalCtx };
+
+    // SPECIFY OBJECTS THAT SHOULD NOT BE MERGED
+    const nonMergeableProperties = [
+      '$repos', // Repository functions
+      '$logs', // Log function
+      '$helpers', // Helper functions
+      '$user', // User object (complex)
+      '$req', // Request object (complex)
+      '$errors', // Errors object
+    ];
+
+    // MERGE ALL PROPERTIES EXCEPT NON-MERGEABLE ONES
+    for (const key in childCtx) {
+      if (!nonMergeableProperties.includes(key)) {
+        const value = childCtx[key];
+
+        // MERGE PRIMITIVES DIRECTLY (but not null/undefined)
+        if (this.isPrimitive(value) && value !== null && value !== undefined) {
+          mergedCtx[key] = value;
+        }
+        // MERGE OBJECTS IF MERGEABLE
+        else if (this.isMergeableProperty(value)) {
+          mergedCtx[key] = merge({}, mergedCtx[key] || {}, value);
+        }
+      }
+    }
+
+    return mergedCtx;
+  }
+
+  // CHECK IF PROPERTY IS MERGEABLE - ACCURATE
+  private isMergeableProperty(value: any): boolean {
+    return (
+      value !== null &&
+      value !== undefined &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      !(value instanceof Date) &&
+      !(value instanceof Function) &&
+      // DO NOT MERGE OBJECTS CONTAINING FUNCTIONS, ARRAYS, OR DATES
+      !this.containsFunctions(value) &&
+      !this.containsArrays(value) &&
+      !this.containsDates(value)
+    );
+  }
+
+  // CHECK IF VALUE IS PRIMITIVE
+  private isPrimitive(value: any): boolean {
+    return (
+      value === null ||
+      value === undefined ||
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      typeof value === 'symbol'
+    );
+  }
+
+  // CHECK IF OBJECT CONTAINS FUNCTIONS
+  private containsFunctions(obj: any): boolean {
+    if (typeof obj !== 'object' || obj === null) return false;
+
+    for (const key in obj) {
+      const value = obj[key];
+      if (typeof value === 'function') return true;
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        this.containsFunctions(value)
+      )
+        return true;
+    }
+
+    return false;
+  }
+
+  // CHECK IF OBJECT CONTAINS ARRAYS
+  private containsArrays(obj: any): boolean {
+    if (typeof obj !== 'object' || obj === null) return false;
+
+    for (const key in obj) {
+      const value = obj[key];
+      if (Array.isArray(value)) return true;
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        this.containsArrays(value)
+      )
+        return true;
+    }
+
+    return false;
+  }
+
+  // CHECK IF OBJECT CONTAINS DATES
+  private containsDates(obj: any): boolean {
+    if (typeof obj !== 'object' || obj === null) return false;
+
+    for (const key in obj) {
+      const value = obj[key];
+      if (value instanceof Date) return true;
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        this.containsDates(value)
+      )
+        return true;
+    }
+
+    return false;
   }
 }
