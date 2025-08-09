@@ -105,6 +105,13 @@
             "isEnabled": true,
             "isSystem":true,
             "icon":"lucide:route"
+        },
+        {
+            "path": "/plugin_registry",
+            "mainTable": null,
+            "isEnabled": true,
+            "isSystem": true,
+            "icon": "lucide:puzzle-piece"
         }
     ], 
     "method_definition": [
