@@ -17,13 +17,15 @@ export class Extension_definition {
     isSystem: boolean;
     @Column({ type: "varchar", nullable: false })
     name: string;
+    @Column({ type: "enum", nullable: false, default: "page", enum: ['page', 'widget'] })
+    type: 'page' | 'widget';
     @Column({ type: "varchar", nullable: false, default: "1.0.0" })
     version: string;
     @Index()
     @ManyToOne('User_definition', { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     createdBy: any;
-    @OneToOne('Menu_definition', (rel: any) => rel.extension, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToOne('Menu_definition', (rel: any) => rel.extension, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn()
     menu: any;
     @Index()

@@ -228,15 +228,16 @@
         "uniques": [["menu"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "type", "type": "enum", "enumValues": ["page", "widget"], "isNullable": false, "isSystem": true, "defaultValue": "page" },
             { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true },
             { "name": "version", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": "1.0.0" },
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "description", "type": "text", "isSystem": true },
-            { "name": "code", "type": "code", "isSystem": true, "isNullable": false }
+            { "name": "code", "type": "code", "isSystem": true, "isNullable": false, "isGenerated": true}
         ],
         "relations": [
-            { "propertyName": "menu", "type": "one-to-one", "targetTable": "menu_definition", "isSystem": true, "inversePropertyName": "extension", "isNullable": false },
+            { "propertyName": "menu", "type": "one-to-one", "targetTable": "menu_definition", "isSystem": true, "inversePropertyName": "extension", "isNullable": true },
             { "propertyName": "createdBy", "type": "many-to-one", "targetTable": "user_definition", "isSystem": true, "isNullable": true },
             { "propertyName": "updatedBy", "type": "many-to-one", "targetTable": "user_definition", "isSystem": true, "isNullable": true }
         ]

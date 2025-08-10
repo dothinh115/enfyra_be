@@ -282,7 +282,8 @@ async function writeEntitiesFromSnapshot() {
       // Thêm cascade cho ManyToMany và OneToMany
       if (
         (!isInverse && ['many-to-many'].includes(rel.type)) ||
-        rel.type === 'one-to-many'
+        rel.type === 'one-to-many' ||
+        (rel.type === 'one-to-one' && !isInverse)
       ) {
         relationOpts.unshift('cascade: true');
       }

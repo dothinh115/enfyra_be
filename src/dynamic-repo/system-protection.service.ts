@@ -35,7 +35,7 @@ export class SystemProtectionService {
   }
 
   private stripRelations(data: any, relationFields: string[]): any {
-    if (!data) return data;
+    if (!data || typeof data !== 'object') return data;
     const result: any = {};
     for (const key of Object.keys(data)) {
       if (!relationFields.includes(key)) {
@@ -53,8 +53,11 @@ export class SystemProtectionService {
     const d = this.stripRelations(data, relationFields);
     const e = this.stripRelations(existing, relationFields);
 
+    if (!d || typeof d !== 'object') return [];
+    if (!e || typeof e !== 'object') return Object.keys(d);
+
     return Object.keys(d).filter((key) => {
-      const isChanged = e && key in e && !isEqual(d[key], e[key]);
+      const isChanged = key in e && !isEqual(d[key], e[key]);
       return isChanged;
     });
   }
@@ -280,7 +283,7 @@ export class SystemProtectionService {
 
         for (const oldCol of oldCols.filter((c) => c.isSystem)) {
           const updated = newCols.find((c) => c.id === oldCol.id);
-          if (!updated) continue;
+          if (!updated || typeof updated !== 'object') continue;
           const allowed = this.getAllowedFields(['description']);
           const changed = Object.keys(updated).filter(
             (key) =>
@@ -294,7 +297,7 @@ export class SystemProtectionService {
 
         for (const oldRel of oldRels.filter((r) => r.isSystem)) {
           const updated = newRels.find((r) => r.id === oldRel.id);
-          if (!updated) continue;
+          if (!updated || typeof updated !== 'object') continue;
           const allowed = this.getAllowedFields(['description']);
           const changed = Object.keys(updated).filter(
             (key) =>

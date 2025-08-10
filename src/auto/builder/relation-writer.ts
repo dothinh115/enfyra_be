@@ -52,7 +52,8 @@ export function addRelationToClass({
   }
   if (
     (rel.type === 'many-to-many' && !isInverse) ||
-    rel.type === 'one-to-many'
+    rel.type === 'one-to-many' ||
+    (rel.type === 'one-to-one' && !isInverse)
   ) {
     options.push('cascade: true');
   }
