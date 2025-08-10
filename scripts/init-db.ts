@@ -279,7 +279,11 @@ async function writeEntitiesFromSnapshot() {
 
       const isInverse = !!rel.targetClass;
 
-      if (!isInverse && ['many-to-many'].includes(rel.type)) {
+      // Thêm cascade cho ManyToMany và OneToMany
+      if (
+        (!isInverse && ['many-to-many'].includes(rel.type)) ||
+        rel.type === 'one-to-many'
+      ) {
         relationOpts.unshift('cascade: true');
       }
 
@@ -291,8 +295,9 @@ async function writeEntitiesFromSnapshot() {
 
       const decorators: any[] = [];
 
-      const shouldAddIndex =
-        ['many-to-one', 'one-to-one'].includes(rel.type) && !isInverse;
+      // Chỉ thêm Index cho ManyToOne
+      // Không thêm @Index cho OneToOne vì @JoinColumn đã tự tạo unique index
+      const shouldAddIndex = rel.type === 'many-to-one';
 
       if (shouldAddIndex) {
         decorators.push({ name: 'Index', arguments: [] });
@@ -301,7 +306,13 @@ async function writeEntitiesFromSnapshot() {
 
       decorators.push({ name: relType, arguments: args });
 
-      if (['many-to-one', 'one-to-one'].includes(rel.type)) {
+      // Chỉ thêm JoinColumn cho owning side của relationship
+      // - ManyToOne: luôn cần JoinColumn
+      // - OneToOne: chỉ cần JoinColumn cho bên có foreign key (không phải inverse)
+      if (
+        rel.type === 'many-to-one' ||
+        (rel.type === 'one-to-one' && !isInverse)
+      ) {
         decorators.push({ name: 'JoinColumn', arguments: [] });
         usedImports.add('JoinColumn');
       }
@@ -368,23 +379,23 @@ async function compileEntitiesToJS(project: Project, outputDir: string) {
     const content = sourceFile.getFullText();
     const relativePath = path.relative(
       path.resolve(process.cwd(), 'src/entities'),
-      filePath
+      filePath,
     );
     compileProject.createSourceFile(relativePath, content);
   }
 
   // Emit compiled JavaScript
   const emitResult = compileProject.emitToMemory();
-  
+
   // Write JS files to disk
   for (const outputFile of emitResult.getFiles()) {
     const jsFilePath = path.join(outputDir, outputFile.filePath);
     const jsDir = path.dirname(jsFilePath);
-    
+
     if (!fs.existsSync(jsDir)) {
       fs.mkdirSync(jsDir, { recursive: true });
     }
-    
+
     fs.writeFileSync(jsFilePath, outputFile.text, 'utf8');
   }
 }

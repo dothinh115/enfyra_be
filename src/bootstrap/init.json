@@ -107,7 +107,21 @@
             "icon":"lucide:route"
         },
         {
-            "path": "/plugin_registry",
+            "path": "/menu_definition",
+            "mainTable": "menu_definition",
+            "isEnabled": true,
+            "isSystem": true,
+            "icon": "lucide:menu"
+        },
+        {
+            "path": "/extension_definition",
+            "mainTable": "extension_definition",
+            "isEnabled": true,
+            "isSystem": true,
+            "icon": "lucide:puzzle"
+        },
+        {
+            "path": "/extension_registry",
             "mainTable": null,
             "isEnabled": true,
             "isSystem": true,
@@ -146,6 +160,194 @@
             "isSystem":true,
             "route": "/user_definition",
             "methods": ["POST", "PATCH"]
+        }
+    ],
+    "menu_definition": [
+        {
+            "type": "mini",
+            "label": "Dashboard",
+            "icon": "lucide:layout-dashboard",
+            "path": "/dashboard",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "Main dashboard",
+            "order": 1
+        },
+        {
+            "type": "mini",
+            "label": "Data",
+            "icon": "lucide:list",
+            "path": "/data",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "Data management",
+            "order": 2
+        },
+        {
+            "type": "mini",
+            "label": "Collections",
+            "icon": "lucide:database",
+            "path": "/collections",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "Table collections management",
+            "order": 3,
+            "permission": {
+                "or": [
+                    {
+                        "route": "/table_definition",
+                        "actions": ["create", "update", "delete"]
+                    }
+                ]
+            }
+        },
+        {
+            "type": "mini",
+            "label": "Settings",
+            "icon": "lucide:settings",
+            "path": "/settings",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "System settings",
+            "order": 4,
+            "permission": {
+                "or": [
+                    { "route": "/setting_definition", "actions": ["read", "update"] },
+                    { "route": "/route_definition", "actions": ["read", "update"] },
+                    { "route": "/route_handler_definition", "actions": ["read"] },
+                    { "route": "/hook_definition", "actions": ["read"] },
+                    { "route": "/user_definition", "actions": ["read"] },
+                    { "route": "/role_definition", "actions": ["read"] },
+                    { "route": "/plugin_registry", "actions": ["read"] }
+                ]
+            }
+        },
+        {
+            "type": "menu",
+            "label": "General",
+            "icon": "heroicons:cog-8-tooth",
+            "path": "/settings/general",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "General settings",
+            "order": 1,
+            "sidebar": "Settings",
+            "permission": {
+                "or": [{ "route": "/setting_definition", "actions": ["read", "update"] }]
+            }
+        },
+        {
+            "type": "menu",
+            "label": "Menu",
+            "icon": "heroicons:bars-3",
+            "path": "/settings/menus",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "Menu management",
+            "order": 2,
+            "sidebar": "Settings",
+            "permission": {
+                "or": [{ "route": "/menu_definition", "actions": ["read", "create", "update", "delete"] }]
+            }
+        },
+        {
+            "type": "menu",
+            "label": "Extensions",
+            "icon": "heroicons:puzzle-piece",
+            "path": "/settings/extensions",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "Extension management",
+            "order": 3,
+            "sidebar": "Settings",
+            "permission": {
+                "or": [{ "route": "/extension_registry", "actions": ["read"] }]
+            }
+        },
+        {
+            "type": "menu",
+            "label": "Routings",
+            "icon": "heroicons:map",
+            "path": "/settings/routings",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "Route management",
+            "order": 4,
+            "sidebar": "Settings",
+            "permission": {
+                "or": [{ "route": "/route_definition", "actions": ["read", "update"] }]
+            }
+        },
+        {
+            "type": "menu",
+            "label": "Handlers",
+            "icon": "heroicons:command-line",
+            "path": "/settings/handlers",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "Route handler management",
+            "order": 5,
+            "sidebar": "Settings",
+            "permission": {
+                "or": [{ "route": "/route_handler_definition", "actions": ["read"] }]
+            }
+        },
+        {
+            "type": "menu",
+            "label": "Hooks",
+            "icon": "heroicons:link",
+            "path": "/settings/hooks",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "Hook management",
+            "order": 6,
+            "sidebar": "Settings",
+            "permission": {
+                "or": [{ "route": "/hook_definition", "actions": ["read"] }]
+            }
+        },
+        {
+            "type": "menu",
+            "label": "Users",
+            "icon": "heroicons:users",
+            "path": "/settings/users",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "User management",
+            "order": 7,
+            "sidebar": "Settings",
+            "permission": {
+                "or": [{ "route": "/user_definition", "actions": ["read"] }]
+            }
+        },
+        {
+            "type": "menu",
+            "label": "Roles",
+            "icon": "heroicons:shield-check",
+            "path": "/settings/roles",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "Role management",
+            "order": 8,
+            "sidebar": "Settings",
+            "permission": {
+                "route": "/role_definition",
+                "actions": ["read"]
+            }
+        },
+        {
+            "type": "menu",
+            "label": "Create New Table",
+            "icon": "lucide:plus",
+            "path": "/collections/create",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "Create new table",
+            "order": 1,
+            "sidebar": "Collections",
+            "permission": {
+                "or": [{ "route": "/table_definition", "actions": ["create"] }]
+            }
         }
     ]
 }

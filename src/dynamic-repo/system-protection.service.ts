@@ -159,6 +159,7 @@ export class SystemProtectionService {
       const allowed = this.getAllowedFields([
         'description',
         'publishedMethods',
+        'icon',
       ]);
       const disallowed = changedFields.filter((f) => !allowed.includes(f));
       if (disallowed.length > 0) {
@@ -176,9 +177,7 @@ export class SystemProtectionService {
           oldIds.length === newIds.length &&
           oldIds.every((id, i) => id === newIds[i]);
         if (!isSame)
-          throw new Error(
-            'Cannot add or modify system route handlers',
-          );
+          throw new Error('Cannot add or modify system route handlers');
       }
     }
 
@@ -305,6 +304,117 @@ export class SystemProtectionService {
             throw new Error(
               `Cannot modify system relation '${oldRel.propertyName}' (only allowed: ${allowed.join(', ')})`,
             );
+        }
+      }
+    }
+
+    if (tableName === 'menu_definition') {
+      const isSystem = fullExisting?.isSystem;
+
+      if (operation === 'create' && data?.isSystem) {
+        throw new Error('Cannot create new system menu!');
+      }
+
+      if (operation === 'delete' && isSystem) {
+        throw new Error('Cannot delete system menu!');
+      }
+
+      if (operation === 'update' && isSystem) {
+        // Chỉ cho phép sửa các trường không quan trọng
+        const allowed = this.getAllowedFields([
+          'description',
+          'icon',
+          'isEnabled',
+          'order',
+          'permission',
+        ]);
+
+        const disallowed = changedFields.filter((k) => !allowed.includes(k));
+        if (disallowed.length > 0) {
+          throw new Error(
+            `Cannot modify system menu (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
+          );
+        }
+
+        // Kiểm tra không cho phép thay đổi cấu trúc cơ bản
+        if ('type' in data && data.type !== fullExisting.type) {
+          throw new Error('Cannot change menu type (mini/menu)');
+        }
+
+        if ('label' in data && data.label !== fullExisting.label) {
+          throw new Error('Cannot change menu label');
+        }
+
+        if ('path' in data && data.path !== fullExisting.path) {
+          throw new Error('Cannot change menu path');
+        }
+
+        if ('sidebar' in data && data.sidebar !== fullExisting.sidebar) {
+          throw new Error('Cannot change menu sidebar reference');
+        }
+
+        if ('parent' in data && data.parent !== fullExisting.parent) {
+          throw new Error('Cannot change menu parent reference');
+        }
+      }
+    }
+
+    if (tableName === 'extension_definition') {
+      const isSystem = fullExisting?.isSystem;
+
+      if (operation === 'create' && data?.isSystem) {
+        throw new Error('Cannot create new system extension!');
+      }
+
+      if (operation === 'delete' && isSystem) {
+        throw new Error('Cannot delete system extension!');
+      }
+
+      if (operation === 'update' && isSystem) {
+        // Chỉ cho phép sửa các trường không quan trọng
+        const allowed = this.getAllowedFields([
+          'description',
+          'category',
+          'version',
+          'isEnabled',
+          'order',
+          'configSchema',
+          'dependencies',
+          'permissions',
+        ]);
+
+        const disallowed = changedFields.filter((k) => !allowed.includes(k));
+        if (disallowed.length > 0) {
+          throw new Error(
+            `Cannot modify system extension (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
+          );
+        }
+
+        // Kiểm tra không cho phép thay đổi cấu trúc cơ bản
+        if ('name' in data && data.name !== fullExisting.name) {
+          throw new Error('Cannot change extension name');
+        }
+
+        if ('slug' in data && data.slug !== fullExisting.slug) {
+          throw new Error('Cannot change extension slug');
+        }
+
+        if ('type' in data && data.type !== fullExisting.type) {
+          throw new Error('Cannot change extension type');
+        }
+
+        if (
+          'frontendCode' in data &&
+          data.frontendCode !== fullExisting.frontendCode
+        ) {
+          throw new Error('Cannot change system extension frontend code');
+        }
+
+        if (
+          'backendCode' in data &&
+          data.backendCode !== fullExisting.backendCode
+        ) {
+          throw new Error('Cannot change system extension backend code');
         }
       }
     }

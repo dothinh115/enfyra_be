@@ -196,5 +196,49 @@
             { "propertyName": "route_permissions", "type": "many-to-many", "targetTable": "route_permission_definition", "isSystem": true, "inversePropertyName": "methods" },
             { "propertyName": "routes", "type": "many-to-many", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "publishedMethods" }
         ]
+    },
+    "menu_definition": {
+        "name": "menu_definition",
+        "uniques": [
+            ["type", "label"],
+            ["type", "sidebar", "label"],
+            ["path"]
+        ],
+        "isSystem": true,
+        "columns": [
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "type", "type": "enum", "isNullable": false, "isSystem": true, "enumValues": ["mini", "menu"] },
+            { "name": "label", "type": "varchar", "isNullable": false, "isSystem": true },
+            { "name": "icon", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": "lucide:menu" },
+            { "name": "path", "type": "varchar", "isNullable": false, "isSystem": true },
+            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
+            { "name": "description", "type": "text", "isSystem": true },
+            { "name": "order", "type": "int", "isNullable": false, "isSystem": true, "defaultValue": 0, "isIndex": true },
+            { "name": "permission", "type": "simple-json", "isNullable": true, "isSystem": true }
+        ],
+        "relations": [
+            { "propertyName": "parent", "type": "many-to-one", "targetTable": "menu_definition", "isSystem": true, "inversePropertyName": "children", "isNullable": true },
+            { "propertyName": "sidebar", "type": "many-to-one", "targetTable": "menu_definition", "isSystem": true, "inversePropertyName": "menus", "isNullable": true }
+        ]
+    },
+    "extension_definition": {
+        "name": "extension_definition",
+        "isSystem": true,
+        "uniques": [["menu"]],
+        "columns": [
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
+            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true },
+            { "name": "version", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": "1.0.0" },
+            { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
+            { "name": "description", "type": "text", "isSystem": true },
+            { "name": "code", "type": "code", "isSystem": true, "isNullable": false }
+        ],
+        "relations": [
+            { "propertyName": "menu", "type": "one-to-one", "targetTable": "menu_definition", "isSystem": true, "inversePropertyName": "extension", "isNullable": false },
+            { "propertyName": "createdBy", "type": "many-to-one", "targetTable": "user_definition", "isSystem": true, "isNullable": true },
+            { "propertyName": "updatedBy", "type": "many-to-one", "targetTable": "user_definition", "isSystem": true, "isNullable": true }
+        ]
     }
 }

@@ -37,9 +37,9 @@ export function addRelationToClass({
 
   const decorators = [];
 
-  // ✅ Auto index for many-to-one and one-to-one (non-inverse)
-  const shouldAddIndex =
-    rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse);
+  // ✅ Auto index for many-to-one only
+  // Không thêm @Index cho OneToOne vì @JoinColumn đã tự tạo unique index
+  const shouldAddIndex = rel.type === 'many-to-one';
   if (shouldAddIndex) {
     decorators.push({ name: 'Index', arguments: [] });
     usedImports.add('Index');
@@ -73,7 +73,10 @@ export function addRelationToClass({
   if (rel.type === 'many-to-many' && !isInverse) {
     decorators.push({ name: 'JoinTable', arguments: [] });
     usedImports.add('JoinTable');
-  } else if (['many-to-one', 'one-to-one'].includes(rel.type)) {
+  } else if (
+    rel.type === 'many-to-one' ||
+    (rel.type === 'one-to-one' && !isInverse)
+  ) {
     decorators.push({ name: 'JoinColumn', arguments: [] });
     usedImports.add('JoinColumn');
   }

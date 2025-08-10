@@ -36,7 +36,9 @@ export class BootstrapService implements OnApplicationBootstrap {
         this.logger.log('Database connection successful.');
         return;
       } catch (error) {
-        this.logger.warn(`Unable to connect to DB, retrying after ${delayMs}ms...`);
+        this.logger.warn(
+          `Unable to connect to DB, retrying after ${delayMs}ms...`,
+        );
         await this.commonService.delay(delayMs);
         await this.dataSourceService.reloadDataSource();
         settingRepo =
@@ -57,12 +59,14 @@ export class BootstrapService implements OnApplicationBootstrap {
       this.dataSourceService.getRepository('setting_definition');
     let schemaHistoryRepo =
       this.dataSourceService.getRepository('schema_history');
-    
+
     if (!settingRepo || !schemaHistoryRepo) {
-      this.logger.error('❌ Failed to get repositories. Database may not be initialized properly.');
+      this.logger.error(
+        '❌ Failed to get repositories. Database may not be initialized properly.',
+      );
       return;
     }
-    
+
     let setting: any = await settingRepo.findOne({ where: { id: 1 } });
 
     if (!setting || !setting.isInit) {
@@ -88,6 +92,10 @@ export class BootstrapService implements OnApplicationBootstrap {
       }
     } else {
       await this.commonService.delay(Math.random() * 500);
+
+      // LUÔN LUÔN chạy upsert để sync data với init.json
+      this.logger.log('🔄 Running upsert to sync default data...');
+      await this.defaultDataService.insertAllDefaultRecords();
 
       const acquired = await this.redisLockService.acquire(
         'global:boot',
