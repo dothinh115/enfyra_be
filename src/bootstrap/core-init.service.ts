@@ -20,7 +20,9 @@ export class CoreInitService {
         this.logger.log('Database connection successful.');
         return;
       } catch (error) {
-        this.logger.warn(`Unable to connect to DB, retrying after ${delayMs}ms...`);
+        this.logger.warn(
+          `Unable to connect to DB, retrying after ${delayMs}ms...`,
+        );
         await new Promise((res) => setTimeout(res, delayMs));
       }
     }
@@ -65,7 +67,7 @@ export class CoreInitService {
         }
       }
 
-      // Phase 2: Add missing columns
+      // Phase 2: Add missing columns and update existing ones
       for (const [name, defRaw] of Object.entries(snapshot)) {
         const def = defRaw as any;
         const tableId = tableNameToId[name];
@@ -79,26 +81,57 @@ export class CoreInitService {
           .createQueryBuilder('c')
           .leftJoin('c.table', 't')
           .where('t.id = :tableId', { tableId })
-          .select(['c.name AS name'])
+          .select([
+            'c.id AS id',
+            'c.name AS name',
+            'c.type AS type',
+            'c.isNullable AS isNullable',
+            'c.isPrimary AS isPrimary',
+            'c.isGenerated AS isGenerated',
+            'c.isUnique AS isUnique',
+            'c.defaultValue AS defaultValue',
+            'c.enumValues AS enumValues',
+            'c.isIndex AS isIndex',
+            'c.isUpdatable AS isUpdatable',
+          ])
           .getRawMany();
 
-        const existingNames = new Set(existingColumns.map((col) => col.name));
-
-        const newColumns = (def.columns || []).filter(
-          (col: any) => col.name && !existingNames.has(col.name),
+        const existingColumnsMap = new Map(
+          existingColumns.map((col) => [col.name, col]),
         );
 
-        if (newColumns.length) {
-          const toInsert = newColumns.map((col: any) => ({
-            ...col,
-            table: { id: tableId },
-          }));
-          await queryRunner.manager.save(columnEntity, toInsert);
-          this.logger.log(
-            `📌 Added ${newColumns.length} new columns for ${name}`,
-          );
-        } else {
-          this.logger.log(`⏩ No columns to add for ${name}`);
+        // Process each column from snapshot
+        for (const snapshotCol of def.columns || []) {
+          const existingCol = existingColumnsMap.get(snapshotCol.name);
+
+          if (!existingCol) {
+            // New column - insert it
+            const toInsert = {
+              ...snapshotCol,
+              table: { id: tableId },
+            };
+            await queryRunner.manager.save(columnEntity, toInsert);
+            this.logger.log(
+              `📌 Added new column ${snapshotCol.name} for ${name}`,
+            );
+          } else {
+            // Existing column - check for changes and update if needed
+            const hasChanges = this.detectColumnChanges(
+              snapshotCol,
+              existingCol,
+            );
+            if (hasChanges) {
+              const updateData = {
+                ...snapshotCol,
+                id: existingCol.id,
+                table: { id: tableId },
+              };
+              await queryRunner.manager.save(columnEntity, updateData);
+              this.logger.log(
+                `🔄 Updated column ${snapshotCol.name} for ${name} due to changes`,
+              );
+            }
+          }
         }
       }
 
@@ -179,5 +212,22 @@ export class CoreInitService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  private detectColumnChanges(snapshotCol: any, existingCol: any): boolean {
+    // Compare all relevant column properties
+    const hasChanges =
+      snapshotCol.type !== existingCol.type ||
+      snapshotCol.isNullable !== existingCol.isNullable ||
+      snapshotCol.isPrimary !== existingCol.isPrimary ||
+      snapshotCol.isGenerated !== existingCol.isGenerated ||
+      snapshotCol.isUnique !== existingCol.isUnique ||
+      snapshotCol.defaultValue !== existingCol.defaultValue ||
+      JSON.stringify(snapshotCol.enumValues) !==
+        JSON.stringify(existingCol.enumValues) ||
+      snapshotCol.isIndex !== existingCol.isIndex ||
+      snapshotCol.isUpdatable !== existingCol.isUpdatable;
+
+    return hasChanges;
   }
 }

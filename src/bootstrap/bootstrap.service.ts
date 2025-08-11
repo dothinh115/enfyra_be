@@ -93,7 +93,6 @@ export class BootstrapService implements OnApplicationBootstrap {
     } else {
       await this.commonService.delay(Math.random() * 500);
 
-      // LUÔN LUÔN chạy upsert để sync data với init.json
       this.logger.log('🔄 Running upsert to sync default data...');
       await this.defaultDataService.insertAllDefaultRecords();
 

@@ -11,6 +11,8 @@ export class Extension_definition {
     code: string;
     @Column({ type: "text", nullable: true })
     description: string;
+    @Column({ type: "varchar", nullable: false })
+    extensionId: string;
     @Column({ type: "boolean", nullable: false, default: true })
     isEnabled: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
