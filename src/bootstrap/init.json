@@ -119,13 +119,6 @@
             "isEnabled": true,
             "isSystem": true,
             "icon": "lucide:puzzle"
-        },
-        {
-            "path": "/extension_registry",
-            "mainTable": null,
-            "isEnabled": true,
-            "isSystem": true,
-            "icon": "lucide:puzzle-piece"
         }
     ], 
     "method_definition": [
@@ -171,7 +164,10 @@
             "isEnabled": true,
             "isSystem": true,
             "description": "Main dashboard",
-            "order": 1
+            "order": 1,
+            "permission": {
+                "allowAll": true
+            }
         },
         {
             "type": "mini",
@@ -181,7 +177,10 @@
             "isEnabled": true,
             "isSystem": true,
             "description": "Data management",
-            "order": 2
+            "order": 2,
+            "permission": {
+                "allowAll": true
+            }
         },
         {
             "type": "mini",
@@ -196,7 +195,15 @@
                 "or": [
                     {
                         "route": "/table_definition",
-                        "actions": ["create", "update", "delete"]
+                        "actions": ["create"]
+                    },
+                    {
+                        "route": "/table_definition",
+                        "actions": ["update"]
+                    },
+                    {
+                        "route": "/table_definition",
+                        "actions": ["delete"]
                     }
                 ]
             }
@@ -211,15 +218,7 @@
             "description": "System settings",
             "order": 4,
             "permission": {
-                "or": [
-                    { "route": "/setting_definition", "actions": ["read", "update"] },
-                    { "route": "/route_definition", "actions": ["read", "update"] },
-                    { "route": "/route_handler_definition", "actions": ["read"] },
-                    { "route": "/hook_definition", "actions": ["read"] },
-                    { "route": "/user_definition", "actions": ["read"] },
-                    { "route": "/role_definition", "actions": ["read"] },
-                    { "route": "/plugin_registry", "actions": ["read"] }
-                ]
+                "allowAll": true
             }
         },
         {
@@ -247,7 +246,12 @@
             "order": 2,
             "sidebar": "Settings",
             "permission": {
-                "or": [{ "route": "/menu_definition", "actions": ["read", "create", "update", "delete"] }]
+                "or": [
+                    { "route": "/menu_definition", "actions": ["read"] },
+                    { "route": "/menu_definition", "actions": ["create"] },
+                    { "route": "/menu_definition", "actions": ["update"] },
+                    { "route": "/menu_definition", "actions": ["delete"] }
+                ]
             }
         },
         {
@@ -261,7 +265,9 @@
             "order": 3,
             "sidebar": "Settings",
             "permission": {
-                "or": [{ "route": "/extension_registry", "actions": ["read"] }]
+                "and": [
+                    { "route": "/extension_definition", "actions": ["read"] }
+                ]
             }
         },
         {
@@ -275,7 +281,16 @@
             "order": 4,
             "sidebar": "Settings",
             "permission": {
-                "or": [{ "route": "/route_definition", "actions": ["read", "update"] }]
+                "and": [
+                    { "route": "/route_definition", "actions": ["read"] },
+                    {
+                        "or": [
+                            { "route": "/route_definition", "actions": ["create"] },
+                            { "route": "/route_definition", "actions": ["update"] },
+                            { "route": "/route_definition", "actions": ["delete"] }
+                        ]
+                    }
+                ]
             }
         },
         {
@@ -317,7 +332,9 @@
             "order": 7,
             "sidebar": "Settings",
             "permission": {
-                "or": [{ "route": "/user_definition", "actions": ["read"] }]
+                "and": [
+                    { "route": "/user_definition", "actions": ["read"] }
+                ]
             }
         },
         {
@@ -331,8 +348,9 @@
             "order": 8,
             "sidebar": "Settings",
             "permission": {
-                "route": "/role_definition",
-                "actions": ["read"]
+                "and": [
+                    { "route": "/role_definition", "actions": ["read"] }
+                ]
             }
         },
         {

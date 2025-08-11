@@ -296,31 +296,44 @@ export class DefaultDataService {
           }
 
           if (existingRecord) {
-            // Update existing record - xử lý đặc biệt cho many-to-many relationships
-            if (tableName === 'hook_definition') {
-              // Với hook_definition, cần xử lý many-to-many methods riêng biệt
-              const { methods, ...updateData } = record;
-
-              // Update các field cơ bản
-              await repo.update((existingRecord as any).id, updateData);
-
-              // Xử lý many-to-many methods nếu có
-              if (methods && Array.isArray(methods)) {
-                const hookRepo = repo as any;
-                await hookRepo.save({
-                  id: (existingRecord as any).id,
-                  methods: methods,
-                });
-              }
-            } else {
-              // Update bình thường cho các table khác
-              await repo.update((existingRecord as any).id, record);
-            }
-
-            updatedCount++;
-            this.logger.debug(
-              `🔄 Updated ${tableName}: ${JSON.stringify(record).substring(0, 50)}...`,
+            // Check if there are actual changes before updating
+            const hasChanges = this.detectRecordChanges(
+              record,
+              existingRecord,
+              tableName,
             );
+
+            if (hasChanges) {
+              // Update existing record - xử lý đặc biệt cho many-to-many relationships
+              if (tableName === 'hook_definition') {
+                // Với hook_definition, cần xử lý many-to-many methods riêng biệt
+                const { methods, ...updateData } = record;
+
+                // Update các field cơ bản
+                await repo.update((existingRecord as any).id, updateData);
+
+                // Xử lý many-to-many methods nếu có
+                if (methods && Array.isArray(methods)) {
+                  const hookRepo = repo as any;
+                  await hookRepo.save({
+                    id: (existingRecord as any).id,
+                    methods: methods,
+                  });
+                }
+              } else {
+                // Update bình thường cho các table khác
+                await repo.update((existingRecord as any).id, record);
+              }
+
+              updatedCount++;
+              this.logger.debug(
+                `🔄 Updated ${tableName}: ${JSON.stringify(record).substring(0, 50)}... (changes detected)`,
+              );
+            } else {
+              this.logger.debug(
+                `⏩ Skipped ${tableName}: ${JSON.stringify(record).substring(0, 50)}... (no changes)`,
+              );
+            }
           } else {
             // Create new record
             const created = repo.create(record);
@@ -341,5 +354,87 @@ export class DefaultDataService {
         `✅ Successfully upserted '${tableName}' (${createdCount} created, ${updatedCount} updated).`,
       );
     }
+  }
+
+  private detectRecordChanges(
+    newRecord: any,
+    existingRecord: any,
+    tableName: string,
+  ): boolean {
+    // Define which fields to compare for each table type
+    const compareFields = this.getCompareFieldsForTable(tableName);
+
+    // Compare only relevant fields
+    for (const field of compareFields) {
+      const newValue = newRecord[field];
+      const existingValue = existingRecord[field];
+
+      // Handle different data types
+      if (this.hasValueChanged(newValue, existingValue)) {
+        this.logger.debug(
+          `🔄 Change detected in ${tableName}.${field}: "${existingValue}" → "${newValue}"`,
+        );
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private getCompareFieldsForTable(tableName: string): string[] {
+    // Define which fields to compare for each table to detect changes
+    const fieldMap: Record<string, string[]> = {
+      role_definition: ['name', 'description'],
+      user_definition: ['email', 'isRootAdmin', 'isSystem'],
+      setting_definition: ['projectName', 'projectDescription', 'projectUrl'],
+      route_definition: ['path', 'isEnabled', 'icon', 'description'],
+      method_definition: ['method', 'isSystem'],
+      hook_definition: [
+        'name',
+        'description',
+        'preHook',
+        'afterHook',
+        'priority',
+        'isEnabled',
+      ],
+      route_permission_definition: ['isEnabled'],
+      route_handler_definition: ['description', 'logic'],
+      menu_definition: [
+        'label',
+        'icon',
+        'path',
+        'isEnabled',
+        'description',
+        'order',
+        'permission',
+      ],
+      extension_definition: [
+        'name',
+        'type',
+        'version',
+        'isEnabled',
+        'description',
+        'code',
+      ],
+      // Add more tables as needed
+    };
+
+    return fieldMap[tableName] || ['name', 'description']; // Default fields
+  }
+
+  private hasValueChanged(newValue: any, existingValue: any): boolean {
+    // Handle null/undefined cases
+    if (newValue === null && existingValue === null) return false;
+    if (newValue === undefined && existingValue === undefined) return false;
+    if (newValue === null || existingValue === null) return true;
+    if (newValue === undefined || existingValue === undefined) return true;
+
+    // Handle objects (like permission, enumValues, etc.)
+    if (typeof newValue === 'object' && typeof existingValue === 'object') {
+      return JSON.stringify(newValue) !== JSON.stringify(existingValue);
+    }
+
+    // Handle primitive values
+    return newValue !== existingValue;
   }
 }
