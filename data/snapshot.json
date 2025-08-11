@@ -229,7 +229,7 @@
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
             { "name": "type", "type": "enum", "enumValues": ["page", "widget"], "isNullable": false, "isSystem": true, "defaultValue": "page" },
-            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true },
+            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "isGenerated":true },
             { "name": "version", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": "1.0.0" },
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
