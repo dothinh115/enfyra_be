@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { Test, TestingModule } from '@nestjs/testing';
-import { AutoService } from '../auto/auto.service';
-import { DataSourceService } from '../data-source/data-source.service';
-import { CommonService } from '../common/common.service';
+import { AutoService } from '../../modules/code-generation/services/auto.service';
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+import { CommonService } from '../../shared/common/services/common.service';
 describe.skip('AutoService', () => {
   let service: AutoService;
   let dataSourceService: jest.Mocked<DataSourceService>;
@@ -16,20 +16,20 @@ describe.skip('AutoService', () => {
       columns: [
         { name: 'id', type: 'uuid', isPrimary: true, isNullable: false },
         { name: 'email', type: 'string', isNullable: false, isUnique: true },
-        { name: 'name', type: 'string', isNullable: true }
+        { name: 'name', type: 'string', isNullable: true },
       ],
       relations: [],
-      uniques: []
+      uniques: [],
     },
     {
-      id: 2, 
+      id: 2,
       name: 'posts',
       displayName: 'Posts',
       columns: [
         { name: 'id', type: 'uuid', isPrimary: true, isNullable: false },
         { name: 'title', type: 'string', isNullable: false },
         { name: 'content', type: 'text', isNullable: true },
-        { name: 'userId', type: 'uuid', isNullable: false }
+        { name: 'userId', type: 'uuid', isNullable: false },
       ],
       relations: [
         {
@@ -37,11 +37,11 @@ describe.skip('AutoService', () => {
           type: 'many-to-one',
           targetTable: 'users',
           targetColumn: 'id',
-          sourceColumn: 'userId'
-        }
+          sourceColumn: 'userId',
+        },
       ],
-      uniques: []
-    }
+      uniques: [],
+    },
   ];
 
   beforeEach(async () => {
@@ -91,7 +91,7 @@ describe.skip('AutoService', () => {
       await service.entityGenerate(mockTables[0]);
 
       expect(mockTableRepo.find).toHaveBeenCalledWith({
-        relations: ['columns', 'relations']
+        relations: ['columns', 'relations'],
       });
       expect(dataSourceService.loadDynamicEntities).toHaveBeenCalled();
     });
@@ -101,14 +101,20 @@ describe.skip('AutoService', () => {
       mockTableRepo.find.mockResolvedValue([]);
       dataSourceService.loadDynamicEntities.mockResolvedValue([]);
 
-      await expect(service.entityGenerate(mockTables[0])).resolves.not.toThrow();
+      await expect(
+        service.entityGenerate(mockTables[0]),
+      ).resolves.not.toThrow();
     });
 
     it('should handle database errors gracefully', async () => {
       const mockTableRepo = dataSourceService.getRepository('table_definition');
-      mockTableRepo.find.mockRejectedValue(new Error('Database connection failed'));
+      mockTableRepo.find.mockRejectedValue(
+        new Error('Database connection failed'),
+      );
 
-      await expect(service.entityGenerate(mockTables[0])).rejects.toThrow('Database connection failed');
+      await expect(service.entityGenerate(mockTables[0])).rejects.toThrow(
+        'Database connection failed',
+      );
     });
   });
 
@@ -122,7 +128,7 @@ describe.skip('AutoService', () => {
 
       expect(mockTableRepo.find).toHaveBeenCalledWith({
         where: { name: 'users' },
-        relations: ['columns', 'relations']
+        relations: ['columns', 'relations'],
       });
     });
 
@@ -154,9 +160,7 @@ describe.skip('AutoService', () => {
     it('should validate column types before generation', async () => {
       const invalidTable = {
         ...mockTables[0],
-        columns: [
-          { name: 'id', type: 'invalid_type', isPrimary: true }
-        ]
+        columns: [{ name: 'id', type: 'invalid_type', isPrimary: true }],
       };
 
       const mockTableRepo = dataSourceService.getRepository('table_definition');
@@ -181,9 +185,9 @@ describe.skip('AutoService', () => {
           ...mockTables[0],
           columns: [
             ...mockTables[0].columns,
-            { name: 'createdAt', type: 'datetime', isNullable: false }
-          ]
-        }
+            { name: 'createdAt', type: 'datetime', isNullable: false },
+          ],
+        },
       ];
 
       const mockTableRepo = dataSourceService.getRepository('table_definition');
@@ -195,18 +199,26 @@ describe.skip('AutoService', () => {
 
   describe('entityGenerate migrations', () => {
     it('should execute pending migrations', async () => {
-      await expect(service.entityGenerate(mockTables[0])).resolves.not.toThrow();
+      await expect(
+        service.entityGenerate(mockTables[0]),
+      ).resolves.not.toThrow();
     });
 
     it('should handle migration failures', async () => {
       // Mock migration failure scenario
       const mockDataSource = {
-        runMigrations: jest.fn().mockRejectedValue(new Error('Migration failed'))
+        runMigrations: jest
+          .fn()
+          .mockRejectedValue(new Error('Migration failed')),
       };
 
-      dataSourceService.getDataSource = jest.fn().mockReturnValue(mockDataSource);
+      dataSourceService.getDataSource = jest
+        .fn()
+        .mockReturnValue(mockDataSource);
 
-      await expect(service.entityGenerate(mockTables[0])).rejects.toThrow('Migration failed');
+      await expect(service.entityGenerate(mockTables[0])).rejects.toThrow(
+        'Migration failed',
+      );
     });
   });
 
@@ -230,9 +242,9 @@ describe.skip('AutoService', () => {
         displayName: `Table ${i + 1}`,
         columns: [
           { name: 'id', type: 'uuid', isPrimary: true, isNullable: false },
-          { name: 'data', type: 'string', isNullable: true }
+          { name: 'data', type: 'string', isNullable: true },
         ],
-        relations: []
+        relations: [],
       }));
 
       const mockTableRepo = dataSourceService.getRepository('table_definition');
@@ -251,14 +263,16 @@ describe.skip('AutoService', () => {
     it('should recover from partial sync failures', async () => {
       const mockTableRepo = dataSourceService.getRepository('table_definition');
       mockTableRepo.find.mockResolvedValue(mockTables);
-      
+
       // Mock partial failure in loadDynamicEntities
       dataSourceService.loadDynamicEntities
         .mockRejectedValueOnce(new Error('Partial failure'))
         .mockResolvedValueOnce([]);
 
       // Should retry and eventually succeed
-      await expect(service.entityGenerate(mockTables[0])).rejects.toThrow('Partial failure');
+      await expect(service.entityGenerate(mockTables[0])).rejects.toThrow(
+        'Partial failure',
+      );
     });
 
     it('should handle corrupted table definitions', async () => {
@@ -266,14 +280,16 @@ describe.skip('AutoService', () => {
         id: '1',
         name: null, // Corrupted data
         columns: null,
-        relations: undefined
+        relations: undefined,
       };
 
       const mockTableRepo = dataSourceService.getRepository('table_definition');
       mockTableRepo.find.mockResolvedValue([corruptedTable]);
 
       // Should handle corrupted data gracefully
-      await expect(service.entityGenerate(mockTables[0])).resolves.not.toThrow();
+      await expect(
+        service.entityGenerate(mockTables[0]),
+      ).resolves.not.toThrow();
     });
   });
 
@@ -284,15 +300,19 @@ describe.skip('AutoService', () => {
       dataSourceService.loadDynamicEntities.mockResolvedValue([]);
 
       // Run multiple sync operations concurrently
-      const promises = Array.from({ length: 3 }, () => service.entityGenerate(mockTables[0]));
-      
+      const promises = Array.from({ length: 3 }, () =>
+        service.entityGenerate(mockTables[0]),
+      );
+
       await expect(Promise.all(promises)).resolves.not.toThrow();
     });
 
     it('should serialize migration operations', async () => {
       // Migrations should not run concurrently
-      const migrationPromises = Array.from({ length: 2 }, () => service.entityGenerate(mockTables[0]));
-      
+      const migrationPromises = Array.from({ length: 2 }, () =>
+        service.entityGenerate(mockTables[0]),
+      );
+
       await expect(Promise.all(migrationPromises)).resolves.not.toThrow();
     });
   });
@@ -307,16 +327,18 @@ describe.skip('AutoService', () => {
             type: 'many-to-one',
             targetTable: 'nonexistent_table', // Invalid target
             targetColumn: 'id',
-            sourceColumn: 'userId'
-          }
-        ]
+            sourceColumn: 'userId',
+          },
+        ],
       };
 
       const mockTableRepo = dataSourceService.getRepository('table_definition');
       mockTableRepo.find.mockResolvedValue([invalidRelationTable]);
 
       // Should handle invalid relationships gracefully
-      await expect(service.entityGenerate(mockTables[0])).resolves.not.toThrow();
+      await expect(
+        service.entityGenerate(mockTables[0]),
+      ).resolves.not.toThrow();
     });
 
     it('should validate column constraints', async () => {
@@ -328,15 +350,17 @@ describe.skip('AutoService', () => {
             type: 'uuid',
             isPrimary: true,
             isNullable: true, // Invalid: primary key cannot be nullable
-          }
-        ]
+          },
+        ],
       };
 
       const mockTableRepo = dataSourceService.getRepository('table_definition');
       mockTableRepo.find.mockResolvedValue([invalidColumnTable]);
 
       // Should handle invalid constraints gracefully
-      await expect(service.entityGenerate(mockTables[0])).resolves.not.toThrow();
+      await expect(
+        service.entityGenerate(mockTables[0]),
+      ).resolves.not.toThrow();
     });
   });
 });

@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { Test, TestingModule } from '@nestjs/testing';
-import { DynamicRepoService } from '../dynamic-repo/dynamic-repo.service';
-import { TableHandlerService } from '../table/table.service';
-import { DataSourceService } from '../data-source/data-source.service';
-import { QueryEngine } from '../query-engine/query-engine.service';
-import { RouteCacheService } from '../redis/route-cache.service';
-import { SystemProtectionService } from '../dynamic-repo/system-protection.service';
+import { DynamicRepoService } from '../../modules/dynamic-api/services/dynamic-repo.service';
+import { TableHandlerService } from '../../modules/table-management/services/table.service';
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+import { QueryEngine } from '../../infrastructure/query-engine/services/query-engine.service';
+import { RouteCacheService } from '../../infrastructure/redis/services/route-cache.service';
+import { SystemProtectionService } from '../../modules/dynamic-api/services/system-protection.service';
 describe.skip('DynamicRepoService', () => {
   let service: DynamicRepoService;
   let tableHandlerService: jest.Mocked<TableHandlerService>;
@@ -20,8 +20,8 @@ describe.skip('DynamicRepoService', () => {
     columns: [
       { name: 'id', type: 'uuid', isPrimary: true },
       { name: 'name', type: 'string' },
-      { name: 'age', type: 'number' }
-    ]
+      { name: 'age', type: 'number' },
+    ],
   };
 
   const mockServices = () => ({
@@ -45,7 +45,7 @@ describe.skip('DynamicRepoService', () => {
     systemProtectionService: {
       isSystemTable: jest.fn().mockReturnValue(false),
       validateAccess: jest.fn().mockReturnValue(true),
-    }
+    },
   });
 
   beforeEach(async () => {
@@ -57,7 +57,10 @@ describe.skip('DynamicRepoService', () => {
         { provide: DataSourceService, useValue: mocks.dataSourceService },
         { provide: QueryEngine, useValue: mocks.queryEngine },
         { provide: RouteCacheService, useValue: mocks.routeCacheService },
-        { provide: SystemProtectionService, useValue: mocks.systemProtectionService },
+        {
+          provide: SystemProtectionService,
+          useValue: mocks.systemProtectionService,
+        },
       ],
     }).compile();
 
@@ -92,14 +95,16 @@ describe.skip('DynamicRepoService', () => {
 
       expect(tableHandlerService.findOne).toHaveBeenCalledWith({
         where: { name: 'test_table' },
-        relations: ['columns', 'relations']
+        relations: ['columns', 'relations'],
       });
     });
 
     it('should throw error for non-existent table', async () => {
       tableHandlerService.findOne.mockResolvedValue(null);
 
-      await expect(service.init()).rejects.toThrow('Table test_table not found');
+      await expect(service.init()).rejects.toThrow(
+        'Table test_table not found',
+      );
     });
 
     it('should handle system table protection', async () => {
@@ -107,7 +112,9 @@ describe.skip('DynamicRepoService', () => {
       systemProtectionService.validateAccess.mockReturnValue(false);
       tableHandlerService.findOne.mockResolvedValue(mockTableDef);
 
-      await expect(service.init()).rejects.toThrow('Access denied to system table');
+      await expect(service.init()).rejects.toThrow(
+        'Access denied to system table',
+      );
     });
   });
 
@@ -120,12 +127,12 @@ describe.skip('DynamicRepoService', () => {
     it('should find records with basic query', async () => {
       const mockResults = [
         { id: '1', name: 'John', age: 25 },
-        { id: '2', name: 'Jane', age: 30 }
+        { id: '2', name: 'Jane', age: 30 },
       ];
 
       queryEngine.find.mockResolvedValue({
         data: mockResults,
-        meta: { totalCount: 2 }
+        meta: { totalCount: 2 },
       });
 
       const result = await service.find({});
@@ -136,20 +143,20 @@ describe.skip('DynamicRepoService', () => {
 
     it('should find records with filters', async () => {
       const mockResults = [{ id: '1', name: 'John', age: 25 }];
-      
+
       queryEngine.find.mockResolvedValue({
         data: mockResults,
-        meta: { totalCount: 1 }
+        meta: { totalCount: 1 },
       });
 
       const result = await service.find({
-        where: { age: { _gte: 25 } }
+        where: { age: { _gte: 25 } },
       });
 
       expect(queryEngine.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          filter: { age: { _gte: 25 } }
-        })
+          filter: { age: { _gte: 25 } },
+        }),
       );
       expect(result.data).toEqual(mockResults);
     });
@@ -157,22 +164,22 @@ describe.skip('DynamicRepoService', () => {
     it('should find records with sorting', async () => {
       const mockResults = [
         { id: '2', name: 'Jane', age: 30 },
-        { id: '1', name: 'John', age: 25 }
+        { id: '1', name: 'John', age: 25 },
       ];
 
       queryEngine.find.mockResolvedValue({
         data: mockResults,
-        meta: { totalCount: 2 }
+        meta: { totalCount: 2 },
       });
 
       await service.find({
-        where: {}
+        where: {},
       } as any);
 
       expect(queryEngine.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          sort: ['-age']
-        })
+          sort: ['-age'],
+        }),
       );
     });
 
@@ -181,18 +188,18 @@ describe.skip('DynamicRepoService', () => {
 
       queryEngine.find.mockResolvedValue({
         data: mockResults,
-        meta: { totalCount: 10 }
+        meta: { totalCount: 10 },
       });
 
       await service.find({
-        where: {}
+        where: {},
       } as any);
 
       expect(queryEngine.find).toHaveBeenCalledWith(
         expect.objectContaining({
           page: 3, // skip 10, take 5 = page 3
-          limit: 5
-        })
+          limit: 5,
+        }),
       );
     });
 
@@ -201,17 +208,17 @@ describe.skip('DynamicRepoService', () => {
 
       queryEngine.find.mockResolvedValue({
         data: mockResults,
-        meta: { totalCount: 1 }
+        meta: { totalCount: 1 },
       });
 
       await service.find({
-        where: {}
+        where: {},
       } as any);
 
       expect(queryEngine.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          fields: 'id,name'
-        })
+          fields: 'id,name',
+        }),
       );
     });
   });
@@ -227,29 +234,29 @@ describe.skip('DynamicRepoService', () => {
 
       queryEngine.find.mockResolvedValue({
         data: [mockResult],
-        meta: { totalCount: 1 }
+        meta: { totalCount: 1 },
       });
 
       const result = await service.findOne({
-        where: { id: '1' }
+        where: { id: '1' },
       });
 
       expect(result).toEqual(mockResult);
       expect(queryEngine.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          limit: 1
-        })
+          limit: 1,
+        }),
       );
     });
 
     it('should return null when no record found', async () => {
       queryEngine.find.mockResolvedValue({
         data: [],
-        meta: { totalCount: 0 }
+        meta: { totalCount: 0 },
       });
 
       const result = await service.findOne({
-        where: { id: '999' }
+        where: { id: '999' },
       });
 
       expect(result).toBeNull();
@@ -266,14 +273,14 @@ describe.skip('DynamicRepoService', () => {
       queryEngine.count.mockResolvedValue(42);
 
       const result = await service.count({
-        where: { age: { _gte: 18 } }
+        where: { age: { _gte: 18 } },
       });
 
       expect(result).toBe(42);
       expect(queryEngine.count).toHaveBeenCalledWith(
         expect.objectContaining({
-          filter: { age: { _gte: 18 } }
-        })
+          filter: { age: { _gte: 18 } },
+        }),
       );
     });
 
@@ -303,7 +310,7 @@ describe.skip('DynamicRepoService', () => {
       expect(result).toEqual(createdRecord);
       expect(queryEngine.create).toHaveBeenCalledWith({
         tableName: 'test_table',
-        data: newRecord
+        data: newRecord,
       });
     });
 
@@ -312,7 +319,9 @@ describe.skip('DynamicRepoService', () => {
 
       queryEngine.create.mockRejectedValue(new Error('Validation failed'));
 
-      await expect(service.create(invalidRecord)).rejects.toThrow('Validation failed');
+      await expect(service.create(invalidRecord)).rejects.toThrow(
+        'Validation failed',
+      );
     });
   });
 
@@ -334,7 +343,7 @@ describe.skip('DynamicRepoService', () => {
       expect(queryEngine.update).toHaveBeenCalledWith({
         tableName: 'test_table',
         id: '1',
-        data: updateData
+        data: updateData,
       });
     });
 
@@ -364,7 +373,7 @@ describe.skip('DynamicRepoService', () => {
       expect(result).toEqual({ affected: 1 });
       expect(queryEngine.delete).toHaveBeenCalledWith({
         tableName: 'test_table',
-        id: '1'
+        id: '1',
       });
     });
 
@@ -372,7 +381,7 @@ describe.skip('DynamicRepoService', () => {
       queryEngine.delete.mockResolvedValue({ affected: 3 });
 
       const result = await service.delete({
-        where: { age: { _lt: 18 } }
+        where: { age: { _lt: 18 } },
       });
 
       expect(result).toEqual({ affected: 3 });
@@ -389,19 +398,19 @@ describe.skip('DynamicRepoService', () => {
       const mockResults = Array.from({ length: 10 }, (_, i) => ({
         id: `${i + 1}`,
         name: `User ${i + 1}`,
-        age: 20 + i
+        age: 20 + i,
       }));
 
       queryEngine.find.mockResolvedValue({
         data: mockResults,
-        meta: { totalCount: 10 }
+        meta: { totalCount: 10 },
       });
 
       const promises = Array.from({ length: 5 }, () => service.find({}));
       const results = await Promise.all(promises);
 
       expect(results).toHaveLength(5);
-      expect(results.every(r => r.data.length === 10)).toBe(true);
+      expect(results.every((r) => r.data.length === 10)).toBe(true);
     });
 
     it('should cache table definition after initialization', async () => {
@@ -419,9 +428,13 @@ describe.skip('DynamicRepoService', () => {
       tableHandlerService.findOne.mockResolvedValue(mockTableDef);
       await service.init();
 
-      queryEngine.find.mockRejectedValue(new Error('Database connection failed'));
+      queryEngine.find.mockRejectedValue(
+        new Error('Database connection failed'),
+      );
 
-      await expect(service.find({})).rejects.toThrow('Database connection failed');
+      await expect(service.find({})).rejects.toThrow(
+        'Database connection failed',
+      );
     });
 
     it('should validate operations before initialization', async () => {
@@ -454,7 +467,7 @@ describe.skip('DynamicRepoService', () => {
 
       const maliciousData = {
         name: "'; DROP TABLE users; --",
-        age: 25
+        age: 25,
       };
 
       queryEngine.create.mockImplementation((params) => {

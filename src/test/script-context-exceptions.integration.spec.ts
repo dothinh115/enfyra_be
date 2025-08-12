@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
-import { ExecutorPoolService } from '../handler-executor/executor-pool.service';
-import { ScriptErrorFactory } from '../utils/script-error-factory';
+import { HandlerExecutorService } from '../../infrastructure/handler-executor/services/handler-executor.service';
+import { ExecutorPoolService } from '../../infrastructure/handler-executor/services/executor-pool.service';
+import { ScriptErrorFactory } from "./shared/utils/script-error-factory";
 import {
   BusinessLogicException,
   ValidationException,
@@ -10,7 +10,7 @@ import {
   AuthorizationException,
   DatabaseException,
   RateLimitExceededException,
-} from '../exceptions/custom-exceptions';
+} from "./core/exceptions/custom-exceptions";
 
 describe.skip('Script Context Exceptions Integration', () => {
   let handlerExecutor: HandlerExecutorService;
@@ -40,7 +40,9 @@ describe.skip('Script Context Exceptions Integration', () => {
       ],
     }).compile();
 
-    handlerExecutor = module.get<HandlerExecutorService>(HandlerExecutorService);
+    handlerExecutor = module.get<HandlerExecutorService>(
+      HandlerExecutorService,
+    );
     executorPool = module.get(ExecutorPoolService);
   });
 
@@ -66,9 +68,9 @@ describe.skip('Script Context Exceptions Integration', () => {
         $body: { orderId: 123 },
       };
 
-      await expect(handlerExecutor.run(script, context as any))
-        .rejects
-        .toThrow(BusinessLogicException);
+      await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
+        BusinessLogicException,
+      );
     });
 
     it('should throw ValidationException with details from script', async () => {
@@ -126,9 +128,9 @@ describe.skip('Script Context Exceptions Integration', () => {
         $body: { userId: 'non-existent' },
       };
 
-      await expect(handlerExecutor.run(script, context as any))
-        .rejects
-        .toThrow(ResourceNotFoundException);
+      await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
+        ResourceNotFoundException,
+      );
     });
   });
 
@@ -148,9 +150,9 @@ describe.skip('Script Context Exceptions Integration', () => {
         $user: null,
       };
 
-      await expect(handlerExecutor.run(script, context as any))
-        .rejects
-        .toThrow(AuthenticationException);
+      await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
+        AuthenticationException,
+      );
     });
 
     it('should throw AuthorizationException for insufficient permissions', async () => {
@@ -318,9 +320,9 @@ describe.skip('Script Context Exceptions Integration', () => {
         $body: {},
       };
 
-      await expect(handlerExecutor.run(script, context as any))
-        .rejects
-        .toThrow(BusinessLogicException);
+      await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
+        BusinessLogicException,
+      );
     });
 
     it('should support legacy throw401 method', async () => {
@@ -338,9 +340,9 @@ describe.skip('Script Context Exceptions Integration', () => {
         $token: null,
       };
 
-      await expect(handlerExecutor.run(script, context as any))
-        .rejects
-        .toThrow(AuthenticationException);
+      await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
+        AuthenticationException,
+      );
     });
 
     it('should support legacy throw404 method', async () => {
@@ -359,9 +361,9 @@ describe.skip('Script Context Exceptions Integration', () => {
         $body: { id: 'not-found' },
       };
 
-      await expect(handlerExecutor.run(script, context as any))
-        .rejects
-        .toThrow(ResourceNotFoundException);
+      await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
+        ResourceNotFoundException,
+      );
     });
   });
 
@@ -380,9 +382,9 @@ describe.skip('Script Context Exceptions Integration', () => {
       };
 
       // Run with 100ms timeout
-      await expect(handlerExecutor.run(script, context as any, 100))
-        .rejects
-        .toThrow('Script execution timed out');
+      await expect(
+        handlerExecutor.run(script, context as any, 100),
+      ).rejects.toThrow('Script execution timed out');
     });
   });
 
@@ -416,7 +418,7 @@ describe.skip('Script Context Exceptions Integration', () => {
       };
 
       const result = await handlerExecutor.run(script, context as any);
-      
+
       expect(result.hasError).toBe(true);
       expect(result.error.code).toBe('CUSTOM_ERROR');
       expect(result.error.message).toBe('Something went wrong');

@@ -7,8 +7,8 @@ import {
   DataSource,
 } from 'typeorm';
 import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
-import { QueryEngine } from '../query-engine/query-engine.service';
-import { DataSourceService } from '../data-source/data-source.service';
+import { QueryEngine } from '../../infrastructure/query-engine/services/query-engine.service';
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 
 @Entity('user')
 class User {
@@ -138,7 +138,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBeLessThanOrEqual(10);
-      expect(result.data.every(user => user.age >= 30)).toBe(true);
+      expect(result.data.every((user) => user.age >= 30)).toBe(true);
     });
 
     it('should find users with field selection', async () => {
@@ -178,7 +178,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         filter: { age: { _gt: 40 } },
         limit: 10,
       });
-      expect(gtResult.data.every(user => user.age > 40)).toBe(true);
+      expect(gtResult.data.every((user) => user.age > 40)).toBe(true);
 
       // _lte operator
       const lteResult = await queryEngine.find({
@@ -186,7 +186,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         filter: { age: { _lte: 25 } },
         limit: 10,
       });
-      expect(lteResult.data.every(user => user.age <= 25)).toBe(true);
+      expect(lteResult.data.every((user) => user.age <= 25)).toBe(true);
 
       // _between operator
       const betweenResult = await queryEngine.find({
@@ -194,7 +194,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         filter: { age: { _between: [25, 35] } },
         limit: 10,
       });
-      expect(betweenResult.data.every(user => user.age >= 25 && user.age <= 35)).toBe(true);
+      expect(
+        betweenResult.data.every((user) => user.age >= 25 && user.age <= 35),
+      ).toBe(true);
     });
 
     it('should handle text search operators', async () => {
@@ -204,7 +206,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         filter: { name: { _contains: 'User 1' } },
         limit: 20,
       });
-      expect(containsResult.data.every(user => user.name.includes('User 1'))).toBe(true);
+      expect(
+        containsResult.data.every((user) => user.name.includes('User 1')),
+      ).toBe(true);
 
       // _starts_with operator
       const startsResult = await queryEngine.find({
@@ -212,7 +216,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         filter: { name: { _starts_with: 'User 2' } },
         limit: 20,
       });
-      expect(startsResult.data.every(user => user.name.startsWith('User 2'))).toBe(true);
+      expect(
+        startsResult.data.every((user) => user.name.startsWith('User 2')),
+      ).toBe(true);
 
       // _ends_with operator
       const endsResult = await queryEngine.find({
@@ -220,7 +226,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         filter: { title: { _ends_with: '5' } },
         limit: 20,
       });
-      expect(endsResult.data.every(post => post.title.endsWith('5'))).toBe(true);
+      expect(endsResult.data.every((post) => post.title.endsWith('5'))).toBe(
+        true,
+      );
     });
 
     it('should handle logical operators', async () => {
@@ -228,27 +236,27 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       const andResult = await queryEngine.find({
         tableName: 'user',
         filter: {
-          _and: [
-            { age: { _gte: 30 } },
-            { name: { _contains: '1' } }
-          ]
+          _and: [{ age: { _gte: 30 } }, { name: { _contains: '1' } }],
         },
         limit: 10,
       });
-      expect(andResult.data.every(user => user.age >= 30 && user.name.includes('1'))).toBe(true);
+      expect(
+        andResult.data.every(
+          (user) => user.age >= 30 && user.name.includes('1'),
+        ),
+      ).toBe(true);
 
       // _or operator
       const orResult = await queryEngine.find({
         tableName: 'user',
         filter: {
-          _or: [
-            { age: { _lt: 20 } },
-            { age: { _gt: 60 } }
-          ]
+          _or: [{ age: { _lt: 20 } }, { age: { _gt: 60 } }],
         },
         limit: 20,
       });
-      expect(orResult.data.every(user => user.age < 20 || user.age > 60)).toBe(true);
+      expect(
+        orResult.data.every((user) => user.age < 20 || user.age > 60),
+      ).toBe(true);
 
       // _not operator - Skip this test as _not operator may not be fully implemented
       const notResult = await queryEngine.find({
@@ -270,7 +278,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       expect(inResult.data).toBeDefined();
       // Check if at least some results match the filter
       if (inResult.data.length > 0) {
-        expect(inResult.data.some(user => [25, 30, 35].includes(user.age))).toBe(true);
+        expect(
+          inResult.data.some((user) => [25, 30, 35].includes(user.age)),
+        ).toBe(true);
       }
 
       // _not_in operator
@@ -281,14 +291,16 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       });
       expect(notInResult.data).toBeDefined();
       if (notInResult.data.length > 0) {
-        expect(notInResult.data.some(user => ![25, 30, 35].includes(user.age))).toBe(true);
+        expect(
+          notInResult.data.some((user) => ![25, 30, 35].includes(user.age)),
+        ).toBe(true);
       }
     });
 
     it('should handle null checks', async () => {
       // Skip null checks as User.name has NOT NULL constraint
       // Instead test _is_null operator logic without actually creating null values
-      
+
       const notNullResult = await queryEngine.find({
         tableName: 'user',
         filter: { name: { _is_null: false } },
@@ -296,7 +308,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       });
       expect(notNullResult.data).toBeDefined();
       expect(notNullResult.data.length).toBeGreaterThan(0);
-      expect(notNullResult.data.every(user => user.name !== null)).toBe(true);
+      expect(notNullResult.data.every((user) => user.name !== null)).toBe(true);
     });
   });
 
@@ -330,7 +342,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBeGreaterThan(0);
-      
+
       const user = result.data[0];
       expect(user).toHaveProperty('posts');
       if (user.posts && user.posts.length > 0) {
@@ -350,8 +362,8 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
           _and: [
             { age: { _gte: 25 } },
             { posts: { views: { _between: [1000, 15000] } } },
-            { posts: { title: { _contains: 'Post' } } }
-          ]
+            { posts: { title: { _contains: 'Post' } } },
+          ],
         },
         limit: 5,
       });
@@ -359,14 +371,17 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       expect(result.data).toBeDefined();
       // Note: Complex join filters may not work exactly as expected
       expect(result.data.length).toBeGreaterThanOrEqual(0);
-      
+
       for (const user of result.data) {
         if (user.posts && user.posts.length > 0) {
-          expect(user.posts.some(post => 
-            post.views >= 1000 && 
-            post.views <= 15000 && 
-            post.title.includes('Post')
-          )).toBe(true);
+          expect(
+            user.posts.some(
+              (post) =>
+                post.views >= 1000 &&
+                post.views <= 15000 &&
+                post.title.includes('Post'),
+            ),
+          ).toBe(true);
         }
       }
     });
@@ -387,30 +402,32 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
               comments: {
                 fields: ['content'],
                 limit: 2,
-              }
-            }
-          }
+              },
+            },
+          },
         },
         limit: 2,
       });
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBe(2);
-      
+
       const user = result.data[0];
       expect(user).toHaveProperty('name');
       expect(user).toHaveProperty('posts');
-      
+
       if (user.posts && user.posts.length > 0) {
         expect(user.posts.length).toBeLessThanOrEqual(3);
         expect(user.posts[0]).toHaveProperty('title');
         expect(user.posts[0]).toHaveProperty('views');
         expect(user.posts[0].views).toBeGreaterThan(1000);
-        
+
         if (user.posts.length > 1) {
-          expect(user.posts[0].views).toBeGreaterThanOrEqual(user.posts[1].views);
+          expect(user.posts[0].views).toBeGreaterThanOrEqual(
+            user.posts[1].views,
+          );
         }
-        
+
         if (user.posts[0].comments) {
           expect(user.posts[0].comments.length).toBeLessThanOrEqual(2);
           expect(user.posts[0].comments[0]).toHaveProperty('content');
@@ -438,7 +455,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       expect(page1.data.length).toBe(10);
       expect(page2.data.length).toBe(10);
       expect(page1.data[0].name).not.toBe(page2.data[0].name);
-      
+
       expect(page1.data[0].name < page1.data[1].name).toBe(true);
       expect(page2.data[0].name < page2.data[1].name).toBe(true);
     });
@@ -453,8 +470,8 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
             filter: {
               _and: [
                 { views: { _gte: 5000 } },
-                { title: { _contains: 'Post' } }
-              ]
+                { title: { _contains: 'Post' } },
+              ],
             },
             limit: 2,
             deep: {
@@ -462,9 +479,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
                 fields: ['content'],
                 filter: { content: { _starts_with: 'Comment' } },
                 limit: 1,
-              }
-            }
-          }
+              },
+            },
+          },
         },
         filter: { age: { _between: [25, 45] } },
         limit: 3,
@@ -473,17 +490,19 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       expect(result.data).toBeDefined();
       // Deep relation filters may not work exactly as expected
       expect(result.data.length).toBeGreaterThanOrEqual(0);
-      
+
       for (const user of result.data) {
         if (user.posts && user.posts.length > 0) {
-          // Note: Deep relation filtering may not work as expected  
+          // Note: Deep relation filtering may not work as expected
           expect(user.posts.length).toBeGreaterThan(0);
-          
+
           for (const post of user.posts) {
             if (post.comments && post.comments.length > 0) {
-              expect(post.comments.every(comment => 
-                comment.content.startsWith('Comment')
-              )).toBe(true);
+              expect(
+                post.comments.every((comment) =>
+                  comment.content.startsWith('Comment'),
+                ),
+              ).toBe(true);
             }
           }
         }
@@ -503,14 +522,14 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       expect(result.data).toBeDefined();
       // Note: _count aggregation may not filter as expected
       expect(result.data.length).toBeGreaterThanOrEqual(0);
-      
+
       for (const user of result.data) {
         const userWithPosts = await queryEngine.find({
           tableName: 'user',
           fields: 'posts.id',
           filter: { id: user.id },
         });
-        
+
         if (userWithPosts.data[0]?.posts) {
           expect(userWithPosts.data[0].posts.length).toBeGreaterThanOrEqual(3);
         }
@@ -527,7 +546,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       });
 
       expect(exactCount.data).toBeDefined();
-      
+
       // Users with less than 3 posts
       const lessThanCount = await queryEngine.find({
         tableName: 'user',
@@ -547,8 +566,8 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
           _and: [
             { age: { _between: [25, 45] } },
             { posts: { _count: { _gt: 2 } } },
-            { posts: { comments: { _count: { _gte: 1 } } } }
-          ]
+            { posts: { comments: { _count: { _gte: 1 } } } },
+          ],
         },
         limit: 5,
       });
@@ -569,7 +588,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBe(5);
-      
+
       for (const user of result.data) {
         expect(user).toHaveProperty('name');
         // Note: Query engine may still include other fields
@@ -585,7 +604,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBe(3);
-      
+
       for (const user of result.data) {
         expect(user).toHaveProperty('id');
         expect(user).toHaveProperty('name');
@@ -618,11 +637,11 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       });
 
       expect(result.data).toBeDefined();
-      
+
       for (const user of result.data) {
         expect(user).toHaveProperty('name');
         // Note: Query engine may still include other fields like age and id
-        
+
         if (user.posts && user.posts.length > 0) {
           expect(user.posts[0]).toHaveProperty('title');
           // Note: Query engine may still include other fields
@@ -642,7 +661,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
 
       expect(ascResult.data.length).toBe(10);
       for (let i = 1; i < ascResult.data.length; i++) {
-        expect(ascResult.data[i].age).toBeGreaterThanOrEqual(ascResult.data[i-1].age);
+        expect(ascResult.data[i].age).toBeGreaterThanOrEqual(
+          ascResult.data[i - 1].age,
+        );
       }
 
       const descResult = await queryEngine.find({
@@ -654,7 +675,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
 
       expect(descResult.data.length).toBe(10);
       for (let i = 1; i < descResult.data.length; i++) {
-        expect(descResult.data[i].age).toBeLessThanOrEqual(descResult.data[i-1].age);
+        expect(descResult.data[i].age).toBeLessThanOrEqual(
+          descResult.data[i - 1].age,
+        );
       }
     });
 
@@ -667,11 +690,11 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       });
 
       expect(result.data.length).toBe(20);
-      
+
       for (let i = 1; i < result.data.length; i++) {
         const current = result.data[i];
-        const previous = result.data[i-1];
-        
+        const previous = result.data[i - 1];
+
         if (current.age === previous.age) {
           expect(current.name >= previous.name).toBe(true);
         } else {
@@ -691,11 +714,13 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBeGreaterThan(0);
-      
+
       for (const user of result.data) {
         if (user.posts && user.posts.length > 1) {
           for (let i = 1; i < user.posts.length; i++) {
-            expect(user.posts[i].views).toBeGreaterThanOrEqual(user.posts[i-1].views);
+            expect(user.posts[i].views).toBeGreaterThanOrEqual(
+              user.posts[i - 1].views,
+            );
           }
         }
       }
@@ -709,22 +734,26 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         filter: {
           _and: [
             { views: { _gte: 1000 } },
-            { author: { age: { _between: [25, 50] } } }
-          ]
+            { author: { age: { _between: [25, 50] } } },
+          ],
         },
         limit: 15,
       });
 
       expect(result.data).toBeDefined();
-      expect(result.data.every(post => post.views >= 1000)).toBe(true);
-      
+      expect(result.data.every((post) => post.views >= 1000)).toBe(true);
+
       // Check descending sort by views
       for (let i = 1; i < result.data.length; i++) {
-        if (result.data[i].views === result.data[i-1].views) {
+        if (result.data[i].views === result.data[i - 1].views) {
           // When views are equal, should be sorted by author name ascending
-          expect(result.data[i].author.name >= result.data[i-1].author.name).toBe(true);
+          expect(
+            result.data[i].author.name >= result.data[i - 1].author.name,
+          ).toBe(true);
         } else {
-          expect(result.data[i].views).toBeLessThanOrEqual(result.data[i-1].views);
+          expect(result.data[i].views).toBeLessThanOrEqual(
+            result.data[i - 1].views,
+          );
         }
       }
     });
@@ -740,24 +769,24 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
             {
               _and: [
                 { age: { _gte: 30 } },
-                { posts: { views: { _gt: 5000 } } }
-              ]
+                { posts: { views: { _gt: 5000 } } },
+              ],
             },
             {
               _and: [
                 { age: { _lt: 25 } },
                 { name: { _contains: '1' } },
-                { posts: { _count: { _gte: 3 } } }
-              ]
-            }
-          ]
+                { posts: { _count: { _gte: 3 } } },
+              ],
+            },
+          ],
         },
         sort: ['age', '-posts.views'],
         limit: 10,
       });
 
       expect(result.data).toBeDefined();
-      
+
       for (const user of result.data) {
         const condition1 = user.age >= 30;
         const condition2 = user.age < 25 && user.name.includes('1');
@@ -781,15 +810,15 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
                 filter: { content: { _contains: 'Comment' } },
                 sort: ['content'],
                 limit: 2,
-              }
-            }
-          }
+              },
+            },
+          },
         },
         filter: {
           _and: [
             { age: { _between: [20, 60] } },
-            { posts: { _count: { _gte: 2 } } }
-          ]
+            { posts: { _count: { _gte: 2 } } },
+          ],
         },
         sort: ['-age'],
         limit: 5,
@@ -797,26 +826,38 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBeLessThanOrEqual(5);
-      expect(result.data.every(user => user.age >= 20 && user.age <= 60)).toBe(true);
-      
+      expect(
+        result.data.every((user) => user.age >= 20 && user.age <= 60),
+      ).toBe(true);
+
       // Check descending age sorting
       for (let i = 1; i < result.data.length; i++) {
-        expect(result.data[i].age).toBeLessThanOrEqual(result.data[i-1].age);
+        expect(result.data[i].age).toBeLessThanOrEqual(result.data[i - 1].age);
       }
-      
+
       for (const user of result.data) {
         if (user.posts && user.posts.length > 0) {
           // Check posts are filtered and sorted
-          expect(user.posts.every(post => post.views >= 2000 && post.views <= 18000)).toBe(true);
-          
+          expect(
+            user.posts.every(
+              (post) => post.views >= 2000 && post.views <= 18000,
+            ),
+          ).toBe(true);
+
           // Check descending sort by views
           for (let i = 1; i < user.posts.length; i++) {
-            expect(user.posts[i].views).toBeLessThanOrEqual(user.posts[i-1].views);
+            expect(user.posts[i].views).toBeLessThanOrEqual(
+              user.posts[i - 1].views,
+            );
           }
-          
+
           for (const post of user.posts) {
             if (post.comments && post.comments.length > 0) {
-              expect(post.comments.every(comment => comment.content.includes('Comment'))).toBe(true);
+              expect(
+                post.comments.every((comment) =>
+                  comment.content.includes('Comment'),
+                ),
+              ).toBe(true);
               expect(post.comments.length).toBeLessThanOrEqual(2);
             }
           }
@@ -914,7 +955,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
   describe('Performance and Optimization Tests', () => {
     it('should efficiently handle large datasets with pagination', async () => {
       const startTime = Date.now();
-      
+
       const result = await queryEngine.find({
         tableName: 'user',
         fields: 'name,age',
@@ -935,15 +976,15 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
 
     it('should optimize join queries efficiently', async () => {
       const startTime = Date.now();
-      
+
       const result = await queryEngine.find({
         tableName: 'user',
         fields: 'name,posts.title,posts.comments.content',
         filter: {
           _and: [
             { posts: { views: { _gt: 5000 } } },
-            { posts: { comments: { content: { _contains: 'Comment' } } } }
-          ]
+            { posts: { comments: { content: { _contains: 'Comment' } } } },
+          ],
         },
         limit: 10,
       });
@@ -956,13 +997,13 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
     });
 
     it('should handle concurrent queries efficiently', async () => {
-      const queries = Array.from({ length: 5 }, (_, i) => 
+      const queries = Array.from({ length: 5 }, (_, i) =>
         queryEngine.find({
           tableName: 'user',
           fields: 'name,age',
           filter: { age: { _gte: 20 + i * 5 } },
           limit: 10,
-        })
+        }),
       );
 
       const startTime = Date.now();
@@ -971,7 +1012,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       const executionTime = endTime - startTime;
 
       expect(results).toHaveLength(5);
-      expect(results.every(result => result.data.length <= 10)).toBe(true);
+      expect(results.every((result) => result.data.length <= 10)).toBe(true);
       expect(executionTime).toBeLessThan(3000); // Concurrent queries should complete within 3 seconds
     });
   });
@@ -984,8 +1025,8 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
           _or: [
             { age: { _eq: 25 } },
             { name: { _contains: 'User 1' } },
-            { age: { _between: [30, 35] } }
-          ]
+            { age: { _between: [30, 35] } },
+          ],
         },
         limit: 10,
       });
@@ -1001,9 +1042,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         filter: {
           posts: {
             _sum: {
-              nonexistent_field: { _gt: 100 }
-            }
-          }
+              nonexistent_field: { _gt: 100 },
+            },
+          },
         },
         limit: 5,
       });
@@ -1017,8 +1058,8 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         tableName: 'user',
         filter: {
           posts: {
-            _count: { _gt: 'invalid_number' }
-          }
+            _count: { _gt: 'invalid_number' },
+          },
         },
         limit: 5,
       });
@@ -1032,9 +1073,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         filter: {
           posts: {
             _avg: {
-              views: { _gte: 1000 }
-            }
-          }
+              views: { _gte: 1000 },
+            },
+          },
         },
         limit: 5,
       });
@@ -1088,10 +1129,12 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBe(10);
-      
+
       // Verify sorting worked
       for (let i = 1; i < result.data.length; i++) {
-        expect(result.data[i].age).toBeGreaterThanOrEqual(result.data[i-1].age);
+        expect(result.data[i].age).toBeGreaterThanOrEqual(
+          result.data[i - 1].age,
+        );
       }
     });
 
@@ -1115,7 +1158,7 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
       });
 
       expect(result.data).toBeDefined();
-      expect(result.data.every(user => user.age !== 25)).toBe(true);
+      expect(result.data.every((user) => user.age !== 25)).toBe(true);
     });
 
     it('should handle text operators comprehensively', async () => {
@@ -1128,7 +1171,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
 
       expect(endsWithResult.data).toBeDefined();
       if (endsWithResult.data.length > 0) {
-        expect(endsWithResult.data.every(user => user.name.endsWith('0'))).toBe(true);
+        expect(
+          endsWithResult.data.every((user) => user.name.endsWith('0')),
+        ).toBe(true);
       }
     });
 
@@ -1138,9 +1183,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         filter: {
           posts: {
             comments: {
-              _count: { _gte: 1 }
-            }
-          }
+              _count: { _gte: 1 },
+            },
+          },
         },
         limit: 5,
       });
@@ -1168,8 +1213,8 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         tableName: 'user',
         filter: {
           posts: {
-            _count: 'invalid_aggregation_value'
-          }
+            _count: 'invalid_aggregation_value',
+          },
         },
         limit: 5,
       });
@@ -1183,9 +1228,9 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
         filter: {
           posts: {
             _sum: {
-              unknown_field: { _gt: 100 }
-            }
-          }
+              unknown_field: { _gt: 100 },
+            },
+          },
         },
         limit: 5,
       });

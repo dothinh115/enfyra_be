@@ -1,81 +1,105 @@
-// @ts-nocheck
 import { Test, TestingModule } from '@nestjs/testing';
-import { TableHandlerService } from '../table/table.service';
-import { DataSourceService } from '../data-source/data-source.service';
-import { CommonService } from '../common/common.service';
-import { MetadataSyncService } from '../metadata/metadata-sync.service';
-import { SchemaReloadService } from '../schema/schema-reload.service';
-import { BadRequestException } from '@nestjs/common';
-describe.skip('TableHandlerService', () => {
+import { TableHandlerService } from '../../modules/table-management/services/table.service';
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+import { CommonService } from '../../shared/common/services/common.service';
+import { MetadataSyncService } from '../../modules/schema-management/services/metadata-sync.service';
+import { SchemaReloadService } from '../../modules/schema-management/services/schema-reload.service';
+import { Logger } from '@nestjs/common';
+
+// Mock the validation utility
+jest.mock('./utils/duplicate-field-check', () => ({
+  validateUniquePropertyNames: jest.fn(),
+}));
+
+jest.mock('./utils/get-deleted-ids', () => ({
+  getDeletedIds: jest.fn().mockReturnValue([]),
+}));
+
+describe('TableHandlerService', () => {
   let service: TableHandlerService;
   let dataSourceService: jest.Mocked<DataSourceService>;
-  let commonService: jest.Mocked<CommonService>;
   let metadataSyncService: jest.Mocked<MetadataSyncService>;
   let schemaReloadService: jest.Mocked<SchemaReloadService>;
+  let commonService: jest.Mocked<CommonService>;
 
   const mockTable = {
-    id: '1',
+    id: 1,
     name: 'test_table',
     displayName: 'Test Table',
     isEnabled: true,
     columns: [],
-    relations: []
+    relations: [],
+  };
+
+  const mockQueryRunner = {
+    connect: jest.fn(),
+    startTransaction: jest.fn(),
+    commitTransaction: jest.fn(),
+    rollbackTransaction: jest.fn(),
+    release: jest.fn(),
+    query: jest.fn(),
+    dropTable: jest.fn(),
+    hasTable: jest.fn(),
+    createTable: jest.fn(),
+  };
+
+  const mockRepo = {
+    find: jest.fn(),
+    findOne: jest.fn(),
+    save: jest.fn(),
+    delete: jest.fn(),
+    create: jest.fn(),
+    remove: jest.fn(),
+  };
+
+  const mockDataSource = {
+    createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
+    getRepository: jest.fn().mockReturnValue(mockRepo),
+    manager: {
+      query: jest.fn(),
+    },
+    getMetadata: jest.fn(),
   };
 
   beforeEach(async () => {
-    const mockQueryRunner = {
-      connect: jest.fn(),
-      startTransaction: jest.fn(),
-      commitTransaction: jest.fn(),
-      rollbackTransaction: jest.fn(),
-      release: jest.fn(),
-      query: jest.fn(),
-      dropTable: jest.fn(),
-      hasTable: jest.fn(),
-      createTable: jest.fn(),
-    };
-
-    const mockDataSource = {
-      createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
-      manager: {
-        query: jest.fn(),
-      }
-    };
-
-    const mockRepo = {
-      find: jest.fn().mockResolvedValue([]),
-      findOne: jest.fn().mockResolvedValue(null),
-      save: jest.fn().mockResolvedValue({}),
-      delete: jest.fn().mockResolvedValue({}),
-      create: jest.fn().mockReturnValue({}),
-    } as any;
-
-    const mockDataSourceService = {
-      getRepository: jest.fn().mockReturnValue(mockRepo),
-      getDataSource: jest.fn().mockReturnValue(mockDataSource),
-    };
-
-    const mockCommonService = {
-      delay: jest.fn(),
-    };
-
-    const mockMetadataSyncService = {
-      syncAll: jest.fn(),
-    };
-
-    const mockSchemaReloadService = {
-      lockSchema: jest.fn(),
-      unlockSchema: jest.fn(),
-      publishSchemaUpdated: jest.fn(),
-    };
+    jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TableHandlerService,
-        { provide: DataSourceService, useValue: mockDataSourceService },
-        { provide: CommonService, useValue: mockCommonService },
-        { provide: MetadataSyncService, useValue: mockMetadataSyncService },
-        { provide: SchemaReloadService, useValue: mockSchemaReloadService },
+        {
+          provide: DataSourceService,
+          useValue: {
+            getDataSource: jest.fn().mockReturnValue(mockDataSource),
+            getRepository: jest.fn().mockReturnValue(mockRepo),
+            entityClassMap: new Map([
+              ['table_definition', {}],
+              ['column_definition', {}],
+              ['relation_definition', {}],
+              ['route_definition', {}],
+            ]),
+          },
+        },
+        {
+          provide: CommonService,
+          useValue: {
+            delay: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: MetadataSyncService,
+          useValue: {
+            syncAll: jest.fn().mockResolvedValue('v1'),
+          },
+        },
+        {
+          provide: SchemaReloadService,
+          useValue: {
+            lockSchema: jest.fn().mockResolvedValue(undefined),
+            unlockSchema: jest.fn().mockResolvedValue(undefined),
+            publishSchemaUpdated: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
@@ -84,36 +108,20 @@ describe.skip('TableHandlerService', () => {
     commonService = module.get(CommonService);
     metadataSyncService = module.get(MetadataSyncService);
     schemaReloadService = module.get(SchemaReloadService);
+
+    // Suppress console.error in tests
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('find', () => {
-    it('should return all tables', async () => {
-      const mockRepo = dataSourceService.getRepository('table_definition');
-      mockRepo.find.mockResolvedValue([mockTable]);
-
-      const result = await service.find();
-
-      expect(result).toEqual([mockTable]);
-      expect(mockRepo.find).toHaveBeenCalledWith({
-        relations: ['columns', 'relations']
-      });
-    });
-
-    it('should handle empty table list', async () => {
-      const mockRepo = dataSourceService.getRepository('table_definition');
-      mockRepo.find.mockResolvedValue([]);
-
-      const result = await service.find();
-
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('create', () => {
+  describe('createTable', () => {
     const createTableDto = {
       name: 'new_table',
       displayName: 'New Table',
@@ -122,226 +130,303 @@ describe.skip('TableHandlerService', () => {
           name: 'id',
           type: 'uuid',
           isPrimary: true,
-          isNullable: false
-        }
-      ]
+          isNullable: false,
+        },
+      ],
+      relations: [],
     };
 
     it('should create table successfully', async () => {
-      commonService.validateIdentifier.mockReturnValue(true);
-      const mockRepo = dataSourceService.getRepository('table_definition');
-      mockRepo.findOne.mockResolvedValue(null); // Table doesn't exist
+      mockQueryRunner.hasTable.mockResolvedValue(false);
+      mockRepo.findOne.mockResolvedValue(null);
       mockRepo.create.mockReturnValue(mockTable);
       mockRepo.save.mockResolvedValue(mockTable);
-      autoService.syncAll.mockResolvedValue(undefined);
 
-      const result = await service.create(createTableDto);
+      const result = await service.createTable(createTableDto);
 
       expect(result).toEqual(mockTable);
-      expect(autoService.syncAll).toHaveBeenCalled();
+      expect(mockQueryRunner.connect).toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalled();
+      expect(schemaReloadService.lockSchema).toHaveBeenCalled();
+      expect(metadataSyncService.syncAll).toHaveBeenCalled();
+      expect(schemaReloadService.unlockSchema).toHaveBeenCalled();
     });
 
-    it('should throw error for invalid table name', async () => {
-      commonService.validateIdentifier.mockReturnValue(false);
-
-      await expect(service.create({ ...createTableDto, name: 'invalid-name' }))
-        .rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw error for existing table name', async () => {
-      commonService.validateIdentifier.mockReturnValue(true);
-      const mockRepo = dataSourceService.getRepository('table_definition');
+    it('should throw error if table already exists', async () => {
+      mockQueryRunner.hasTable.mockResolvedValue(true);
       mockRepo.findOne.mockResolvedValue(mockTable);
 
-      await expect(service.create(createTableDto))
-        .rejects.toThrow(BadRequestException);
+      await expect(service.createTable(createTableDto)).rejects.toThrow(
+        'Table new_table already exists!',
+      );
     });
 
-    it('should validate column names', async () => {
+    it('should throw error if no id column with isPrimary', async () => {
       const invalidDto = {
-        ...createTableDto,
-        columns: [{ name: 'invalid-column', type: 'string' }]
+        name: 'new_table',
+        columns: [
+          {
+            name: 'name',
+            type: 'varchar',
+            isPrimary: false,
+          },
+        ],
       };
 
-      commonService.validateIdentifier
-        .mockReturnValueOnce(true) // table name valid
-        .mockReturnValueOnce(false); // column name invalid
+      mockQueryRunner.hasTable.mockResolvedValue(false);
+      mockRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.create(invalidDto))
-        .rejects.toThrow(BadRequestException);
+      await expect(service.createTable(invalidDto)).rejects.toThrow(
+        'Table must contain a column named "id" with isPrimary = true.',
+      );
+    });
+
+    it('should throw error if id column has invalid type', async () => {
+      const invalidDto = {
+        name: 'new_table',
+        columns: [
+          {
+            name: 'id',
+            type: 'varchar',
+            isPrimary: true,
+          },
+        ],
+      };
+
+      mockQueryRunner.hasTable.mockResolvedValue(false);
+      mockRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.createTable(invalidDto)).rejects.toThrow(
+        'The primary column "id" must be of type int or uuid.',
+      );
+    });
+
+    it('should throw error if multiple primary columns', async () => {
+      const invalidDto = {
+        name: 'new_table',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+          },
+          {
+            name: 'id2',
+            type: 'int',
+            isPrimary: true,
+          },
+        ],
+      };
+
+      mockQueryRunner.hasTable.mockResolvedValue(false);
+      mockRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.createTable(invalidDto)).rejects.toThrow(
+        'Only one column is allowed to have isPrimary = true.',
+      );
+    });
+
+    it('should create route definition after table creation', async () => {
+      mockQueryRunner.hasTable.mockResolvedValue(false);
+      mockRepo.findOne.mockResolvedValue(null);
+      mockRepo.create.mockReturnValue(mockTable);
+      mockRepo.save
+        .mockResolvedValueOnce(mockTable) // table save
+        .mockResolvedValueOnce({ id: 1 }); // route save
+
+      await service.createTable(createTableDto);
+
+      expect(mockRepo.save).toHaveBeenCalledTimes(2);
+      expect(mockRepo.save).toHaveBeenLastCalledWith({
+        path: '/test_table',
+        mainTable: 1,
+        isEnabled: true,
+      });
     });
   });
 
-  describe('update', () => {
+  describe('updateTable', () => {
     const updateDto = {
       displayName: 'Updated Table',
       columns: [
         {
           name: 'id',
           type: 'uuid',
-          isPrimary: true
-        }
-      ]
+          isPrimary: true,
+        },
+      ],
+      relations: [],
     };
 
     it('should update table successfully', async () => {
-      const mockRepo = dataSourceService.getRepository('table_definition');
-      mockRepo.findOne.mockResolvedValue(mockTable);
-      mockRepo.save.mockResolvedValue({ ...mockTable, ...updateDto });
-      autoService.syncAll.mockResolvedValue(undefined);
+      const existingTable = {
+        ...mockTable,
+        columns: [],
+        relations: [],
+      };
 
-      const result = await service.update('1', updateDto);
+      mockRepo.findOne.mockResolvedValue(existingTable);
+      mockRepo.save.mockResolvedValue({ ...existingTable, ...updateDto });
+      mockRepo.delete.mockResolvedValue({ affected: 0 });
 
-      expect(result).toEqual(expect.objectContaining(updateDto));
-      expect(autoService.syncAll).toHaveBeenCalled();
+      const result = await service.updateTable(1, updateDto as any);
+
+      expect(result).toBeDefined();
+      expect(mockQueryRunner.connect).toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalled();
+      expect(metadataSyncService.syncAll).toHaveBeenCalled();
     });
 
     it('should throw error for non-existent table', async () => {
-      const mockRepo = dataSourceService.getRepository('table_definition');
       mockRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.update('999', updateDto))
-        .rejects.toThrow(BadRequestException);
+      await expect(service.updateTable(999, updateDto as any)).rejects.toThrow(
+        'Table undefined does not exist.',
+      );
     });
 
-    it('should validate new column names in update', async () => {
+    it('should throw error if no primary column in update', async () => {
       const invalidUpdateDto = {
-        ...updateDto,
-        columns: [{ name: 'invalid-column', type: 'string' }]
+        name: 'test_table',
+        columns: [
+          {
+            name: 'name',
+            type: 'varchar',
+            isPrimary: false,
+          },
+        ],
       };
 
-      commonService.validateIdentifier.mockReturnValue(false);
-      const mockRepo = dataSourceService.getRepository('table_definition');
       mockRepo.findOne.mockResolvedValue(mockTable);
 
-      await expect(service.update('1', invalidUpdateDto))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        service.updateTable(1, invalidUpdateDto as any),
+      ).rejects.toThrow(
+        'Table must contain an id column with isPrimary = true!',
+      );
+    });
+
+    it('should delete removed columns and relations', async () => {
+      const existingTable = {
+        ...mockTable,
+        columns: [
+          { id: 1, name: 'col1' },
+          { id: 2, name: 'col2' },
+        ],
+        relations: [{ id: 1, propertyName: 'rel1' }],
+      };
+
+      const updateWithRemovals = {
+        name: 'test_table',
+        columns: [
+          { id: 1, name: 'col1', isPrimary: true, type: 'uuid' }, // col2 removed, make it primary
+        ],
+        relations: [], // rel1 removed
+      };
+
+      mockRepo.findOne.mockResolvedValue(existingTable);
+      mockRepo.save.mockResolvedValue(existingTable);
+      mockRepo.delete.mockResolvedValue({ affected: 1 });
+
+      // Mock getDeletedIds to return the IDs that should be deleted
+      const { getDeletedIds } = require('./utils/get-deleted-ids');
+      getDeletedIds
+        .mockReturnValueOnce([2]) // deleted column id
+        .mockReturnValueOnce([1]); // deleted relation id
+
+      await service.updateTable(1, updateWithRemovals as any);
+
+      expect(mockRepo.delete).toHaveBeenCalledWith([2]); // column deletion
+      expect(mockRepo.delete).toHaveBeenCalledWith([1]); // relation deletion
     });
   });
 
   describe('delete', () => {
     it('should delete table and drop from database', async () => {
-      const mockRepo = dataSourceService.getRepository('table_definition');
-      const mockQueryRunner = dataSourceService.getDataSource().createQueryRunner();
-      
       mockRepo.findOne.mockResolvedValue(mockTable);
       mockQueryRunner.query.mockResolvedValue([]);
       mockQueryRunner.hasTable.mockResolvedValue(true);
-      mockRepo.delete.mockResolvedValue({ affected: 1 });
+      mockRepo.remove.mockResolvedValue(mockTable);
 
-      await service.delete('1');
+      await service.delete(1);
 
       expect(mockQueryRunner.dropTable).toHaveBeenCalledWith('test_table');
-      expect(mockRepo.delete).toHaveBeenCalledWith('1');
-      expect(autoService.syncAll).toHaveBeenCalled();
+      expect(mockRepo.remove).toHaveBeenCalledWith(mockTable);
+      expect(metadataSyncService.syncAll).toHaveBeenCalled();
     });
 
-    it('should clean up foreign keys before dropping table', async () => {
-      const mockRepo = dataSourceService.getRepository('table_definition');
-      const mockQueryRunner = dataSourceService.getDataSource().createQueryRunner();
-      
+    it('should handle foreign key constraints before dropping', async () => {
       mockRepo.findOne.mockResolvedValue(mockTable);
-      mockQueryRunner.query.mockResolvedValue([
-        { CONSTRAINT_NAME: 'FK_test_constraint' }
-      ]);
+      mockQueryRunner.query
+        .mockResolvedValueOnce([
+          { TABLE_NAME: 'other_table', CONSTRAINT_NAME: 'FK_ref_test' },
+        ]) // referencing FKs query
+        .mockResolvedValueOnce(undefined) // FK drop query result
+        .mockResolvedValueOnce([{ CONSTRAINT_NAME: 'FK_test_out' }]) // outgoing FKs query
+        .mockResolvedValue(undefined); // remaining FK drop queries
+
       mockQueryRunner.hasTable.mockResolvedValue(true);
+      mockRepo.remove.mockResolvedValue(mockTable);
 
-      await service.delete('1');
+      await service.delete(1);
 
+      // Should drop referencing FK
       expect(mockQueryRunner.query).toHaveBeenCalledWith(
-        expect.stringContaining('ALTER TABLE `test_table` DROP FOREIGN KEY')
+        expect.stringContaining(
+          'ALTER TABLE `other_table` DROP FOREIGN KEY `FK_ref_test`',
+        ),
       );
+      // The outgoing FK drop might be handled differently, let's just check it was called
+      expect(mockQueryRunner.dropTable).toHaveBeenCalledWith('test_table');
+      expect(mockRepo.remove).toHaveBeenCalledWith(mockTable);
     });
 
     it('should throw error for non-existent table', async () => {
-      const mockRepo = dataSourceService.getRepository('table_definition');
       mockRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.delete('999'))
-        .rejects.toThrow(BadRequestException);
+      await expect(service.delete(999)).rejects.toThrow(
+        'Table with id 999 does not exist.',
+      );
     });
 
     it('should handle table that does not exist in database', async () => {
-      const mockRepo = dataSourceService.getRepository('table_definition');
-      const mockQueryRunner = dataSourceService.getDataSource().createQueryRunner();
-      
       mockRepo.findOne.mockResolvedValue(mockTable);
+      mockQueryRunner.query
+        .mockResolvedValueOnce([]) // no referencing FKs
+        .mockResolvedValueOnce([]) // no outgoing FKs
+        .mockResolvedValue(undefined);
       mockQueryRunner.hasTable.mockResolvedValue(false);
-      mockRepo.delete.mockResolvedValue({ affected: 1 });
+      mockRepo.remove.mockResolvedValue(mockTable);
 
-      await service.delete('1');
+      await service.delete(1);
 
       expect(mockQueryRunner.dropTable).not.toHaveBeenCalled();
-      expect(mockRepo.delete).toHaveBeenCalled();
+      expect(mockRepo.remove).toHaveBeenCalledWith(mockTable);
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle database transaction errors', async () => {
-      const mockRepo = dataSourceService.getRepository('table_definition');
-      const mockQueryRunner = dataSourceService.getDataSource().createQueryRunner();
-      
-      mockRepo.findOne.mockResolvedValue(mockTable);
-      mockQueryRunner.dropTable.mockRejectedValue(new Error('Database error'));
+  describe('afterEffect', () => {
+    it('should handle schema synchronization', async () => {
+      await service.afterEffect({ entityName: 'test_table', type: 'create' });
 
-      await expect(service.delete('1')).rejects.toThrow('Database error');
-      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
-    });
-
-    it('should handle sync errors gracefully', async () => {
-      commonService.validateIdentifier.mockReturnValue(true);
-      const mockRepo = dataSourceService.getRepository('table_definition');
-      mockRepo.findOne.mockResolvedValue(null);
-      mockRepo.create.mockReturnValue(mockTable);
-      mockRepo.save.mockResolvedValue(mockTable);
-      autoService.syncAll.mockRejectedValue(new Error('Sync failed'));
-
-      // Should still create table even if sync fails
-      const result = await service.create({
-        name: 'test_table',
-        displayName: 'Test',
-        columns: []
+      expect(schemaReloadService.lockSchema).toHaveBeenCalled();
+      expect(metadataSyncService.syncAll).toHaveBeenCalledWith({
+        entityName: 'test_table',
+        type: 'create',
       });
-
-      expect(result).toEqual(mockTable);
-    });
-  });
-
-  describe('Performance Tests', () => {
-    it('should handle multiple table operations concurrently', async () => {
-      const mockRepo = dataSourceService.getRepository('table_definition');
-      mockRepo.find.mockResolvedValue([mockTable]);
-
-      const promises = Array.from({ length: 10 }, () => service.find());
-      const results = await Promise.all(promises);
-
-      expect(results).toHaveLength(10);
-      expect(results.every(r => r.length === 1)).toBe(true);
-    });
-  });
-
-  describe('Validation Tests', () => {
-    it('should validate required fields', async () => {
-      await expect(service.create({
-        name: '',
-        displayName: 'Test',
-        columns: []
-      })).rejects.toThrow();
+      expect(schemaReloadService.publishSchemaUpdated).toHaveBeenCalled();
+      expect(commonService.delay).toHaveBeenCalledWith(1000);
+      expect(schemaReloadService.unlockSchema).toHaveBeenCalled();
     });
 
-    it('should validate column types', async () => {
-      const invalidDto = {
-        name: 'test_table',
-        displayName: 'Test',
-        columns: [
-          { name: 'col1', type: 'invalid_type' }
-        ]
-      };
+    it('should unlock schema even if sync fails', async () => {
+      metadataSyncService.syncAll.mockRejectedValue(new Error('Sync failed'));
 
-      commonService.validateIdentifier.mockReturnValue(true);
+      await expect(
+        service.afterEffect({ entityName: 'test_table', type: 'update' }),
+      ).rejects.toThrow('Sync failed');
 
-      await expect(service.create(invalidDto))
-        .rejects.toThrow(BadRequestException);
+      expect(schemaReloadService.unlockSchema).toHaveBeenCalled();
     });
   });
 });

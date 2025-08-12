@@ -123,8 +123,8 @@ async function writeEntitiesFromSnapshot() {
     manipulationSettings: { quoteKind: QuoteKind.Single },
   });
 
-  const entitiesDir = path.resolve(process.cwd(), 'src/entities');
-  const distEntitiesDir = path.resolve(process.cwd(), 'dist/src/entities');
+  const entitiesDir = path.resolve(process.cwd(), 'src/core/database/entities');
+  const distEntitiesDir = path.resolve(process.cwd(), 'dist/src/core/database/entities');
 
   if (!fs.existsSync(entitiesDir))
     fs.mkdirSync(entitiesDir, { recursive: true });
@@ -379,7 +379,7 @@ async function compileEntitiesToJS(project: Project, outputDir: string) {
     const filePath = sourceFile.getFilePath();
     const content = sourceFile.getFullText();
     const relativePath = path.relative(
-      path.resolve(process.cwd(), 'src/entities'),
+      path.resolve(process.cwd(), 'src/core/database/entities'),
       filePath,
     );
     compileProject.createSourceFile(relativePath, content);
@@ -455,7 +455,7 @@ export async function initializeDatabase() {
     username: DB_USERNAME,
     password: DB_PASSWORD,
     database: DB_NAME,
-    entities: [path.resolve(process.cwd(), 'dist/src/entities/*.entity.js')],
+    entities: [path.resolve(process.cwd(), 'dist/src/core/database/entities/*.entity.js')],
     synchronize: true,
     logging: false,
   });

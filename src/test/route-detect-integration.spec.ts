@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RouteDetectMiddleware } from '../middleware/route-detect.middleware';
-import { RouteCacheService } from '../redis/route-cache.service';
-import { CommonService } from '../common/common.service';
-import { DataSourceService } from '../data-source/data-source.service';
+import { RouteDetectMiddleware } from "./shared/middleware/route-detect.middleware";
+import { RouteCacheService } from '../../infrastructure/redis/services/route-cache.service';
+import { CommonService } from '../../shared/common/services/common.service';
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { JwtService } from '@nestjs/jwt';
-import { TableHandlerService } from '../table/table.service';
-import { RedisLockService } from '../redis/redis-lock.service';
-import { QueryEngine } from '../query-engine/query-engine.service';
-import { SystemProtectionService } from '../dynamic-repo/system-protection.service';
-import { BcryptService } from '../auth/bcrypt.service';
+import { TableHandlerService } from '../../modules/table-management/services/table.service';
+import { RedisLockService } from '../../infrastructure/redis/services/redis-lock.service';
+import { QueryEngine } from '../../infrastructure/query-engine/services/query-engine.service';
+import { SystemProtectionService } from '../../modules/dynamic-api/services/system-protection.service';
+import { BcryptService } from '../../core/auth/services/bcrypt.service';
 
 interface MockRequest {
   method: string;
@@ -33,10 +33,10 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       targetTables: [],
       hooks: [],
       handlers: [
-        { id: 1, method: { method: 'GET' }, logic: 'return { success: true }' }
+        { id: 1, method: { method: 'GET' }, logic: 'return { success: true }' },
       ],
       publishedMethods: [{ method: 'GET' }],
-      routePermissions: []
+      routePermissions: [],
     },
     {
       id: 2,
@@ -45,21 +45,25 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       mainTable: { id: 2, name: 'post_table' },
       targetTables: [{ id: 3, name: 'comment_table', alias: 'comments' }],
       hooks: [
-        { 
-          id: 1, 
-          priority: 1, 
-          methods: [{ method: 'POST' }], 
+        {
+          id: 1,
+          priority: 1,
+          methods: [{ method: 'POST' }],
           route: { id: 2 },
-          isEnabled: true 
-        }
+          isEnabled: true,
+        },
       ],
       handlers: [
         { id: 2, method: { method: 'GET' }, logic: 'return { success: true }' },
-        { id: 3, method: { method: 'POST' }, logic: 'return { created: true }' }
+        {
+          id: 3,
+          method: { method: 'POST' },
+          logic: 'return { created: true }',
+        },
       ],
       publishedMethods: [{ method: 'POST' }],
-      routePermissions: []
-    }
+      routePermissions: [],
+    },
   ];
 
   beforeEach(async () => {
@@ -90,13 +94,25 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       providers: [
         RouteDetectMiddleware,
         { provide: CommonService, useValue: mockServices.commonService },
-        { provide: DataSourceService, useValue: mockServices.dataSourceService },
+        {
+          provide: DataSourceService,
+          useValue: mockServices.dataSourceService,
+        },
         { provide: JwtService, useValue: mockServices.jwtService },
-        { provide: TableHandlerService, useValue: mockServices.tableHandlerService },
+        {
+          provide: TableHandlerService,
+          useValue: mockServices.tableHandlerService,
+        },
         { provide: RedisLockService, useValue: mockServices.redisLockService },
         { provide: QueryEngine, useValue: mockServices.queryEngine },
-        { provide: RouteCacheService, useValue: mockServices.routeCacheService },
-        { provide: SystemProtectionService, useValue: mockServices.systemProtectionService },
+        {
+          provide: RouteCacheService,
+          useValue: mockServices.routeCacheService,
+        },
+        {
+          provide: SystemProtectionService,
+          useValue: mockServices.systemProtectionService,
+        },
         { provide: BcryptService, useValue: mockServices.bcryptService },
       ],
     }).compile();
@@ -115,7 +131,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       // Arrange
       routeCacheService.getRoutesWithSWR.mockResolvedValue(mockRoutes);
       commonService.isRouteMatched.mockReturnValue({
-        params: { id: '123' }
+        params: { id: '123' },
       });
 
       const mockReq: MockRequest = {
@@ -123,7 +139,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/users',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -135,7 +151,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       expect(routeCacheService.getRoutesWithSWR).toHaveBeenCalledTimes(1);
       expect(commonService.isRouteMatched).toHaveBeenCalledWith({
         routePath: '/users',
-        reqPath: '/users'
+        reqPath: '/users',
       });
       expect(mockReq.routeData).toBeDefined();
       expect(mockReq.routeData.id).toBe(1);
@@ -150,7 +166,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/nonexistent',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -166,19 +182,23 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
 
     it('should handle SWR cache errors gracefully', async () => {
       // Arrange
-      routeCacheService.getRoutesWithSWR.mockRejectedValue(new Error('Cache service error'));
+      routeCacheService.getRoutesWithSWR.mockRejectedValue(
+        new Error('Cache service error'),
+      );
       const mockReq: MockRequest = {
         method: 'GET',
         baseUrl: '/users',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
 
       // Act & Assert
-      await expect(middleware.use(mockReq, mockRes, mockNext)).rejects.toThrow('Cache service error');
+      await expect(middleware.use(mockReq, mockRes, mockNext)).rejects.toThrow(
+        'Cache service error',
+      );
     });
   });
 
@@ -193,7 +213,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/users',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -218,7 +238,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/posts',
         query: {},
         body: { title: 'Test Post' },
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -237,8 +257,12 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       const routeWithId = {
         ...mockRoutes[0],
         handlers: [
-          { id: 3, method: { method: 'DELETE' }, logic: 'return { deleted: true }' }
-        ]
+          {
+            id: 3,
+            method: { method: 'DELETE' },
+            logic: 'return { deleted: true }',
+          },
+        ],
       };
       routeCacheService.getRoutesWithSWR.mockResolvedValue([routeWithId]);
       commonService.isRouteMatched
@@ -250,7 +274,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/users/123',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -275,7 +299,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/posts',
         query: { include: 'comments' },
         body: {},
-        user: { id: 1, name: 'test user' }
+        user: { id: 1, name: 'test user' },
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -288,7 +312,10 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       expect(mockReq.routeData.context.$repos).toBeDefined();
       expect(mockReq.routeData.context.$repos.main).toBeDefined();
       expect(mockReq.routeData.context.$repos.comments).toBeDefined();
-      expect(mockReq.routeData.context.$user).toEqual({ id: 1, name: 'test user' });
+      expect(mockReq.routeData.context.$user).toEqual({
+        id: 1,
+        name: 'test user',
+      });
       expect(mockReq.routeData.context.$query).toEqual({ include: 'comments' });
       expect(mockReq.routeData.context.$body).toEqual({});
     });
@@ -301,10 +328,12 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
           { id: 1, name: 'table_definition' },
           { id: 2, name: 'column_definition' },
           { id: 3, name: 'relation_definition' },
-          { id: 4, name: 'user_table' }
-        ]
+          { id: 4, name: 'user_table' },
+        ],
       };
-      routeCacheService.getRoutesWithSWR.mockResolvedValue([routeWithSystemTables]);
+      routeCacheService.getRoutesWithSWR.mockResolvedValue([
+        routeWithSystemTables,
+      ]);
       commonService.isRouteMatched.mockReturnValue({ params: {} });
 
       const mockReq: MockRequest = {
@@ -312,7 +341,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/posts',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -326,8 +355,12 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       expect(mockReq.routeData.context.$repos.user_table).toBeDefined();
       // System tables should be filtered out
       expect(mockReq.routeData.context.$repos.table_definition).toBeUndefined();
-      expect(mockReq.routeData.context.$repos.column_definition).toBeUndefined();
-      expect(mockReq.routeData.context.$repos.relation_definition).toBeUndefined();
+      expect(
+        mockReq.routeData.context.$repos.column_definition,
+      ).toBeUndefined();
+      expect(
+        mockReq.routeData.context.$repos.relation_definition,
+      ).toBeUndefined();
     });
   });
 
@@ -338,15 +371,15 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         priority: 0,
         methods: [],
         route: null,
-        isEnabled: true
+        isEnabled: true,
       },
       {
         id: 2,
         priority: 1,
         methods: [{ method: 'GET' }],
         route: null,
-        isEnabled: true
-      }
+        isEnabled: true,
+      },
     ];
 
     const localHooks = [
@@ -355,22 +388,22 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         priority: 2,
         methods: [],
         route: { id: 1 },
-        isEnabled: true
+        isEnabled: true,
       },
       {
         id: 4,
         priority: 3,
         methods: [{ method: 'POST' }],
         route: { id: 1 },
-        isEnabled: true
-      }
+        isEnabled: true,
+      },
     ];
 
     it('should include global hooks for all methods', async () => {
       // Arrange
       const routeWithHooks = {
         ...mockRoutes[0],
-        hooks: [...globalHooks, ...localHooks]
+        hooks: [...globalHooks, ...localHooks],
       };
       routeCacheService.getRoutesWithSWR.mockResolvedValue([routeWithHooks]);
       commonService.isRouteMatched.mockReturnValue({ params: {} });
@@ -380,7 +413,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/users',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -391,17 +424,17 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       // Assert
       const filteredHooks = mockReq.routeData.hooks;
       expect(filteredHooks).toHaveLength(3); // global all + global GET + local all
-      expect(filteredHooks.some(h => h.id === 1)).toBe(true); // Global all methods
-      expect(filteredHooks.some(h => h.id === 2)).toBe(true); // Global GET
-      expect(filteredHooks.some(h => h.id === 3)).toBe(true); // Local all methods
-      expect(filteredHooks.some(h => h.id === 4)).toBe(false); // Local POST should be excluded
+      expect(filteredHooks.some((h) => h.id === 1)).toBe(true); // Global all methods
+      expect(filteredHooks.some((h) => h.id === 2)).toBe(true); // Global GET
+      expect(filteredHooks.some((h) => h.id === 3)).toBe(true); // Local all methods
+      expect(filteredHooks.some((h) => h.id === 4)).toBe(false); // Local POST should be excluded
     });
 
     it('should include method-specific hooks only', async () => {
       // Arrange
       const routeWithHooks = {
         ...mockRoutes[0],
-        hooks: [...globalHooks, ...localHooks]
+        hooks: [...globalHooks, ...localHooks],
       };
       routeCacheService.getRoutesWithSWR.mockResolvedValue([routeWithHooks]);
       commonService.isRouteMatched.mockReturnValue({ params: {} });
@@ -411,7 +444,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/users',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -422,10 +455,10 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       // Assert
       const filteredHooks = mockReq.routeData.hooks;
       expect(filteredHooks).toHaveLength(3); // global all + local all + local POST
-      expect(filteredHooks.some(h => h.id === 1)).toBe(true); // Global all methods
-      expect(filteredHooks.some(h => h.id === 2)).toBe(false); // Global GET should be excluded
-      expect(filteredHooks.some(h => h.id === 3)).toBe(true); // Local all methods
-      expect(filteredHooks.some(h => h.id === 4)).toBe(true); // Local POST
+      expect(filteredHooks.some((h) => h.id === 1)).toBe(true); // Global all methods
+      expect(filteredHooks.some((h) => h.id === 2)).toBe(false); // Global GET should be excluded
+      expect(filteredHooks.some((h) => h.id === 3)).toBe(true); // Local all methods
+      expect(filteredHooks.some((h) => h.id === 4)).toBe(true); // Local POST
     });
   });
 
@@ -440,7 +473,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/users/123',
         query: { include: 'posts' },
         body: { name: 'test' },
-        user: { id: 1, role: 'admin' }
+        user: { id: 1, role: 'admin' },
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -476,7 +509,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/users',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -502,7 +535,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/users',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
@@ -527,7 +560,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: `/users/${i}`,
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       }));
 
       const responses = requests.map(() => ({}));
@@ -536,14 +569,16 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       // Act
       const startTime = Date.now();
       await Promise.all(
-        requests.map((req, i) => middleware.use(req, responses[i], nextFunctions[i]))
+        requests.map((req, i) =>
+          middleware.use(req, responses[i], nextFunctions[i]),
+        ),
       );
       const duration = Date.now() - startTime;
 
       // Assert
       expect(duration).toBeLessThan(200); // Concurrent requests should be fast
       expect(routeCacheService.getRoutesWithSWR).toHaveBeenCalledTimes(10);
-      nextFunctions.forEach(next => expect(next).toHaveBeenCalled());
+      nextFunctions.forEach((next) => expect(next).toHaveBeenCalled());
     });
   });
 
@@ -552,7 +587,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       // Arrange
       const routeWithBadTable = {
         ...mockRoutes[0],
-        mainTable: null // This should cause an error
+        mainTable: null, // This should cause an error
       };
       routeCacheService.getRoutesWithSWR.mockResolvedValue([routeWithBadTable]);
       commonService.isRouteMatched.mockReturnValue({ params: {} });
@@ -562,19 +597,21 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/users',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();
 
       // Act & Assert
-      await expect(middleware.use(mockReq, mockRes, mockNext)).rejects.toThrow();
+      await expect(
+        middleware.use(mockReq, mockRes, mockNext),
+      ).rejects.toThrow();
     });
 
     it('should continue processing even if some dynamic repos fail', async () => {
       // This test would require more complex mocking of DynamicRepoService
       // For now, we'll test that the middleware doesn't crash on edge cases
-      
+
       // Arrange
       routeCacheService.getRoutesWithSWR.mockResolvedValue([mockRoutes[1]]);
       commonService.isRouteMatched.mockReturnValue({ params: {} });
@@ -584,7 +621,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
         baseUrl: '/posts',
         query: {},
         body: {},
-        user: undefined
+        user: undefined,
       };
       const mockRes = {};
       const mockNext = jest.fn();

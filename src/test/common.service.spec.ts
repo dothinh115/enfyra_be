@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CommonService } from '../common/common.service';
-import { DataSourceService } from '../data-source/data-source.service';
+import { CommonService } from '../../shared/common/services/common.service';
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 
 describe('CommonService', () => {
   let service: CommonService;
@@ -48,8 +48,8 @@ describe('CommonService', () => {
         reqPath: '/users/123/posts/456',
       });
 
-      expect(result).toEqual({ 
-        params: { userId: '123', postId: '456' } 
+      expect(result).toEqual({
+        params: { userId: '123', postId: '456' },
       });
     });
 
@@ -157,7 +157,7 @@ describe('CommonService', () => {
     });
 
     it('should handle special characters safely', () => {
-      const input = "user@domain.com";
+      const input = 'user@domain.com';
       const result = service.sanitizeInput(input);
       expect(result).toBeDefined();
     });
@@ -174,29 +174,33 @@ describe('CommonService', () => {
     });
 
     it('should handle null/undefined inputs', () => {
-      expect(service.isRouteMatched({
-        routePath: null as any,
-        reqPath: '/users',
-      })).toBeNull();
+      expect(
+        service.isRouteMatched({
+          routePath: null as any,
+          reqPath: '/users',
+        }),
+      ).toBeNull();
 
-      expect(service.isRouteMatched({
-        routePath: '/users',
-        reqPath: null as any,
-      })).toBeNull();
+      expect(
+        service.isRouteMatched({
+          routePath: '/users',
+          reqPath: null as any,
+        }),
+      ).toBeNull();
     });
   });
 
   describe('Performance', () => {
     it('should handle route matching efficiently', () => {
       const startTime = Date.now();
-      
+
       for (let i = 0; i < 1000; i++) {
         service.isRouteMatched({
           routePath: '/users/:id',
           reqPath: `/users/${i}`,
         });
       }
-      
+
       const duration = Date.now() - startTime;
       expect(duration).toBeLessThan(100); // Should complete in under 100ms
     });

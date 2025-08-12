@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RedisLockService } from '../redis/redis-lock.service';
+import { RedisLockService } from '../../infrastructure/redis/services/redis-lock.service';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 
 describe('Simple Monitoring and Metrics', () => {
@@ -39,8 +39,11 @@ describe('Simple Monitoring and Metrics', () => {
 
   describe('Performance Metrics', () => {
     it('should measure operation response time', async () => {
-      mockRedis.get.mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve('"test-data"'), 50))
+      mockRedis.get.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve('"test-data"'), 50),
+          ),
       );
 
       const startTime = Date.now();
@@ -54,13 +57,13 @@ describe('Simple Monitoring and Metrics', () => {
 
     it('should track memory usage during operations', async () => {
       const initialMemory = process.memoryUsage();
-      
+
       mockRedis.set.mockResolvedValue('OK');
       mockRedis.pttl.mockResolvedValue(30000);
 
       // Perform multiple operations
       const promises = Array.from({ length: 100 }, (_, i) =>
-        redisLockService.acquire(`key-${i}`, `value-${i}`, 1000)
+        redisLockService.acquire(`key-${i}`, `value-${i}`, 1000),
       );
 
       await Promise.all(promises);
@@ -85,14 +88,14 @@ describe('Simple Monitoring and Metrics', () => {
       });
 
       await Promise.all(
-        Array.from({ length: 50 }, () => redisLockService.get('cpu-test'))
+        Array.from({ length: 50 }, () => redisLockService.get('cpu-test')),
       );
 
       const cpuUsage = process.cpuUsage(startCPU);
       const totalCPU = cpuUsage.user + cpuUsage.system;
 
       expect(totalCPU).toBeGreaterThan(0);
-      
+
       // Convert to milliseconds
       const cpuTimeMs = totalCPU / 1000;
       expect(cpuTimeMs).toBeLessThan(1000);
@@ -119,12 +122,16 @@ describe('Simple Monitoring and Metrics', () => {
 
       const results = await Promise.allSettled(
         Array.from({ length: 100 }, (_, i) =>
-          redisLockService.acquire(`key-${i}`, `value-${i}`, 1000)
-        )
+          redisLockService.acquire(`key-${i}`, `value-${i}`, 1000),
+        ),
       );
 
-      const actualSuccesses = results.filter(r => r.status === 'fulfilled').length;
-      const actualFailures = results.filter(r => r.status === 'rejected').length;
+      const actualSuccesses = results.filter(
+        (r) => r.status === 'fulfilled',
+      ).length;
+      const actualFailures = results.filter(
+        (r) => r.status === 'rejected',
+      ).length;
 
       expect(actualSuccesses).toBeGreaterThan(60); // At least 60% success
       expect(actualFailures).toBeGreaterThan(0); // Some failures expected
@@ -139,12 +146,12 @@ describe('Simple Monitoring and Metrics', () => {
       const errorTypes = {
         timeout: 0,
         connection: 0,
-        other: 0
+        other: 0,
       };
 
       mockRedis.set.mockImplementation(() => {
         const errorType = Math.random();
-        
+
         if (errorType < 0.3) {
           errorTypes.timeout++;
           return Promise.reject(new Error('Operation timeout'));
@@ -163,13 +170,14 @@ describe('Simple Monitoring and Metrics', () => {
 
       await Promise.allSettled(
         Array.from({ length: 50 }, (_, i) =>
-          redisLockService.acquire(`error-key-${i}`, 'value', 1000)
-        )
+          redisLockService.acquire(`error-key-${i}`, 'value', 1000),
+        ),
       );
 
-      const totalErrors = errorTypes.timeout + errorTypes.connection + errorTypes.other;
+      const totalErrors =
+        errorTypes.timeout + errorTypes.connection + errorTypes.other;
       expect(totalErrors).toBeGreaterThan(0);
-      
+
       // Should have different types of errors
       expect(errorTypes.timeout).toBeGreaterThan(0);
       expect(errorTypes.connection).toBeGreaterThan(0);
@@ -185,8 +193,8 @@ describe('Simple Monitoring and Metrics', () => {
 
       await Promise.all(
         Array.from({ length: operationCount }, (_, i) =>
-          redisLockService.get(`throughput-key-${i}`)
-        )
+          redisLockService.get(`throughput-key-${i}`),
+        ),
       );
 
       const duration = Date.now() - startTime;
@@ -197,8 +205,8 @@ describe('Simple Monitoring and Metrics', () => {
     });
 
     it('should handle concurrent load gracefully', async () => {
-      mockRedis.set.mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve('OK'), 10))
+      mockRedis.set.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve('OK'), 10)),
       );
       mockRedis.pttl.mockResolvedValue(30000);
 
@@ -207,12 +215,14 @@ describe('Simple Monitoring and Metrics', () => {
 
       const results = await Promise.allSettled(
         Array.from({ length: concurrentOperations }, (_, i) =>
-          redisLockService.acquire(`concurrent-${i}`, 'value', 5000)
-        )
+          redisLockService.acquire(`concurrent-${i}`, 'value', 5000),
+        ),
       );
 
       const duration = Date.now() - startTime;
-      const successfulOperations = results.filter(r => r.status === 'fulfilled').length;
+      const successfulOperations = results.filter(
+        (r) => r.status === 'fulfilled',
+      ).length;
 
       expect(successfulOperations).toBe(concurrentOperations);
       expect(duration).toBeLessThan(2000); // Should handle concurrency well
@@ -235,8 +245,9 @@ describe('Simple Monitoring and Metrics', () => {
         }
       });
 
-      const operations = Array.from({ length: 100 }, (_, i) =>
-        redisLockService.get(`cache-key-${i % 20}`) // 20 unique keys with repeats
+      const operations = Array.from(
+        { length: 100 },
+        (_, i) => redisLockService.get(`cache-key-${i % 20}`), // 20 unique keys with repeats
       );
 
       await Promise.all(operations);
@@ -275,7 +286,7 @@ describe('Simple Monitoring and Metrics', () => {
       // Fill cache beyond capacity
       for (let i = 0; i < 75; i++) {
         await redisLockService.set(`item-${i}`, { data: i }, 60000);
-        
+
         // Occasionally trigger manual evictions
         if (i % 20 === 0 && i > 0) {
           await redisLockService.deleteKey(`old-item-${i - 20}`);
@@ -290,16 +301,16 @@ describe('Simple Monitoring and Metrics', () => {
   describe('Health Check Metrics', () => {
     it('should monitor service health and availability', async () => {
       const healthChecks = [];
-      
+
       mockRedis.get.mockImplementation(() => {
         const responseTime = Math.random() * 100; // 0-100ms
         const isHealthy = responseTime < 80; // Healthy if under 80ms
-        
+
         healthChecks.push({
           timestamp: Date.now(),
           responseTime,
           isHealthy,
-          status: isHealthy ? 'healthy' : 'degraded'
+          status: isHealthy ? 'healthy' : 'degraded',
         });
 
         if (isHealthy) {
@@ -311,17 +322,19 @@ describe('Simple Monitoring and Metrics', () => {
 
       // Perform health checks
       await Promise.allSettled(
-        Array.from({ length: 20 }, () => redisLockService.get('health-check'))
+        Array.from({ length: 20 }, () => redisLockService.get('health-check')),
       );
 
-      const healthyChecks = healthChecks.filter(hc => hc.isHealthy).length;
-      const degradedChecks = healthChecks.filter(hc => !hc.isHealthy).length;
-      const averageResponseTime = healthChecks.reduce((sum, hc) => sum + hc.responseTime, 0) / healthChecks.length;
+      const healthyChecks = healthChecks.filter((hc) => hc.isHealthy).length;
+      const degradedChecks = healthChecks.filter((hc) => !hc.isHealthy).length;
+      const averageResponseTime =
+        healthChecks.reduce((sum, hc) => sum + hc.responseTime, 0) /
+        healthChecks.length;
 
       expect(healthChecks).toHaveLength(20);
       expect(healthyChecks).toBeGreaterThan(0);
       expect(averageResponseTime).toBeLessThan(100);
-      
+
       // Calculate availability percentage
       const availability = (healthyChecks / healthChecks.length) * 100;
       expect(availability).toBeGreaterThan(0);

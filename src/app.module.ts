@@ -1,39 +1,40 @@
 import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { DynamicModule } from './dynamic/dynamic.module';
-import { TableModule } from './table/table.module';
+import { DynamicModule } from './modules/dynamic-api/dynamic.module';
+import { TableModule } from './modules/table-management/table.module';
 import * as path from 'path';
-import { RabbitMQRegistry } from './rabbitmq/rabbitmq.service';
-import { DataSourceModule } from './data-source/data-source.module';
-import { CommonModule } from './common/common.module';
-import { AutoModule } from './auto/auto.module';
-import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
-import { JwtAuthGuard } from './guard/jwt-auth.guard';
-import { JwtStrategy } from './auth/jwt.strategy';
+import { RabbitMQRegistry } from './infrastructure/rabbitmq/services/rabbitmq.service';
+import { DataSourceModule } from './core/database/data-source/data-source.module';
+import { CommonModule } from './shared/common/common.module';
+import { AutoModule } from './modules/code-generation/auto.module';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { JwtAuthGuard } from './core/auth/guards/jwt-auth.guard';
+import { JwtStrategy } from './core/auth/services/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
-import { HideFieldInterceptor } from './interceptors/hidden-field.interceptor';
-import { AuthModule } from './auth/auth.module';
-import { RoleGuard } from './guard/role.guard';
-import { MeModule } from './me/me.module';
-import { RouteDetectMiddleware } from './middleware/route-detect.middleware';
-import { NotFoundDetectGuard } from './guard/not-found-detect.guard';
-import { SchemaReloadService } from './schema/schema-reload.service';
-import { RedisPubSubService } from './redis/redis-pubsub.service';
-import { SchemaStateService } from './schema/schema-state.service';
-import { SchemaLockGuard } from './guard/schema-lock.guard';
-import { SqlFunctionService } from './sql/sql-function.service';
-import { MetadataSyncService } from './metadata/metadata-sync.service';
-import { SchemaHistoryService } from './metadata/schema-history.service';
-import { BootstrapModule } from './bootstrap/bootstrap.module';
+import { HideFieldInterceptor } from './shared/interceptors/hidden-field.interceptor';
+import { AuthModule } from './core/auth/auth.module';
+import { RoleGuard } from './core/auth/guards/role.guard';
+import { MeModule } from './modules/user/me.module';
+import { RouteDetectMiddleware } from './shared/middleware/route-detect.middleware';
+import { NotFoundDetectGuard } from './core/auth/guards/not-found-detect.guard';
+import { SchemaReloadService } from './modules/schema-management/services/schema-reload.service';
+import { RedisPubSubService } from './infrastructure/redis/services/redis-pubsub.service';
+import { SchemaStateService } from './modules/schema-management/services/schema-state.service';
+import { SchemaLockGuard } from './core/auth/guards/schema-lock.guard';
+import { SqlFunctionService } from './infrastructure/sql/services/sql-function.service';
+import { MetadataSyncService } from './modules/schema-management/services/metadata-sync.service';
+import { SchemaHistoryService } from './modules/schema-management/services/schema-history.service';
+import { BootstrapModule } from './core/bootstrap/bootstrap.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
-import { GraphqlModule } from './graphql/graphql.module';
-import { QueryEngineModule } from './query-engine/query-engine.module';
-import { DynamicInterceptor } from './interceptors/dynamic.interceptor';
-import { HandlerExecutorModule } from './handler-executor/hanler-executor.module';
-import { RouteCacheService } from './redis/route-cache.service';
-import { ParseQueryMiddleware } from './middleware/parse-query.middleware';
-import { SystemProtectionService } from './dynamic-repo/system-protection.service';
-import { ErrorHandlingModule } from './error-handling/error-handling.module';
+import { GraphqlModule } from './modules/graphql/graphql.module';
+import { QueryEngineModule } from './infrastructure/query-engine/query-engine.module';
+import { DynamicInterceptor } from './shared/interceptors/dynamic.interceptor';
+import { HandlerExecutorModule } from './infrastructure/handler-executor/hanler-executor.module';
+import { RouteCacheService } from './infrastructure/redis/services/route-cache.service';
+import { ParseQueryMiddleware } from './shared/middleware/parse-query.middleware';
+import { SystemProtectionService } from './modules/dynamic-api/services/system-protection.service';
+import { ExceptionsModule } from './core/exceptions/exceptions.module';
+import { RequestContextMiddleware } from './core/exceptions/middleware/request-context.middleware';
 
 @Global()
 @Module({
@@ -42,7 +43,7 @@ import { ErrorHandlingModule } from './error-handling/error-handling.module';
       isGlobal: true,
       envFilePath: path.resolve(__dirname, '../.env'),
     }),
-    ErrorHandlingModule,
+    ExceptionsModule,
     TableModule,
     CommonModule,
     DataSourceModule,
@@ -107,6 +108,7 @@ import { ErrorHandlingModule } from './error-handling/error-handling.module';
 })
 export class AppModule implements NestModule {
   async configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestContextMiddleware).forRoutes('*');
     consumer.apply(ParseQueryMiddleware).forRoutes('*');
     consumer.apply(RouteDetectMiddleware).forRoutes('*');
   }

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RedisLockService } from '../redis/redis-lock.service';
+import { RedisLockService } from '../../infrastructure/redis/services/redis-lock.service';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 
 describe('RedisLockService', () => {
@@ -49,7 +49,7 @@ describe('RedisLockService', () => {
         'test-value',
         'PX',
         30000,
-        'NX'
+        'NX',
       );
     });
 
@@ -63,7 +63,11 @@ describe('RedisLockService', () => {
     });
 
     it('should handle complex objects', async () => {
-      const complexValue = { id: 1, data: ['a', 'b'], nested: { key: 'value' } };
+      const complexValue = {
+        id: 1,
+        data: ['a', 'b'],
+        nested: { key: 'value' },
+      };
       mockRedis.set.mockResolvedValue('OK');
       mockRedis.pttl.mockResolvedValue(30000);
 
@@ -75,7 +79,7 @@ describe('RedisLockService', () => {
         JSON.stringify(complexValue),
         'PX',
         30000,
-        'NX'
+        'NX',
       );
     });
   });
@@ -154,7 +158,7 @@ describe('RedisLockService', () => {
         'test-key',
         '{"data":"test"}',
         'PX',
-        30000
+        30000,
       );
     });
 
@@ -163,10 +167,7 @@ describe('RedisLockService', () => {
 
       await service.set('test-key', { data: 'test' }, 0);
 
-      expect(mockRedis.set).toHaveBeenCalledWith(
-        'test-key',
-        '{"data":"test"}'
-      );
+      expect(mockRedis.set).toHaveBeenCalledWith('test-key', '{"data":"test"}');
     });
   });
 
@@ -221,8 +222,9 @@ describe('RedisLockService', () => {
     it('should handle Redis connection errors', async () => {
       mockRedis.set.mockRejectedValue(new Error('Redis connection failed'));
 
-      await expect(service.acquire('test-key', 'value', 30000))
-        .rejects.toThrow('Redis connection failed');
+      await expect(service.acquire('test-key', 'value', 30000)).rejects.toThrow(
+        'Redis connection failed',
+      );
     });
 
     it('should handle malformed Lua script responses', async () => {
@@ -240,12 +242,12 @@ describe('RedisLockService', () => {
       mockRedis.pttl.mockResolvedValue(30000);
 
       const promises = Array.from({ length: 100 }, (_, i) =>
-        service.acquire(`key-${i}`, `value-${i}`, 30000)
+        service.acquire(`key-${i}`, `value-${i}`, 30000),
       );
 
       const results = await Promise.all(promises);
 
-      expect(results.every(r => r === true)).toBe(true);
+      expect(results.every((r) => r === true)).toBe(true);
       expect(mockRedis.set).toHaveBeenCalledTimes(100);
     });
   });

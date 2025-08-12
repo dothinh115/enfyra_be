@@ -1,0 +1,23 @@
+import 'reflect-metadata';
+import { DataSource } from 'typeorm';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+export const createDataSource: (entities: any[]) => DataSource = (
+  entities: any[],
+) => {
+  return new DataSource({
+    type: process.env.DB_TYPE as 'mysql',
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT || '3306'),
+    username: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    synchronize: false,
+    entities,
+    migrations: [path.resolve('src', 'core', 'database', 'migrations', '*.js')],
+    logging: false,
+  });
+};

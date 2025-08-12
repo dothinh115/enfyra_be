@@ -5,7 +5,7 @@ import * as cors from 'cors';
 import * as express from 'express';
 import * as qs from 'qs';
 import { ConfigService } from '@nestjs/config';
-import { GraphqlService } from './graphql/graphql.service';
+import { GraphqlService } from './modules/graphql/services/graphql.service';
 import { initializeDatabase } from '../scripts/init-db';
 
 async function bootstrap() {

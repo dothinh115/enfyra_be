@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HandlerExecutorService } from '../handler-executor/handler-executor.service';
-import { ExecutorPoolService } from '../handler-executor/executor-pool.service';
+import { HandlerExecutorService } from '../../infrastructure/handler-executor/services/handler-executor.service';
+import { ExecutorPoolService } from '../../infrastructure/handler-executor/services/executor-pool.service';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { smartMergeContext } from '../handler-executor/utils/smart-merge';
 

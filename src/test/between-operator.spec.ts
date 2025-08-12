@@ -1,12 +1,7 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  DataSource,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, DataSource } from 'typeorm';
 import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
-import { QueryEngine } from '../query-engine/query-engine.service';
-import { DataSourceService } from '../data-source/data-source.service';
+import { QueryEngine } from '../../infrastructure/query-engine/services/query-engine.service';
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 
 @Entity('test_product')
 class TestProduct {
@@ -46,7 +41,7 @@ describe('QueryEngine - _between operator tests', () => {
     // Seed test data
     const productRepo = dataSource.getRepository(TestProduct);
     const products: TestProduct[] = [];
-    
+
     // Create products with various prices, ratings, and dates
     for (let i = 1; i <= 20; i++) {
       const product = new TestProduct();
@@ -57,7 +52,7 @@ describe('QueryEngine - _between operator tests', () => {
       product.releaseDate = new Date(2024, i % 12, 1); // Various months in 2024
       products.push(product);
     }
-    
+
     await productRepo.save(products);
 
     // Create DataSourceService
@@ -85,7 +80,9 @@ describe('QueryEngine - _between operator tests', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBe(7); // Products 4-10 (prices 200-500)
-      expect(result.data.every(p => p.price >= 200 && p.price <= 500)).toBe(true);
+      expect(result.data.every((p) => p.price >= 200 && p.price <= 500)).toBe(
+        true,
+      );
       expect(result.data[0].price).toBe(200);
       expect(result.data[result.data.length - 1].price).toBe(500);
     });
@@ -99,7 +96,9 @@ describe('QueryEngine - _between operator tests', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBe(7); // Products 4-10 (prices 200-500)
-      expect(result.data.every(p => p.price >= 200 && p.price <= 500)).toBe(true);
+      expect(result.data.every((p) => p.price >= 200 && p.price <= 500)).toBe(
+        true,
+      );
     });
 
     it('should handle _between with float values (array format)', async () => {
@@ -110,7 +109,9 @@ describe('QueryEngine - _between operator tests', () => {
       });
 
       expect(result.data).toBeDefined();
-      expect(result.data.every(p => p.rating >= 1.5 && p.rating <= 2.5)).toBe(true);
+      expect(result.data.every((p) => p.rating >= 1.5 && p.rating <= 2.5)).toBe(
+        true,
+      );
     });
 
     it('should handle _between with float values (string format)', async () => {
@@ -121,7 +122,9 @@ describe('QueryEngine - _between operator tests', () => {
       });
 
       expect(result.data).toBeDefined();
-      expect(result.data.every(p => p.rating >= 1.5 && p.rating <= 2.5)).toBe(true);
+      expect(result.data.every((p) => p.rating >= 1.5 && p.rating <= 2.5)).toBe(
+        true,
+      );
     });
 
     it('should handle _between with spaces in string format', async () => {
@@ -132,7 +135,9 @@ describe('QueryEngine - _between operator tests', () => {
       });
 
       expect(result.data).toBeDefined();
-      expect(result.data.every(p => p.price >= 300 && p.price <= 700)).toBe(true);
+      expect(result.data.every((p) => p.price >= 300 && p.price <= 700)).toBe(
+        true,
+      );
     });
 
     it('should return empty when no values match _between range', async () => {
@@ -161,7 +166,7 @@ describe('QueryEngine - _between operator tests', () => {
     it('should handle _between with Date array for datetime fields', async () => {
       const startDate = new Date(2024, 0, 5); // Jan 5, 2024
       const endDate = new Date(2024, 0, 15); // Jan 15, 2024
-      
+
       const result = await queryEngine.find({
         tableName: 'test_product',
         filter: { createdAt: { _between: [startDate, endDate] } },
@@ -211,52 +216,72 @@ describe('QueryEngine - _between operator tests', () => {
 
   describe('_between error handling', () => {
     it('should throw error for invalid string format (not 2 values)', async () => {
-      await expect(queryEngine.find({
-        tableName: 'test_product',
-        filter: { price: { _between: '100' } },
-      })).rejects.toThrow('_between operator requires exactly 2 comma-separated values');
+      await expect(
+        queryEngine.find({
+          tableName: 'test_product',
+          filter: { price: { _between: '100' } },
+        }),
+      ).rejects.toThrow(
+        '_between operator requires exactly 2 comma-separated values',
+      );
     });
 
     it('should throw error for invalid string format (too many values)', async () => {
-      await expect(queryEngine.find({
-        tableName: 'test_product',
-        filter: { price: { _between: '100,200,300' } },
-      })).rejects.toThrow('_between operator requires exactly 2 comma-separated values');
+      await expect(
+        queryEngine.find({
+          tableName: 'test_product',
+          filter: { price: { _between: '100,200,300' } },
+        }),
+      ).rejects.toThrow(
+        '_between operator requires exactly 2 comma-separated values',
+      );
     });
 
     it('should throw error for invalid array format (not 2 values)', async () => {
-      await expect(queryEngine.find({
-        tableName: 'test_product',
-        filter: { price: { _between: [100] } },
-      })).rejects.toThrow('_between operator requires exactly 2 values');
+      await expect(
+        queryEngine.find({
+          tableName: 'test_product',
+          filter: { price: { _between: [100] } },
+        }),
+      ).rejects.toThrow('_between operator requires exactly 2 values');
     });
 
     it('should throw error for invalid array format (too many values)', async () => {
-      await expect(queryEngine.find({
-        tableName: 'test_product',
-        filter: { price: { _between: [100, 200, 300] } },
-      })).rejects.toThrow('_between operator requires exactly 2 values');
+      await expect(
+        queryEngine.find({
+          tableName: 'test_product',
+          filter: { price: { _between: [100, 200, 300] } },
+        }),
+      ).rejects.toThrow('_between operator requires exactly 2 values');
     });
 
     it('should throw error for invalid type (not string or array)', async () => {
-      await expect(queryEngine.find({
-        tableName: 'test_product',
-        filter: { price: { _between: 100 } },
-      })).rejects.toThrow('_between operator requires either a comma-separated string or array of 2 values');
+      await expect(
+        queryEngine.find({
+          tableName: 'test_product',
+          filter: { price: { _between: 100 } },
+        }),
+      ).rejects.toThrow(
+        '_between operator requires either a comma-separated string or array of 2 values',
+      );
     });
 
     it('should throw error for invalid numeric values', async () => {
-      await expect(queryEngine.find({
-        tableName: 'test_product',
-        filter: { price: { _between: 'abc,xyz' } },
-      })).rejects.toThrow('_between operator requires valid numeric values');
+      await expect(
+        queryEngine.find({
+          tableName: 'test_product',
+          filter: { price: { _between: 'abc,xyz' } },
+        }),
+      ).rejects.toThrow('_between operator requires valid numeric values');
     });
 
     it('should throw error for invalid date values', async () => {
-      await expect(queryEngine.find({
-        tableName: 'test_product',
-        filter: { createdAt: { _between: 'invalid-date,2024-01-15' } },
-      })).rejects.toThrow('Invalid date value');
+      await expect(
+        queryEngine.find({
+          tableName: 'test_product',
+          filter: { createdAt: { _between: 'invalid-date,2024-01-15' } },
+        }),
+      ).rejects.toThrow('Invalid date value');
     });
   });
 
@@ -267,16 +292,18 @@ describe('QueryEngine - _between operator tests', () => {
         filter: {
           _and: [
             { price: { _between: [200, 600] } },
-            { rating: { _gte: 2.0 } }
-          ]
+            { rating: { _gte: 2.0 } },
+          ],
         },
         sort: ['price'],
       });
 
       expect(result.data).toBeDefined();
-      expect(result.data.every(p => 
-        p.price >= 200 && p.price <= 600 && p.rating >= 2.0
-      )).toBe(true);
+      expect(
+        result.data.every(
+          (p) => p.price >= 200 && p.price <= 600 && p.rating >= 2.0,
+        ),
+      ).toBe(true);
     });
 
     it('should work with OR conditions', async () => {
@@ -285,17 +312,20 @@ describe('QueryEngine - _between operator tests', () => {
         filter: {
           _or: [
             { price: { _between: [100, 200] } },
-            { rating: { _between: '2.5,3.0' } }
-          ]
+            { rating: { _between: '2.5,3.0' } },
+          ],
         },
         sort: ['price'],
       });
 
       expect(result.data).toBeDefined();
-      expect(result.data.every(p => 
-        (p.price >= 100 && p.price <= 200) || 
-        (p.rating >= 2.5 && p.rating <= 3.0)
-      )).toBe(true);
+      expect(
+        result.data.every(
+          (p) =>
+            (p.price >= 100 && p.price <= 200) ||
+            (p.rating >= 2.5 && p.rating <= 3.0),
+        ),
+      ).toBe(true);
     });
 
     it('should work with multiple _between conditions', async () => {
@@ -304,18 +334,23 @@ describe('QueryEngine - _between operator tests', () => {
         filter: {
           price: { _between: [200, 800] },
           rating: { _between: '1.5,2.5' },
-          createdAt: { _between: ['2024-01-05', '2024-01-15'] }
+          createdAt: { _between: ['2024-01-05', '2024-01-15'] },
         },
         sort: ['price'],
       });
 
       expect(result.data).toBeDefined();
-      expect(result.data.every(p => 
-        p.price >= 200 && p.price <= 800 &&
-        p.rating >= 1.5 && p.rating <= 2.5 &&
-        new Date(p.createdAt) >= new Date('2024-01-05') &&
-        new Date(p.createdAt) <= new Date('2024-01-15')
-      )).toBe(true);
+      expect(
+        result.data.every(
+          (p) =>
+            p.price >= 200 &&
+            p.price <= 800 &&
+            p.rating >= 1.5 &&
+            p.rating <= 2.5 &&
+            new Date(p.createdAt) >= new Date('2024-01-05') &&
+            new Date(p.createdAt) <= new Date('2024-01-15'),
+        ),
+      ).toBe(true);
     });
 
     it('should work with pagination', async () => {

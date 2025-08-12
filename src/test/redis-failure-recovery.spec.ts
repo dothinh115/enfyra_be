@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RedisLockService } from '../redis/redis-lock.service';
-import { RouteCacheService } from '../redis/route-cache.service';
-import { DataSourceService } from '../data-source/data-source.service';
+import { RedisLockService } from '../../infrastructure/redis/services/redis-lock.service';
+import { RouteCacheService } from '../../infrastructure/redis/services/route-cache.service';
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 
 describe('Redis Failure Recovery', () => {
@@ -26,9 +26,9 @@ describe('Redis Failure Recovery', () => {
 
     const mockDataSourceService = {
       getRepository: jest.fn().mockReturnValue({
-        find: jest.fn().mockResolvedValue([
-          { path: '/api/test', method: 'GET' }
-        ])
+        find: jest
+          .fn()
+          .mockResolvedValue([{ path: '/api/test', method: 'GET' }]),
       }),
     };
 
@@ -58,15 +58,17 @@ describe('Redis Failure Recovery', () => {
     it('should handle Redis connection timeout', async () => {
       mockRedis.set.mockRejectedValue(new Error('Connection timeout'));
 
-      await expect(redisLockService.acquire('test-key', 'test-value', 30000))
-        .rejects.toThrow('Connection timeout');
+      await expect(
+        redisLockService.acquire('test-key', 'test-value', 30000),
+      ).rejects.toThrow('Connection timeout');
     });
 
     it('should handle Redis connection refused', async () => {
       mockRedis.get.mockRejectedValue(new Error('ECONNREFUSED'));
 
-      await expect(redisLockService.get('test-key'))
-        .rejects.toThrow('ECONNREFUSED');
+      await expect(redisLockService.get('test-key')).rejects.toThrow(
+        'ECONNREFUSED',
+      );
     });
 
     it('should handle Redis network errors gracefully', async () => {
@@ -82,8 +84,9 @@ describe('Redis Failure Recovery', () => {
       mockRedis.isReady.mockReturnValue(false);
       mockRedis.get.mockRejectedValue(new Error('Connection not ready'));
 
-      await expect(redisLockService.get('test-key'))
-        .rejects.toThrow('Connection not ready');
+      await expect(redisLockService.get('test-key')).rejects.toThrow(
+        'Connection not ready',
+      );
     });
   });
 
@@ -102,13 +105,13 @@ describe('Redis Failure Recovery', () => {
       }
 
       expect(failures).toHaveLength(5);
-      expect(failures.every(e => e.message === 'Redis down')).toBe(true);
+      expect(failures.every((e) => e.message === 'Redis down')).toBe(true);
     });
 
     it('should recover after Redis comes back online', async () => {
       // First call fails
       mockRedis.set.mockRejectedValueOnce(new Error('Redis down'));
-      
+
       try {
         await redisLockService.acquire('test-key', 'test-value', 1000);
       } catch (error) {
@@ -119,7 +122,11 @@ describe('Redis Failure Recovery', () => {
       mockRedis.set.mockResolvedValueOnce('OK');
       mockRedis.pttl.mockResolvedValueOnce(1000);
 
-      const result = await redisLockService.acquire('test-key-2', 'test-value', 1000);
+      const result = await redisLockService.acquire(
+        'test-key-2',
+        'test-value',
+        1000,
+      );
       expect(result).toBe(true);
     });
 
@@ -141,7 +148,8 @@ describe('Redis Failure Recovery', () => {
       mockRedis.get.mockRejectedValue(new Error('Redis unavailable'));
 
       // Mock the background revalidation to succeed
-      jest.spyOn(routeCacheService as any, 'loadAndCacheRoutes')
+      jest
+        .spyOn(routeCacheService as any, 'loadAndCacheRoutes')
         .mockResolvedValue([{ path: '/api/test', method: 'GET' }]);
 
       const routes = await routeCacheService.getRoutesWithSWR();
@@ -152,7 +160,8 @@ describe('Redis Failure Recovery', () => {
     it.skip('should handle corrupted cache data gracefully', async () => {
       mockRedis.get.mockResolvedValue('invalid-json-data{');
 
-      jest.spyOn(routeCacheService as any, 'loadAndCacheRoutes')
+      jest
+        .spyOn(routeCacheService as any, 'loadAndCacheRoutes')
         .mockResolvedValue([{ path: '/api/fallback', method: 'GET' }]);
 
       const routes = await routeCacheService.getRoutesWithSWR();
@@ -162,8 +171,11 @@ describe('Redis Failure Recovery', () => {
 
     it.skip('should implement exponential backoff for retries', async () => {
       const delays = [];
-      
-      jest.spyOn(global, 'setTimeout').mockImplementation(((callback: Function, delay: number) => {
+
+      jest.spyOn(global, 'setTimeout').mockImplementation(((
+        callback: Function,
+        delay: number,
+      ) => {
         delays.push(delay);
         callback();
         return {} as any;
@@ -205,15 +217,20 @@ describe('Redis Failure Recovery', () => {
       mockRedis.set
         .mockRejectedValueOnce(new Error('Connection reset'))
         .mockResolvedValueOnce('OK');
-      
+
       mockRedis.pttl.mockResolvedValue(30000);
 
       // First attempt fails
-      await expect(redisLockService.acquire('test-key', 'test-value', 30000))
-        .rejects.toThrow('Connection reset');
+      await expect(
+        redisLockService.acquire('test-key', 'test-value', 30000),
+      ).rejects.toThrow('Connection reset');
 
       // Second attempt succeeds after Redis restarts
-      const result = await redisLockService.acquire('test-key', 'test-value', 30000);
+      const result = await redisLockService.acquire(
+        'test-key',
+        'test-value',
+        30000,
+      );
       expect(result).toBe(true);
     });
 
@@ -232,8 +249,9 @@ describe('Redis Failure Recovery', () => {
       // Simulate network partition - can't communicate with Redis
       mockRedis.pttl.mockRejectedValue(new Error('Network partition'));
 
-      await expect(redisLockService.acquire('test-key', 'test-value', 30000))
-        .rejects.toThrow('Network partition');
+      await expect(
+        redisLockService.acquire('test-key', 'test-value', 30000),
+      ).rejects.toThrow('Network partition');
     });
 
     it('should implement distributed lock with Redis Sentinel', async () => {
@@ -245,10 +263,15 @@ describe('Redis Failure Recovery', () => {
       mockRedis.pttl.mockResolvedValue(30000);
 
       // Should retry and succeed with new master
-      await expect(redisLockService.acquire('test-key', 'test-value', 30000))
-        .rejects.toThrow('Master down');
+      await expect(
+        redisLockService.acquire('test-key', 'test-value', 30000),
+      ).rejects.toThrow('Master down');
 
-      const result = await redisLockService.acquire('test-key-2', 'test-value', 30000);
+      const result = await redisLockService.acquire(
+        'test-key-2',
+        'test-value',
+        30000,
+      );
       expect(result).toBe(true);
     });
   });
@@ -268,18 +291,20 @@ describe('Redis Failure Recovery', () => {
     it('should handle Redis memory pressure gracefully', async () => {
       mockRedis.set.mockRejectedValue(new Error('OOM command not allowed'));
 
-      await expect(redisLockService.set('test-key', { large: 'data' }, 30000))
-        .rejects.toThrow('OOM command not allowed');
+      await expect(
+        redisLockService.set('test-key', { large: 'data' }, 30000),
+      ).rejects.toThrow('OOM command not allowed');
     });
 
     it('should implement cache warming after Redis recovery', async () => {
       // Simulate Redis recovery
       mockRedis.get.mockResolvedValue(null); // Cache is empty after recovery
 
-      jest.spyOn(routeCacheService as any, 'loadAndCacheRoutes')
+      jest
+        .spyOn(routeCacheService as any, 'loadAndCacheRoutes')
         .mockResolvedValue([
           { path: '/api/users', method: 'GET' },
-          { path: '/api/posts', method: 'POST' }
+          { path: '/api/posts', method: 'POST' },
         ]);
 
       const routes = await routeCacheService.getRoutesWithSWR();
@@ -287,7 +312,7 @@ describe('Redis Failure Recovery', () => {
       expect(routes).toHaveLength(2);
       expect(routes).toEqual([
         { path: '/api/users', method: 'GET' },
-        { path: '/api/posts', method: 'POST' }
+        { path: '/api/posts', method: 'POST' },
       ]);
     });
   });
@@ -296,21 +321,24 @@ describe('Redis Failure Recovery', () => {
     it('should handle high concurrency during Redis issues', async () => {
       // Simulate intermittent Redis issues under load
       mockRedis.set.mockImplementation(() => {
-        return Math.random() > 0.3 
+        return Math.random() > 0.3
           ? Promise.resolve('OK')
           : Promise.reject(new Error('Intermittent failure'));
       });
 
       mockRedis.pttl.mockResolvedValue(30000);
 
-      const promises = Array.from({ length: 100 }, (_, i) =>
-        redisLockService.acquire(`key-${i}`, `value-${i}`, 1000)
-          .catch(() => false) // Convert rejections to false
+      const promises = Array.from(
+        { length: 100 },
+        (_, i) =>
+          redisLockService
+            .acquire(`key-${i}`, `value-${i}`, 1000)
+            .catch(() => false), // Convert rejections to false
       );
 
       const results = await Promise.all(promises);
-      const successes = results.filter(r => r === true);
-      const failures = results.filter(r => r === false);
+      const successes = results.filter((r) => r === true);
+      const failures = results.filter((r) => r === false);
 
       // At least 60% should succeed (70% success rate minus margin)
       expect(successes.length).toBeGreaterThan(60);
@@ -319,12 +347,15 @@ describe('Redis Failure Recovery', () => {
 
     it('should prevent Redis connection pool exhaustion', async () => {
       // Simulate slow Redis responses
-      mockRedis.get.mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve('"slow-response"'), 100))
+      mockRedis.get.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve('"slow-response"'), 100),
+          ),
       );
 
       const promises = Array.from({ length: 50 }, (_, i) =>
-        redisLockService.get(`key-${i}`)
+        redisLockService.get(`key-${i}`),
       );
 
       const startTime = Date.now();
@@ -332,8 +363,8 @@ describe('Redis Failure Recovery', () => {
       const duration = Date.now() - startTime;
 
       expect(results).toHaveLength(50);
-      expect(results.every(r => r === 'slow-response')).toBe(true);
-      
+      expect(results.every((r) => r === 'slow-response')).toBe(true);
+
       // Should complete within reasonable time despite slow responses
       expect(duration).toBeLessThan(2000);
     });
@@ -342,7 +373,7 @@ describe('Redis Failure Recovery', () => {
   describe('Monitoring and Alerting', () => {
     it.skip('should track Redis failure metrics', async () => {
       const failures = [];
-      
+
       // Mock failure tracking
       jest.spyOn(console, 'error').mockImplementation((message) => {
         failures.push(message);
@@ -361,7 +392,7 @@ describe('Redis Failure Recovery', () => {
 
     it('should emit alerts for prolonged Redis outages', async () => {
       const alerts = [];
-      
+
       // Mock alerting system
       jest.spyOn(console, 'warn').mockImplementation((message) => {
         alerts.push(message);
