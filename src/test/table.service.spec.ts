@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TableHandlerService } from '../../modules/table-management/services/table.service';
+import { TableHandlerService } from '../../modules/table-management/services/table-handler.service';
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { CommonService } from '../../shared/common/services/common.service';
 import { MetadataSyncService } from '../../modules/schema-management/services/metadata-sync.service';

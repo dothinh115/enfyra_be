@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Patch, Req } from '@nestjs/common';
 import { MeService } from '../services/me.service';
-import { Public } from "../../../core/auth/decorators/public-route.decorator";
+import { Public } from '../../../shared/decorators/public-route.decorator';
 import { Request } from 'express';
 
 @Controller('me')

@@ -1,16 +1,28 @@
-import { Injectable } from '@nestjs/common';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+// External packages
 import { Brackets } from 'typeorm';
-import { parseSortInput } from '../utils/parse-sort-input';
-import { walkFilter } from '../utils/walk-filter';
+
+// @nestjs packages
+import { Injectable, Logger } from '@nestjs/common';
+
+// Internal imports
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+import { LoggingService } from '../../../core/exceptions/services/logging.service';
+import { DatabaseQueryException, ResourceNotFoundException } from '../../../core/exceptions/custom-exceptions';
+
+// Relative imports
 import { buildJoinTree } from '../utils/build-join-tree';
+import { parseSortInput } from '../utils/parse-sort-input';
 import { resolveDeepRelations } from '../utils/resolve-deep';
+import { walkFilter } from '../utils/walk-filter';
 
 @Injectable()
 export class QueryEngine {
   private log: string[] = [];
 
-  constructor(private dataSourceService: DataSourceService) {}
+  constructor(
+    private dataSourceService: DataSourceService,
+    private loggingService: LoggingService,
+  ) {}
 
   async find(options: {
     tableName: string;
@@ -157,8 +169,43 @@ export class QueryEngine {
         }),
       };
     } catch (error) {
-      console.log(error);
-      throw error;
+      this.loggingService.error('Query execution failed', {
+        context: 'find',
+        error: error.message,
+        stack: error.stack,
+        tableName: options.tableName,
+        fields: options.fields,
+        filterPresent: !!options.filter,
+        sortPresent: !!options.sort,
+        page: options.page,
+        limit: options.limit,
+        hasDeepRelations: options.deep && Object.keys(options.deep).length > 0
+      });
+      
+      // Handle specific database errors
+      if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+        throw new ResourceNotFoundException('Table or Relation', options.tableName);
+      }
+      
+      if (error.message?.includes('column') && error.message?.includes('does not exist')) {
+        throw new DatabaseQueryException(
+          `Invalid column in query: ${error.message}`,
+          {
+            tableName: options.tableName,
+            fields: options.fields,
+            operation: 'query'
+          }
+        );
+      }
+      
+      throw new DatabaseQueryException(
+        `Query failed: ${error.message}`,
+        {
+          tableName: options.tableName,
+          operation: 'find',
+          originalError: error.message
+        }
+      );
     }
   }
 }

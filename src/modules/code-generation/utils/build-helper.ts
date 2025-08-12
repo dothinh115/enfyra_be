@@ -5,13 +5,13 @@ import { Project } from 'ts-morph';
 
 const logger = new Logger('BuildHelper');
 
-function walkDirectory(dir: string): string[] {
+function walkDirectoryForTypeScriptFiles(dir: string): string[] {
   const files: string[] = [];
   for (const file of fs.readdirSync(dir)) {
     const fullPath = path.join(dir, file);
     const stat = fs.statSync(fullPath);
     if (stat.isDirectory()) {
-      files.push(...walkDirectory(fullPath));
+      files.push(...walkDirectoryForTypeScriptFiles(fullPath));
     } else if (file.endsWith('.ts')) {
       files.push(fullPath);
     }
@@ -19,7 +19,7 @@ function walkDirectory(dir: string): string[] {
   return files;
 }
 
-export async function buildToJs({
+export async function buildTypeScriptToJs({
   targetDir,
   outDir,
 }: {
@@ -47,7 +47,7 @@ export async function buildToJs({
     });
 
     // Load TypeScript files into memory
-    const tsFiles = walkDirectory(targetDir);
+    const tsFiles = walkDirectoryForTypeScriptFiles(targetDir);
     for (const filePath of tsFiles) {
       const content = fs.readFileSync(filePath, 'utf8');
       const relativePath = path.relative(targetDir, filePath);

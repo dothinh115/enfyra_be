@@ -1,4 +1,4 @@
-import { HIDDEN_FIELD_KEY } from "../../../shared/utils/constant";
+import { HIDDEN_FIELD_KEY } from '../utils/constant';
 
 export function HiddenField(): PropertyDecorator {
   return (target, propertyKey) => {

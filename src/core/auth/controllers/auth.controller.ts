@@ -4,7 +4,7 @@ import { LoginAuthDto } from '../dto/login-auth.dto';
 import { LogoutAuthDto } from '../dto/logout-auth.dto';
 import { Request } from 'express';
 import { RefreshTokenAuthDto } from '../dto/refresh-token-auth.dto';
-import { Public } from "../decorators/public-route.decorator";
+import { Public } from '../../../shared/decorators/public-route.decorator';
 
 @Controller('auth')
 export class AuthController {

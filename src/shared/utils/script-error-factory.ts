@@ -19,7 +19,7 @@ import {
   FileUploadException,
   FileNotFoundException,
   FileSizeExceededException,
-} from "../../core/exceptions/custom-exceptions";
+} from '../../core/exceptions/custom-exceptions';
 
 /**
  * Factory to create error handlers for script execution context

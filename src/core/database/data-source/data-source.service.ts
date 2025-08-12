@@ -1,8 +1,17 @@
+// External packages
 import * as path from 'path';
-import { CommonService } from '../../../shared/common/services/common.service';
-import { createDataSource } from './data-source';
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource, EntitySchema, EntityTarget, Repository } from 'typeorm';
+
+// @nestjs packages
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+
+// Internal imports
+import { CommonService } from '../../../shared/common/services/common.service';
+import { LoggingService } from '../../exceptions/services/logging.service';
+import { DatabaseException, DatabaseConnectionException } from '../../exceptions/custom-exceptions';
+
+// Relative imports
+import { createDataSource } from './data-source';
 
 const entityDir = path.resolve('dist', 'src', 'core', 'database', 'entities');
 
@@ -12,7 +21,10 @@ export class DataSourceService implements OnModuleInit {
   private logger = new Logger(DataSourceService.name);
   entityClassMap: Map<string, Function> = new Map();
 
-  constructor(private commonService: CommonService) {}
+  constructor(
+    private commonService: CommonService,
+    private loggingService: LoggingService,
+  ) {}
 
   async onModuleInit() {
     this.logger.log('Preparing to assign and initialize DataSource.');
@@ -41,12 +53,23 @@ export class DataSourceService implements OnModuleInit {
       });
       return this.dataSource;
     } catch (error: any) {
-      this.logger.error(
-        '❌ Error during DataSource reinitialization:',
-        error.message,
-      );
-      this.logger.error(error.stack || error);
-      throw error;
+      this.loggingService.error('DataSource reinitialization failed', {
+        context: 'reloadDataSource',
+        error: error.message,
+        stack: error.stack,
+        entityDir: entityDir,
+        isDataSourceInitialized: this.dataSource?.isInitialized || false
+      });
+      
+      // Check if it's a connection error
+      if (error.code && ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT'].includes(error.code)) {
+        throw new DatabaseConnectionException();
+      }
+      
+      throw new DatabaseException(`DataSource initialization failed: ${error.message}`, {
+        entityDir: entityDir,
+        operation: 'reload-datasource'
+      });
     }
   }
 
@@ -54,7 +77,11 @@ export class DataSourceService implements OnModuleInit {
     identifier: string | Function | EntitySchema<any>,
   ): Repository<Entity> | null {
     if (!this.dataSource?.isInitialized) {
-      throw new Error('DataSource is not initialized!');
+      this.loggingService.error('DataSource not initialized', {
+        context: 'getRepository',
+        identifier: typeof identifier === 'string' ? identifier : 'non-string'
+      });
+      throw new DatabaseException('DataSource is not initialized');
     }
 
     let metadata;

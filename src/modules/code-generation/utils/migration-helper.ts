@@ -123,7 +123,13 @@ async function generateMigrationFileDirect() {
     'migrations',
     'AutoMigration',
   );
-  const needDeleteDir = path.resolve('dist', 'src', 'core', 'database', 'migrations');
+  const needDeleteDir = path.resolve(
+    'dist',
+    'src',
+    'core',
+    'database',
+    'migrations',
+  );
   const entityDir = path.resolve('dist', 'src', 'core', 'database', 'entities');
 
   logger.log('🚀 Generating migration using DataSource API...');
@@ -372,7 +378,13 @@ export async function runMigration() {
 
 async function runMigrationDirect() {
   const entityDir = path.resolve('dist', 'src', 'core', 'database', 'entities');
-  const migrationDir = path.resolve('dist', 'src', 'core', 'database', 'migrations');
+  const migrationDir = path.resolve(
+    'dist',
+    'src',
+    'core',
+    'database',
+    'migrations',
+  );
 
   logger.log('🚀 Running migration using DataSource API...');
 

@@ -12,5 +12,5 @@ export const importMap: Record<string, string> = {
   ManyToMany: 'typeorm',
   Unique: 'typeorm',
   Index: 'typeorm',
-  HiddenField: '../../../core/auth/decorators/hidden-field.decorator',
+  HiddenField: '../../../shared/decorators/hidden-field.decorator',
 };

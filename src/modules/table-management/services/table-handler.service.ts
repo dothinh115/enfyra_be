@@ -4,6 +4,13 @@ import { DataSourceService } from '../../../core/database/data-source/data-sourc
 import { MetadataSyncService } from '../../schema-management/services/metadata-sync.service';
 import { SchemaReloadService } from '../../schema-management/services/schema-reload.service';
 import { CommonService } from '../../../shared/common/services/common.service';
+import { LoggingService } from '../../../core/exceptions/services/logging.service';
+import { 
+  BusinessLogicException,
+  DatabaseException,
+  DuplicateResourceException,
+  ResourceNotFoundException 
+} from '../../../core/exceptions/custom-exceptions';
 import { validateUniquePropertyNames } from '../utils/duplicate-field-check';
 import { getDeletedIds } from '../utils/get-deleted-ids';
 import { CreateTableDto } from '../dto/create-table.dto';
@@ -17,6 +24,7 @@ export class TableHandlerService {
     private metadataSyncService: MetadataSyncService,
     private schemaReloadService: SchemaReloadService,
     private commonService: CommonService,
+    private loggingService: LoggingService,
   ) {}
 
   async createTable(body: any) {
@@ -90,8 +98,23 @@ export class TableHandlerService {
 
       return result;
     } catch (error) {
-      console.error(error.stack || error.message || error);
-      throw new Error(`Error: "${error.message}"`);
+      this.loggingService.error('Table creation failed', {
+        context: 'createTable',
+        error: error.message,
+        stack: error.stack,
+        tableName: body?.name,
+        columnCount: body?.columns?.length,
+        relationCount: body?.relations?.length
+      });
+      
+      if (error.message?.includes('already exists')) {
+        throw new DuplicateResourceException('Table', 'name', body?.name || 'unknown');
+      }
+      
+      throw new DatabaseException(`Failed to create table: ${error.message}`, {
+        tableName: body?.name,
+        operation: 'create'
+      });
     } finally {
       await queryRunner.release();
     }
@@ -142,7 +165,7 @@ export class TableHandlerService {
       if (deletedColumnIds.length) await columnRepo.delete(deletedColumnIds);
       if (deletedRelationIds.length)
         await relationRepo.delete(deletedRelationIds);
-      console.log(body);
+      this.logger.debug('Updating table with body:', body);
 
       // Update existing table properties
       Object.assign(exists, body);
@@ -168,8 +191,25 @@ export class TableHandlerService {
       await this.afterEffect({ entityName: result.name, type: 'update' });
       return result;
     } catch (error) {
-      console.error(error.stack || error.message || error);
-      throw error;
+      this.loggingService.error('Table update failed', {
+        context: 'updateTable',
+        error: error.message,
+        stack: error.stack,
+        tableId: id,
+        tableName: body?.name,
+        columnCount: body?.columns?.length,
+        relationCount: body?.relations?.length
+      });
+      
+      if (error.message?.includes('does not exist')) {
+        throw new ResourceNotFoundException('Table', id.toString());
+      }
+      
+      throw new DatabaseException(`Failed to update table: ${error.message}`, {
+        tableId: id,
+        tableName: body?.name,
+        operation: 'update'
+      });
     } finally {
       await queryRunner.release();
     }
@@ -180,9 +220,11 @@ export class TableHandlerService {
       this.dataSourceService.getRepository('table_definition');
     const dataSource = this.dataSourceService.getDataSource();
     const queryRunner = dataSource.createQueryRunner();
+    
+    let exists: any = null;
 
     try {
-      const exists = await tableDefRepo.findOne({ where: { id } });
+      exists = await tableDefRepo.findOne({ where: { id } });
 
       if (!exists) {
         throw new Error(`Table with id ${id} does not exist.`);
@@ -254,8 +296,23 @@ export class TableHandlerService {
       await this.afterEffect({ entityName: result.name, type: 'update' });
       return result;
     } catch (error) {
-      this.logger.error(`❌ Error deleting table:`, error);
-      throw new Error(`Error: "${error.message}"`);
+      this.loggingService.error('Table deletion failed', {
+        context: 'delete',
+        error: error.message,
+        stack: error.stack,
+        tableId: id,
+        tableName: exists?.name
+      });
+      
+      if (error.message?.includes('does not exist')) {
+        throw new ResourceNotFoundException('Table', id.toString());
+      }
+      
+      throw new DatabaseException(`Failed to delete table: ${error.message}`, {
+        tableId: id,
+        tableName: exists?.name,
+        operation: 'delete'
+      });
     } finally {
       await queryRunner.release();
     }
@@ -280,12 +337,21 @@ export class TableHandlerService {
       this.logger.log('✅ Unlocking schema');
       await this.schemaReloadService.unlockSchema();
     } catch (error) {
-      this.logger.error(
-        '❌ Error in afterEffect during schema synchronization:',
-        error,
-      );
+      this.loggingService.error('Schema synchronization failed', {
+        context: 'afterEffect',
+        error: error.message,
+        stack: error.stack,
+        entityName: options.entityName,
+        operationType: options.type
+      });
+      
       await this.schemaReloadService.unlockSchema();
-      throw error;
+      
+      throw new DatabaseException(`Schema synchronization failed: ${error.message}`, {
+        entityName: options.entityName,
+        operationType: options.type,
+        operation: 'schema-sync'
+      });
     }
   }
 }

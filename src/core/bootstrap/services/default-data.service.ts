@@ -5,7 +5,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const initJson = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), 'src/core/bootstrap/data/init.json'), 'utf8'),
+  fs.readFileSync(
+    path.join(process.cwd(), 'src/core/bootstrap/data/init.json'),
+    'utf8',
+  ),
 );
 
 @Injectable()

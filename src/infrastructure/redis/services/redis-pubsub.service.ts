@@ -8,7 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { SchemaReloadService } from '../../../modules/schema-management/services/schema-reload.service';
-import { SCHEMA_UPDATED_EVENT_KEY } from "../../../shared/utils/constant";
+import { SCHEMA_UPDATED_EVENT_KEY } from '../../../shared/utils/constant';
 
 @Injectable()
 export class RedisPubSubService implements OnModuleInit, OnModuleDestroy {

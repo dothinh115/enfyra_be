@@ -1,11 +1,18 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { Logger, ValidationPipe } from '@nestjs/common';
+// External packages
 import * as cors from 'cors';
 import * as express from 'express';
 import * as qs from 'qs';
+
+// @nestjs packages
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NestFactory } from '@nestjs/core';
+
+// Internal imports
 import { GraphqlService } from './modules/graphql/services/graphql.service';
+
+// Relative imports
+import { AppModule } from './app.module';
 import { initializeDatabase } from '../scripts/init-db';
 
 async function bootstrap() {

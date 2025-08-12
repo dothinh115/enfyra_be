@@ -8,7 +8,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { AutoService } from '../../code-generation/services/auto.service';
-import { buildToJs } from '../../code-generation/utils/build-helper';
+import { buildTypeScriptToJs } from '../../code-generation/utils/build-helper';
 import {
   generateMigrationFile,
   runMigration,
@@ -17,6 +17,8 @@ import { SchemaHistoryService } from './schema-history.service';
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { clearOldEntitiesJs } from '../utils/clear-old-entities';
 import { GraphqlService } from '../../graphql/services/graphql.service';
+import { LoggingService } from '../../../core/exceptions/services/logging.service';
+import { DatabaseException, ResourceNotFoundException, SchemaException } from '../../../core/exceptions/custom-exceptions';
 
 @Injectable()
 export class MetadataSyncService {
@@ -27,14 +29,21 @@ export class MetadataSyncService {
     private autoService: AutoService,
     private schemaHistoryService: SchemaHistoryService,
     private dataSourceService: DataSourceService,
+    @Inject(forwardRef(() => GraphqlService))
     private graphqlService: GraphqlService,
+    @Inject(forwardRef(() => LoggingService))
+    private loggingService: LoggingService,
   ) {}
 
   async pullMetadataFromDb() {
     const tableDefRepo =
       this.dataSourceService.getRepository('table_definition');
-    if (!tableDefRepo)
-      throw new Error('Không tìm thấy repo cho table_definition');
+    if (!tableDefRepo) {
+      this.loggingService.error('Table definition repository not found', {
+        context: 'pullMetadataFromDb'
+      });
+      throw new ResourceNotFoundException('Repository', 'table_definition');
+    }
 
     const tables: any = await tableDefRepo
       .createQueryBuilder('table')
@@ -59,7 +68,7 @@ export class MetadataSyncService {
 
     const inverseRelationMap = this.autoService.buildInverseRelationMap(tables);
 
-    const entityDir = path.resolve('src', 'entities');
+    const entityDir = path.resolve('src', 'core', 'database', 'entities');
     const validFileNames = tables.map(
       (table) => `${table.name.toLowerCase()}.entity.ts`,
     );
@@ -110,7 +119,7 @@ export class MetadataSyncService {
 
       // Step 2: Build JS entities (needs pulled metadata)
       const step2Start = Date.now();
-      await buildToJs({
+      await buildTypeScriptToJs({
         targetDir: path.resolve('src/core/database/entities'),
         outDir: path.resolve('dist/src/core/database/entities'),
       });
@@ -164,19 +173,37 @@ export class MetadataSyncService {
 
       return version;
     } catch (err) {
-      this.logger.error(
-        '❌ Error synchronizing metadata, restoring previous schema...',
-        err,
-      );
-      await this.schemaHistoryService.restore({
+      this.loggingService.error('Schema synchronization failed, initiating restore', {
+        context: 'syncAll',
+        error: err.message,
+        stack: err.stack,
         entityName: options?.entityName,
-        type: options?.type,
+        operationType: options?.type,
+        fromRestore: options?.fromRestore
       });
-      this.logger.error('🛑 THROWING error after restore');
+      
+      try {
+        await this.schemaHistoryService.restore({
+          entityName: options?.entityName,
+          type: options?.type,
+        });
+        this.logger.log('✅ Schema restored successfully after sync failure');
+      } catch (restoreError) {
+        this.loggingService.error('Schema restore also failed', {
+          context: 'syncAll.restore',
+          error: restoreError.message,
+          stack: restoreError.stack,
+          originalError: err.message
+        });
+      }
 
-      throw new BadRequestException(
-        err.message ??
-          `Something went wrong, check your table schema again....`,
+      throw new SchemaException(
+        `Schema synchronization failed: ${err.message || 'Please check your table schema'}`,
+        {
+          entityName: options?.entityName,
+          operationType: options?.type,
+          originalError: err.message
+        }
       );
     }
   }

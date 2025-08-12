@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { HiddenField } from '../../../core/auth/decorators/hidden-field.decorator';
+import { HiddenField } from '../../../shared/decorators/hidden-field.decorator';
 import { Role_definition } from './role_definition.entity';
 
 @Entity('user_definition')

@@ -20,7 +20,7 @@ import {
   FileUploadException,
   FileNotFoundException,
   FileSizeExceededException,
-} from "./core/exceptions/custom-exceptions";
+} from './core/exceptions/custom-exceptions';
 
 describe('ScriptErrorFactory', () => {
   let errorHandlers: ReturnType<typeof ScriptErrorFactory.createErrorHandlers>;

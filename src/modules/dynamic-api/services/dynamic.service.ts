@@ -1,18 +1,23 @@
-import { Injectable, Logger } from '@nestjs/common';
+// External packages
 import { Request } from 'express';
-import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
+
+// @nestjs packages
+import { Injectable, Logger } from '@nestjs/common';
+
+// Internal imports
+import { ResourceNotFoundException, ScriptExecutionException, ScriptTimeoutException } from '../../../core/exceptions/custom-exceptions';
+import { LoggingService } from '../../../core/exceptions/services/logging.service';
 import { HandlerExecutorService } from '../../../infrastructure/handler-executor/services/handler-executor.service';
-import {
-  ScriptExecutionException,
-  ScriptTimeoutException,
-  ResourceNotFoundException,
-} from "../../../core/exceptions/custom-exceptions";
+import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
 
 @Injectable()
 export class DynamicService {
   private logger = new Logger(DynamicService.name);
 
-  constructor(private handlerExecutorService: HandlerExecutorService) {}
+  constructor(
+    private handlerExecutorService: HandlerExecutorService,
+    private loggingService: LoggingService,
+  ) {}
 
   async runHandler(
     req: Request & {
@@ -50,15 +55,19 @@ export class DynamicService {
 
       return result;
     } catch (error) {
-      this.logger.error('❌ Error running handler:', {
-        message: error.message,
+      this.loggingService.error('Handler execution failed', {
+        context: 'runHandler',
+        error: error.message,
         stack: error.stack,
         method: req.method,
         url: req.url,
         handler: req.routeData?.handler,
+        isTableOperation: isTableDefinitionOperation,
+        timeout: timeout,
+        userId: req.user?.id
       });
 
-      // Re-throw custom exceptions as-is
+      // Re-throw custom exceptions as-is (they already have proper error codes)
       if (error.constructor.name.includes('Exception')) {
         throw error;
       }
@@ -72,7 +81,12 @@ export class DynamicService {
       throw new ScriptExecutionException(
         error.message,
         req.routeData?.handler,
-        { method: req.method, url: req.url },
+        { 
+          method: req.method, 
+          url: req.url,
+          userId: req.user?.id,
+          isTableOperation: isTableDefinitionOperation
+        },
       );
     }
   }

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
 import { EntityMetadata } from 'typeorm';
-import { HIDDEN_FIELD_KEY } from "../../shared/utils/constant";
+import { HIDDEN_FIELD_KEY } from '../../shared/utils/constant';
 import { DataSourceService } from '../../core/database/data-source/data-source.service';
 
 @Injectable()

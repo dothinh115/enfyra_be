@@ -1,12 +1,19 @@
+// External packages
+import { Request } from 'express';
+
+// @nestjs packages
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { BcryptService } from './bcrypt.service';
 import { ConfigService } from '@nestjs/config';
-import { LoginAuthDto } from '../dto/login-auth.dto';
 import { JwtService } from '@nestjs/jwt';
+
+// Internal imports
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+
+// Relative imports
+import { LoginAuthDto } from '../dto/login-auth.dto';
 import { LogoutAuthDto } from '../dto/logout-auth.dto';
 import { RefreshTokenAuthDto } from '../dto/refresh-token-auth.dto';
-import { Request } from 'express';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+import { BcryptService } from './bcrypt.service';
 
 @Injectable()
 export class AuthService {

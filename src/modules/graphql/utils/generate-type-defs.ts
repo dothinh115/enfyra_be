@@ -23,7 +23,7 @@ function mapColumnTypeToGraphQL(type: string): string {
   return map[type] || 'String';
 }
 
-export function generateTypeDefsFromTables(
+export function generateGraphQLTypeDefsFromTables(
   tables: any[],
   metadatas: EntityMetadata[],
 ): string {

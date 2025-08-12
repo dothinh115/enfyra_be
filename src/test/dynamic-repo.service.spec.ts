@@ -1,13 +1,13 @@
 // @ts-nocheck
 import { Test, TestingModule } from '@nestjs/testing';
-import { DynamicRepoService } from '../../modules/dynamic-api/services/dynamic-repo.service';
-import { TableHandlerService } from '../../modules/table-management/services/table.service';
+import { DynamicRepository } from '../../modules/dynamic-api/repositories/dynamic.repository';
+import { TableHandlerService } from '../../modules/table-management/services/table-handler.service';
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { QueryEngine } from '../../infrastructure/query-engine/services/query-engine.service';
 import { RouteCacheService } from '../../infrastructure/redis/services/route-cache.service';
 import { SystemProtectionService } from '../../modules/dynamic-api/services/system-protection.service';
-describe.skip('DynamicRepoService', () => {
-  let service: DynamicRepoService;
+describe.skip('DynamicRepository', () => {
+  let service: DynamicRepository;
   let tableHandlerService: jest.Mocked<TableHandlerService>;
   let dataSourceService: jest.Mocked<DataSourceService>;
   let queryEngine: jest.Mocked<QueryEngine>;
@@ -71,7 +71,7 @@ describe.skip('DynamicRepoService', () => {
     systemProtectionService = module.get(SystemProtectionService);
 
     // Create service instance
-    service = new DynamicRepoService({
+    service = new DynamicRepository({
       query: {},
       tableName: 'test_table',
       tableHandlerService,
@@ -444,7 +444,7 @@ describe.skip('DynamicRepoService', () => {
 
   describe('Security Tests', () => {
     it('should respect user permissions', async () => {
-      const userService = new DynamicRepoService({
+      const userService = new DynamicRepository({
         query: {},
         tableName: 'test_table',
         tableHandlerService,

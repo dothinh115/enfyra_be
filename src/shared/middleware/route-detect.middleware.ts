@@ -5,18 +5,18 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { CommonService } from '../common/services/common.service';
-import { GLOBAL_ROUTES_KEY } from "../../shared/utils/constant";
+import { GLOBAL_ROUTES_KEY } from '../../shared/utils/constant';
 import { DataSourceService } from '../../core/database/data-source/data-source.service';
 import { JwtService } from '@nestjs/jwt';
-import { TableHandlerService } from '../../modules/table-management/services/table.service';
-import { DynamicRepoService } from '../../modules/dynamic-api/services/dynamic-repo.service';
+import { TableHandlerService } from '../../modules/table-management/services/table-handler.service';
+import { DynamicRepository } from '../../modules/dynamic-api/repositories/dynamic.repository';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
 import { RedisLockService } from '../../infrastructure/redis/services/redis-lock.service';
 import { QueryEngine } from '../../infrastructure/query-engine/services/query-engine.service';
 import { RouteCacheService } from '../../infrastructure/redis/services/route-cache.service';
 import { SystemProtectionService } from '../../modules/dynamic-api/services/system-protection.service';
 import { BcryptService } from '../../core/auth/services/bcrypt.service';
-import { ScriptErrorFactory } from "../../shared/utils/script-error-factory";
+import { ScriptErrorFactory } from '../../shared/utils/script-error-factory';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
@@ -53,7 +53,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
             (route) => !systemTables.includes(route.name),
           ),
         ]?.map(async (table) => {
-          const dynamicRepo = new DynamicRepoService({
+          const dynamicRepo = new DynamicRepository({
             query: req.query,
             tableName: table.name,
             tableHandlerService: this.tableHandlerService,

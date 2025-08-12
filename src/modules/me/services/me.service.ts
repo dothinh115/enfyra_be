@@ -1,8 +1,8 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
-import { DynamicRepoService } from '../../dynamic-api/services/dynamic-repo.service';
-import { TableHandlerService } from '../../table-management/services/table.service';
+import { DynamicRepository } from '../../dynamic-api/repositories/dynamic.repository';
+import { TableHandlerService } from '../../table-management/services/table-handler.service';
 import { QueryEngine } from '../../../infrastructure/query-engine/services/query-engine.service';
 import { RouteCacheService } from '../../../infrastructure/redis/services/route-cache.service';
 import { SystemProtectionService } from '../../dynamic-api/services/system-protection.service';
@@ -20,7 +20,7 @@ export class MeService {
   async find(req: Request & { user: any }) {
     if (!req.user) throw new UnauthorizedException();
 
-    const repo = new DynamicRepoService({
+    const repo = new DynamicRepository({
       query: req.query,
       tableName: 'user_definition',
       tableHandlerService: this.tableHandlerService,
@@ -37,7 +37,7 @@ export class MeService {
   async update(body: any, req: Request & { user: any }) {
     if (!req.user) throw new UnauthorizedException();
 
-    const repo = new DynamicRepoService({
+    const repo = new DynamicRepository({
       query: req.query,
       tableName: 'user_definition',
       tableHandlerService: this.tableHandlerService,

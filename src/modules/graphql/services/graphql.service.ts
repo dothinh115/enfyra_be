@@ -1,11 +1,18 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
-import { createYoga } from 'graphql-yoga';
+// External packages
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { GraphQLSchema } from 'graphql';
+import { createYoga } from 'graphql-yoga';
 import { EntityMetadata } from 'typeorm';
-import { generateTypeDefsFromTables } from '../utils/generate-type-defs';
+
+// @nestjs packages
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+
+// Internal imports
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+
+// Relative imports
 import { DynamicResolver } from '../resolvers/dynamic.resolver';
+import { generateGraphQLTypeDefsFromTables } from '../utils/generate-type-defs';
 
 @Injectable()
 export class GraphqlService implements OnApplicationBootstrap {
@@ -31,7 +38,11 @@ export class GraphqlService implements OnApplicationBootstrap {
     const aliasMap = new Map<string, string>();
     const visited = new Set<number>();
 
-    function walk(meta: EntityMetadata, path: string[], alias: string) {
+    function walkEntityMetadata(
+      meta: EntityMetadata,
+      path: string[],
+      alias: string,
+    ) {
       const tableId = meta.tableName;
       if (visited.has(tableId as any)) return;
 
@@ -45,14 +56,14 @@ export class GraphqlService implements OnApplicationBootstrap {
         if (!aliasMap.has(aliasKey)) {
           aliasMap.set(aliasKey, aliasKey);
           qb.leftJoinAndSelect(joinPath, aliasKey);
-          walk(rel.inverseEntityMetadata, relPath, aliasKey);
+          walkEntityMetadata(rel.inverseEntityMetadata, relPath, aliasKey);
         }
       }
 
       visited.delete(tableId as any);
     }
 
-    walk(rootMeta, [], 'table');
+    walkEntityMetadata(rootMeta, [], 'table');
 
     return await qb.getMany();
   }
@@ -60,7 +71,7 @@ export class GraphqlService implements OnApplicationBootstrap {
   private async schemaGenerator(): Promise<GraphQLSchema> {
     const tables = await this.pullMetadataFromDb();
     const metadatas = this.dataSourceService.getDataSource().entityMetadatas;
-    const typeDefs = generateTypeDefsFromTables(tables, metadatas);
+    const typeDefs = generateGraphQLTypeDefsFromTables(tables, metadatas);
 
     const resolvers = {
       Query: new Proxy(

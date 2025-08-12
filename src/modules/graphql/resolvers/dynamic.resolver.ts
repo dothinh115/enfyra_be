@@ -4,20 +4,20 @@ import {
   Inject,
   Injectable,
 } from '@nestjs/common';
-import { DynamicRepoService } from '../../dynamic-api/services/dynamic-repo.service';
+import { DynamicRepository } from '../../dynamic-api/repositories/dynamic.repository';
 import { TGqlDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
 import { convertFieldNodesToFieldPicker } from '../utils/field-string-convertor';
-import { TableHandlerService } from '../../table-management/services/table.service';
+import { TableHandlerService } from '../../table-management/services/table-handler.service';
 import { QueryEngine } from '../../../infrastructure/query-engine/services/query-engine.service';
 import { throwGqlError } from '../utils/throw-error';
 import { RedisLockService } from '../../../infrastructure/redis/services/redis-lock.service';
 import { JwtService } from '@nestjs/jwt';
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
-import { GLOBAL_ROUTES_KEY } from "../../../shared/utils/constant";
+import { GLOBAL_ROUTES_KEY } from '../../../shared/utils/constant';
 import { HandlerExecutorService } from '../../../infrastructure/handler-executor/services/handler-executor.service';
 import { RouteCacheService } from '../../../infrastructure/redis/services/route-cache.service';
 import { SystemProtectionService } from '../../dynamic-api/services/system-protection.service';
-import { ScriptErrorFactory } from "../../../shared/utils/script-error-factory";
+import { ScriptErrorFactory } from '../../../shared/utils/script-error-factory';
 
 @Injectable()
 export class DynamicResolver {
@@ -73,7 +73,7 @@ export class DynamicResolver {
 
     const dynamicFindEntries = await Promise.all(
       [mainTable, ...targetTables].map(async (table) => {
-        const dynamicRepo = new DynamicRepoService({
+        const dynamicRepo = new DynamicRepository({
           query,
           tableName: table.name,
           tableHandlerService: this.tableHandlerService,

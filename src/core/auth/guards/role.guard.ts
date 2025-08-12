@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IS_PUBLIC_KEY } from "../../../shared/utils/constant";
+import { IS_PUBLIC_KEY } from '../../../shared/utils/constant';
 
 @Injectable()
 export class RoleGuard implements CanActivate {

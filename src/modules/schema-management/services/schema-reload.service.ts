@@ -8,7 +8,7 @@ import {
   SCHEMA_LOCK_EVENT_KEY,
   SCHEMA_PULLING_EVENT_KEY,
   SCHEMA_UPDATED_EVENT_KEY,
-} from "../../../shared/utils/constant";
+} from '../../../shared/utils/constant';
 import { RedisPubSubService } from '../../../infrastructure/redis/services/redis-pubsub.service';
 import { CommonService } from '../../../shared/common/services/common.service';
 import { MetadataSyncService } from './metadata-sync.service';
@@ -30,6 +30,7 @@ export class SchemaReloadService {
     @Inject(forwardRef(() => MetadataSyncService))
     private metadataSyncService: MetadataSyncService,
     private redisLockService: RedisLockService,
+    @Inject(forwardRef(() => GraphqlService))
     private graphqlService: GraphqlService,
   ) {
     this.sourceInstanceId = uuidv4();

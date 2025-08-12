@@ -1,9 +1,14 @@
-import { DBToTSTypeMap, TSToDBTypeMap } from '../../utils/types/common.type';
-import { Injectable, Logger } from '@nestjs/common';
+// External packages
 import * as fs from 'fs';
 import * as path from 'path';
 import * as ts from 'typescript';
 import { match } from 'path-to-regexp';
+
+// @nestjs packages
+import { Injectable, Logger } from '@nestjs/common';
+
+// Relative imports
+import { DBToTSTypeMap, TSToDBTypeMap } from '../../utils/types/common.type';
 
 @Injectable()
 export class CommonService {

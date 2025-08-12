@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { RedisLockService } from './redis-lock.service';
 import { Repository, IsNull } from 'typeorm';
-import { GLOBAL_ROUTES_KEY } from "../../../shared/utils/constant";
+import { GLOBAL_ROUTES_KEY } from '../../../shared/utils/constant';
 
 const STALE_ROUTES_KEY = 'stale:routes';
 const REVALIDATING_KEY = 'revalidating:routes';

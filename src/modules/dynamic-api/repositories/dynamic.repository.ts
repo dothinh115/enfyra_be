@@ -1,12 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { Repository } from 'typeorm';
-import { TableHandlerService } from '../../table-management/services/table.service';
+import { TableHandlerService } from '../../table-management/services/table-handler.service';
 import { QueryEngine } from '../../../infrastructure/query-engine/services/query-engine.service';
 import { RouteCacheService } from '../../../infrastructure/redis/services/route-cache.service';
-import { SystemProtectionService } from './system-protection.service';
+import { SystemProtectionService } from '../services/system-protection.service';
 
-export class DynamicRepoService {
+export class DynamicRepository {
   private fields: string;
   private filter: any;
   private page: number;

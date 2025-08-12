@@ -1,9 +1,14 @@
-import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
-import { wrapCtx } from '../utils/wrap-ctx';
+// @nestjs packages
 import { Injectable, Logger } from '@nestjs/common';
-import { ExecutorPoolService } from './executor-pool.service';
-import { ErrorHandler } from '../utils/error-handler';
+
+// Internal imports
+import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
+
+// Relative imports
 import { ChildProcessManager } from '../utils/child-process-manager';
+import { ErrorHandler } from '../utils/error-handler';
+import { wrapCtx } from '../utils/wrap-ctx';
+import { ExecutorPoolService } from './executor-pool.service';
 
 @Injectable()
 export class HandlerExecutorService {

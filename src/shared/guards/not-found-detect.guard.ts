@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IS_PUBLIC_KEY } from "../../../shared/utils/constant";
+import { IS_PUBLIC_KEY } from '../utils/constant';
 
 @Injectable()
 export class NotFoundDetectGuard implements CanActivate {
