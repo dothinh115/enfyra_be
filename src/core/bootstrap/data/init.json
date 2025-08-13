@@ -14,20 +14,40 @@
         "projectName": "Enfyra CMS",
         "projectDescription": "Description for Enfyra CMS"
     },
+    "method_definition": [
+        {
+            "method": "GET",
+            "isSystem":true
+        },
+        {
+            "method": "POST",
+            "isSystem":true
+        },
+        {
+            "method": "PATCH",
+            "isSystem":true
+        },
+        {
+            "method": "DELETE",
+            "isSystem":true
+        }
+    ],
     "route_definition": [
         {
             "path": "/route_definition",
             "mainTable": "route_definition",
             "isEnabled": true,
             "isSystem":true,
-            "icon": "lucide:git-branch"
+            "icon": "lucide:git-branch",
+            "publishedMethods": ["GET"]
         },
         {
             "path": "/table_definition",
             "mainTable": "table_definition",
             "isEnabled": true,
             "isSystem":true,
-            "icon": "lucide:table"
+            "icon": "lucide:table",
+            "publishedMethods": ["GET"]
         },
         {
             "path": "/user_definition",
@@ -41,7 +61,8 @@
             "mainTable": "setting_definition",
             "isEnabled": true,
             "isSystem":true,
-            "icon": "lucide:settings"
+            "icon": "lucide:settings",
+            "publishedMethods": ["GET"]
         },
         {
             "path": "/role_definition",
@@ -111,34 +132,18 @@
             "mainTable": "menu_definition",
             "isEnabled": true,
             "isSystem": true,
-            "icon": "lucide:menu"
+            "icon": "lucide:menu",
+            "publishedMethods": ["GET"]
         },
         {
             "path": "/extension_definition",
             "mainTable": "extension_definition",
             "isEnabled": true,
             "isSystem": true,
-            "icon": "lucide:puzzle"
+            "icon": "lucide:puzzle",
+            "publishedMethods": ["GET"]
         }
     ], 
-    "method_definition": [
-        {
-            "method": "GET",
-            "isSystem":true
-        },
-        {
-            "method": "POST",
-            "isSystem":true
-        },
-        {
-            "method": "PATCH",
-            "isSystem":true
-        },
-        {
-            "method": "DELETE",
-            "isSystem":true
-        }
-    ],
     "hook_definition": [
         {
             "isEnabled": true,

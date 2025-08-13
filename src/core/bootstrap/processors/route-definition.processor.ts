@@ -10,9 +10,13 @@ export class RouteDefinitionProcessor extends BaseTableProcessor {
 
   async transformRecords(records: any[]): Promise<any[]> {
     const tableDefRepo = this.dataSourceService.getRepository('table_definition');
+    const methodRepo = this.dataSourceService.getRepository('method_definition');
     
     const transformedRecords = await Promise.all(
       records.map(async (record) => {
+        const transformedRecord = { ...record };
+        
+        // Handle mainTable reference
         const mainTable = await tableDefRepo.findOne({
           where: { name: record.mainTable },
         });
@@ -24,10 +28,27 @@ export class RouteDefinitionProcessor extends BaseTableProcessor {
           return null;
         }
         
-        return {
-          ...record,
-          mainTable,
-        };
+        transformedRecord.mainTable = mainTable;
+        
+        // Handle publishedMethods - convert string array to method entities
+        if (record.publishedMethods && Array.isArray(record.publishedMethods)) {
+          const methodEntities = await methodRepo.find({
+            where: record.publishedMethods.map((method: string) => ({ method }))
+          });
+          
+          if (methodEntities.length !== record.publishedMethods.length) {
+            const foundMethods = methodEntities.map((m: any) => m.method);
+            const notFound = record.publishedMethods.filter((m: string) => !foundMethods.includes(m));
+            this.logger.warn(
+              `⚠️ Method(s) '${notFound.join(', ')}' not found for route ${record.path}`,
+            );
+          }
+          
+          transformedRecord.publishedMethods = methodEntities;
+          this.logger.debug(`🔗 Route ${record.path} linked to methods: ${methodEntities.map((m: any) => m.method).join(', ')}`);
+        }
+        
+        return transformedRecord;
       }),
     );
 
