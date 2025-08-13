@@ -3,9 +3,26 @@ import { BootstrapService } from './services/bootstrap.service';
 import { CoreInitService } from './services/core-init.service';
 import { DefaultDataService } from './services/default-data.service';
 
+// Import processors
+import { UserDefinitionProcessor } from './processors/user-definition.processor';
+import { MenuDefinitionProcessor } from './processors/menu-definition.processor';
+import { RouteDefinitionProcessor } from './processors/route-definition.processor';
+import { MethodDefinitionProcessor } from './processors/method-definition.processor';
+import { HookDefinitionProcessor } from './processors/hook-definition.processor';
+
 @Global()
 @Module({
-  providers: [BootstrapService, CoreInitService, DefaultDataService],
+  providers: [
+    BootstrapService, 
+    CoreInitService, 
+    DefaultDataService,
+    // Register processors
+    UserDefinitionProcessor,
+    MenuDefinitionProcessor,
+    RouteDefinitionProcessor,
+    MethodDefinitionProcessor,
+    HookDefinitionProcessor,
+  ],
   exports: [BootstrapService, CoreInitService, DefaultDataService],
 })
 export class BootstrapModule {}
