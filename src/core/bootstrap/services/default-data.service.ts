@@ -46,21 +46,14 @@ export class DefaultDataService {
     this.processors.set('method_definition', this.methodProcessor);
     this.processors.set('hook_definition', this.hookProcessor);
     
-    // Generic processors for other tables
-    const genericTables = [
-      'table_definition',
-      'role_definition', 
-      'setting_definition',
-      'session_definition',
-      'column_definition',
-      'relation_definition',
-      'route_permission_definition',
-      'route_handler_definition',
-      'extension_definition',
-    ];
-
-    for (const tableName of genericTables) {
-      this.processors.set(tableName, new GenericTableProcessor(tableName));
+    // Dynamic processors for remaining tables - auto-detect from initJson
+    const allTables = Object.keys(initJson);
+    const registeredTables = Array.from(this.processors.keys());
+    
+    for (const tableName of allTables) {
+      if (!registeredTables.includes(tableName)) {
+        this.processors.set(tableName, new GenericTableProcessor(tableName));
+      }
     }
   }
 
@@ -88,8 +81,12 @@ export class DefaultDataService {
         const repo = this.dataSourceService.getRepository(tableName);
         const records = Array.isArray(rawRecords) ? rawRecords : [rawRecords];
         
-        // Special context for menu processor
-        const context = tableName === 'menu_definition' ? { repo } : undefined;
+        // Dynamic context based on processor needs
+        let context: any = undefined;
+        if (tableName === 'menu_definition') {
+          context = { repo };
+        }
+        // Add more context rules as needed for other processors
         
         const result = await processor.process(records, repo, context);
         

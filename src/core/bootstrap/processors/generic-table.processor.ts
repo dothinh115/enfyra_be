@@ -7,41 +7,68 @@ export class GenericTableProcessor extends BaseTableProcessor {
     super();
   }
 
-  getUniqueIdentifier(record: any): object {
-    // Map table names to their unique identifiers
-    const uniqueKeyMap: Record<string, string | string[]> = {
-      'table_definition': 'name',
-      'role_definition': 'name', 
-      'setting_definition': 'key',
-      'session_definition': 'name',
+  getUniqueIdentifier(record: any): object | object[] {
+    // Dynamic unique identifier strategy - try multiple approaches
+    const identifiers: object[] = [];
+    
+    // Strategy 1: Table-specific known patterns (keep some for critical tables)
+    const criticalUniqueKeys: Record<string, string | string[]> = {
       'column_definition': ['table', 'name'],
-      'relation_definition': ['table', 'name'],
+      'relation_definition': ['table', 'propertyName'], 
       'route_permission_definition': ['route', 'role'],
       'route_handler_definition': ['route', 'method'],
-      'extension_definition': 'name',
+      'setting_definition': 'key',
     };
-
-    const uniqueKey = uniqueKeyMap[this.tableName];
     
-    if (!uniqueKey) {
-      // Default fallback - try common fields
-      if (record.name !== undefined) return { name: record.name };
-      if (record.id !== undefined) return { id: record.id };
-      // Last resort - return the whole record as identifier (will likely create duplicates)
-      return record;
-    }
-
-    if (Array.isArray(uniqueKey)) {
-      // Composite key
-      const whereCondition: any = {};
-      for (const key of uniqueKey) {
-        whereCondition[key] = record[key];
+    const knownKey = criticalUniqueKeys[this.tableName];
+    if (knownKey) {
+      if (Array.isArray(knownKey)) {
+        const whereCondition: any = {};
+        for (const key of knownKey) {
+          if (record[key] !== undefined) {
+            whereCondition[key] = record[key];
+          }
+        }
+        if (Object.keys(whereCondition).length > 0) {
+          identifiers.push(whereCondition);
+        }
+      } else {
+        if (record[knownKey] !== undefined) {
+          identifiers.push({ [knownKey]: record[knownKey] });
+        }
       }
-      return whereCondition;
     }
-
-    // Single key
-    return { [uniqueKey]: record[uniqueKey] };
+    
+    // Strategy 2: Try common unique fields in order of preference
+    const commonUniqueFields = ['name', 'username', 'email', 'method', 'path', 'label', 'key'];
+    for (const field of commonUniqueFields) {
+      if (record[field] !== undefined) {
+        identifiers.push({ [field]: record[field] });
+      }
+    }
+    
+    // Strategy 3: Try ID if available  
+    if (record.id !== undefined) {
+      identifiers.push({ id: record.id });
+    }
+    
+    // Strategy 4: Composite keys for common patterns
+    if (record.name && record.type) {
+      identifiers.push({ name: record.name, type: record.type });
+    }
+    
+    // Strategy 5: Fallback to first non-null property
+    if (identifiers.length === 0) {
+      const firstKey = Object.keys(record).find(key => 
+        record[key] !== null && record[key] !== undefined && key !== 'createdAt' && key !== 'updatedAt'
+      );
+      if (firstKey) {
+        identifiers.push({ [firstKey]: record[firstKey] });
+      }
+    }
+    
+    // Return multiple strategies for the base processor to try, or single fallback
+    return identifiers.length > 1 ? identifiers : identifiers[0] || { id: record.id };
   }
 
   // TODO: Uncomment when update logic is restored
