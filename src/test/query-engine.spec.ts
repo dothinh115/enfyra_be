@@ -7,8 +7,9 @@ import {
   DataSource,
 } from 'typeorm';
 import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
-import { QueryEngine } from '../../infrastructure/query-engine/services/query-engine.service';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+import { QueryEngine } from '../infrastructure/query-engine/services/query-engine.service';
+import { DataSourceService } from '../core/database/data-source/data-source.service';
+import { LoggingService } from '../core/exceptions/services/logging.service';
 
 @Entity('user')
 class User {
@@ -114,14 +115,24 @@ describe('QueryEngine - Real Integration with DataSourceService', () => {
     const fakeCommonService = {
       loadDynamicEntities: async () => [User, Post, Comment],
     };
-    const dsService = new DataSourceService(fakeCommonService as any);
+    const mockLoggingService = {
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    };
+
+    const dsService = new DataSourceService(
+      fakeCommonService as any,
+      mockLoggingService as any,
+    );
     (dsService as any).dataSource = dataSource;
     for (const entity of [User, Post, Comment]) {
       const table = dataSource.getMetadata(entity).tableName;
       dsService.entityClassMap.set(table, entity);
     }
 
-    queryEngine = new QueryEngine(dsService);
+    queryEngine = new QueryEngine(dsService, mockLoggingService as any);
   });
 
   afterAll(async () => {

@@ -8,7 +8,10 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 // Internal imports
 import { CommonService } from '../../../shared/common/services/common.service';
 import { LoggingService } from '../../exceptions/services/logging.service';
-import { DatabaseException, DatabaseConnectionException } from '../../exceptions/custom-exceptions';
+import {
+  DatabaseException,
+  DatabaseConnectionException,
+} from '../../exceptions/custom-exceptions';
 
 // Relative imports
 import { createDataSource } from './data-source';
@@ -58,18 +61,24 @@ export class DataSourceService implements OnModuleInit {
         error: error.message,
         stack: error.stack,
         entityDir: entityDir,
-        isDataSourceInitialized: this.dataSource?.isInitialized || false
+        isDataSourceInitialized: this.dataSource?.isInitialized || false,
       });
-      
+
       // Check if it's a connection error
-      if (error.code && ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT'].includes(error.code)) {
+      if (
+        error.code &&
+        ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT'].includes(error.code)
+      ) {
         throw new DatabaseConnectionException();
       }
-      
-      throw new DatabaseException(`DataSource initialization failed: ${error.message}`, {
-        entityDir: entityDir,
-        operation: 'reload-datasource'
-      });
+
+      throw new DatabaseException(
+        `DataSource initialization failed: ${error.message}`,
+        {
+          entityDir: entityDir,
+          operation: 'reload-datasource',
+        },
+      );
     }
   }
 
@@ -79,7 +88,7 @@ export class DataSourceService implements OnModuleInit {
     if (!this.dataSource?.isInitialized) {
       this.loggingService.error('DataSource not initialized', {
         context: 'getRepository',
-        identifier: typeof identifier === 'string' ? identifier : 'non-string'
+        identifier: typeof identifier === 'string' ? identifier : 'non-string',
       });
       throw new DatabaseException('DataSource is not initialized');
     }

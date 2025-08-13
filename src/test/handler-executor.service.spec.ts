@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HandlerExecutorService } from '../../infrastructure/handler-executor/services/handler-executor.service';
-import { ExecutorPoolService } from '../../infrastructure/handler-executor/services/executor-pool.service';
-import { TDynamicContext } from '../utils/types/dynamic-context.type';
-import { smartMergeContext } from '../handler-executor/utils/smart-merge';
+import { HandlerExecutorService } from '../infrastructure/handler-executor/services/handler-executor.service';
+import { ExecutorPoolService } from '../infrastructure/handler-executor/services/executor-pool.service';
+import { TDynamicContext } from '../shared/utils/types/dynamic-context.type';
+import { smartMergeContext } from '../infrastructure/handler-executor/utils/smart-merge';
 
 describe('HandlerExecutorService - Smart Merge', () => {
   let service: HandlerExecutorService;

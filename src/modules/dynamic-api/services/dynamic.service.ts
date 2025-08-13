@@ -5,7 +5,11 @@ import { Request } from 'express';
 import { Injectable, Logger } from '@nestjs/common';
 
 // Internal imports
-import { ResourceNotFoundException, ScriptExecutionException, ScriptTimeoutException } from '../../../core/exceptions/custom-exceptions';
+import {
+  ResourceNotFoundException,
+  ScriptExecutionException,
+  ScriptTimeoutException,
+} from '../../../core/exceptions/custom-exceptions';
 import { LoggingService } from '../../../core/exceptions/services/logging.service';
 import { HandlerExecutorService } from '../../../infrastructure/handler-executor/services/handler-executor.service';
 import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
@@ -64,7 +68,7 @@ export class DynamicService {
         handler: req.routeData?.handler,
         isTableOperation: isTableDefinitionOperation,
         timeout: timeout,
-        userId: req.user?.id
+        userId: req.user?.id,
       });
 
       // Re-throw custom exceptions as-is (they already have proper error codes)
@@ -81,11 +85,11 @@ export class DynamicService {
       throw new ScriptExecutionException(
         error.message,
         req.routeData?.handler,
-        { 
-          method: req.method, 
+        {
+          method: req.method,
           url: req.url,
           userId: req.user?.id,
-          isTableOperation: isTableDefinitionOperation
+          isTableOperation: isTableDefinitionOperation,
         },
       );
     }

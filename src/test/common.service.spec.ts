@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CommonService } from '../../shared/common/services/common.service';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+import { CommonService } from '../shared/common/services/common.service';
+import { DataSourceService } from '../core/database/data-source/data-source.service';
 
 describe('CommonService', () => {
   let service: CommonService;

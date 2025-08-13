@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
-import { CommonService } from '../../shared/common/services/common.service';
+import { DataSourceService } from '../core/database/data-source/data-source.service';
+import { CommonService } from '../shared/common/services/common.service';
+import { LoggingService } from '../core/exceptions/services/logging.service';
 import { DataSource, Repository } from 'typeorm';
 
 describe('DataSourceService', () => {
@@ -23,10 +24,18 @@ describe('DataSourceService', () => {
       loadDynamicEntities: jest.fn(),
     };
 
+    const mockLoggingService = {
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DataSourceService,
         { provide: CommonService, useValue: mockCommonService },
+        { provide: LoggingService, useValue: mockLoggingService },
       ],
     }).compile();
 

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HandlerExecutorService } from '../../infrastructure/handler-executor/services/handler-executor.service';
-import { ExecutorPoolService } from '../../infrastructure/handler-executor/services/executor-pool.service';
-import { ScriptErrorFactory } from './shared/utils/script-error-factory';
+import { HandlerExecutorService } from '../infrastructure/handler-executor/services/handler-executor.service';
+import { ExecutorPoolService } from '../infrastructure/handler-executor/services/executor-pool.service';
+import { ScriptErrorFactory } from '../shared/utils/script-error-factory';
 import {
   BusinessLogicException,
   ValidationException,
@@ -10,7 +10,7 @@ import {
   AuthorizationException,
   DatabaseException,
   RateLimitExceededException,
-} from './core/exceptions/custom-exceptions';
+} from '../core/exceptions/custom-exceptions';
 
 describe.skip('Script Context Exceptions Integration', () => {
   let handlerExecutor: HandlerExecutorService;

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GraphqlService } from './graphql.service';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
-import { DynamicResolver } from './dynamic.resolver';
+import { GraphqlService } from '../modules/graphql/services/graphql.service';
+import { DataSourceService } from '../core/database/data-source/data-source.service';
+import { DynamicResolver } from '../modules/graphql/resolvers/dynamic.resolver';
 import { createYoga } from 'graphql-yoga';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 

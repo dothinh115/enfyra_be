@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from '../../core/auth/services/auth.service';
+import { AuthService } from '../core/auth/services/auth.service';
 import { JwtService } from '@nestjs/jwt';
-import { BcryptService } from '../../core/auth/services/bcrypt.service';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+import { BcryptService } from '../core/auth/services/bcrypt.service';
+import { DataSourceService } from '../core/database/data-source/data-source.service';
 import { UnauthorizedException } from '@nestjs/common';
 describe.skip('AuthService', () => {
   let service: AuthService;

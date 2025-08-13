@@ -1,7 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, DataSource } from 'typeorm';
 import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
-import { QueryEngine } from '../../infrastructure/query-engine/services/query-engine.service';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+import { QueryEngine } from '../infrastructure/query-engine/services/query-engine.service';
+import { DataSourceService } from '../core/database/data-source/data-source.service';
+import { LoggingService } from '../core/exceptions/services/logging.service';
 
 @Entity('test_product')
 class TestProduct {
@@ -59,11 +60,21 @@ describe('QueryEngine - _between operator tests', () => {
     const fakeCommonService = {
       loadDynamicEntities: async () => [TestProduct],
     };
-    const dsService = new DataSourceService(fakeCommonService as any);
+    const mockLoggingService = {
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    };
+
+    const dsService = new DataSourceService(
+      fakeCommonService as any,
+      mockLoggingService as any,
+    );
     (dsService as any).dataSource = dataSource;
     dsService.entityClassMap.set('test_product', TestProduct);
 
-    queryEngine = new QueryEngine(dsService);
+    queryEngine = new QueryEngine(dsService, mockLoggingService as any);
   });
 
   afterAll(async () => {

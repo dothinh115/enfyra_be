@@ -18,7 +18,11 @@ import { DataSourceService } from '../../../core/database/data-source/data-sourc
 import { clearOldEntitiesJs } from '../utils/clear-old-entities';
 import { GraphqlService } from '../../graphql/services/graphql.service';
 import { LoggingService } from '../../../core/exceptions/services/logging.service';
-import { DatabaseException, ResourceNotFoundException, SchemaException } from '../../../core/exceptions/custom-exceptions';
+import {
+  DatabaseException,
+  ResourceNotFoundException,
+  SchemaException,
+} from '../../../core/exceptions/custom-exceptions';
 
 @Injectable()
 export class MetadataSyncService {
@@ -40,7 +44,7 @@ export class MetadataSyncService {
       this.dataSourceService.getRepository('table_definition');
     if (!tableDefRepo) {
       this.loggingService.error('Table definition repository not found', {
-        context: 'pullMetadataFromDb'
+        context: 'pullMetadataFromDb',
       });
       throw new ResourceNotFoundException('Repository', 'table_definition');
     }
@@ -173,15 +177,18 @@ export class MetadataSyncService {
 
       return version;
     } catch (err) {
-      this.loggingService.error('Schema synchronization failed, initiating restore', {
-        context: 'syncAll',
-        error: err.message,
-        stack: err.stack,
-        entityName: options?.entityName,
-        operationType: options?.type,
-        fromRestore: options?.fromRestore
-      });
-      
+      this.loggingService.error(
+        'Schema synchronization failed, initiating restore',
+        {
+          context: 'syncAll',
+          error: err.message,
+          stack: err.stack,
+          entityName: options?.entityName,
+          operationType: options?.type,
+          fromRestore: options?.fromRestore,
+        },
+      );
+
       try {
         await this.schemaHistoryService.restore({
           entityName: options?.entityName,
@@ -193,7 +200,7 @@ export class MetadataSyncService {
           context: 'syncAll.restore',
           error: restoreError.message,
           stack: restoreError.stack,
-          originalError: err.message
+          originalError: err.message,
         });
       }
 
@@ -202,8 +209,8 @@ export class MetadataSyncService {
         {
           entityName: options?.entityName,
           operationType: options?.type,
-          originalError: err.message
-        }
+          originalError: err.message,
+        },
       );
     }
   }

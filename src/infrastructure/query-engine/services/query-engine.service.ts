@@ -7,7 +7,10 @@ import { Injectable, Logger } from '@nestjs/common';
 // Internal imports
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { LoggingService } from '../../../core/exceptions/services/logging.service';
-import { DatabaseQueryException, ResourceNotFoundException } from '../../../core/exceptions/custom-exceptions';
+import {
+  DatabaseQueryException,
+  ResourceNotFoundException,
+} from '../../../core/exceptions/custom-exceptions';
 
 // Relative imports
 import { buildJoinTree } from '../utils/build-join-tree';
@@ -179,33 +182,39 @@ export class QueryEngine {
         sortPresent: !!options.sort,
         page: options.page,
         limit: options.limit,
-        hasDeepRelations: options.deep && Object.keys(options.deep).length > 0
+        hasDeepRelations: options.deep && Object.keys(options.deep).length > 0,
       });
-      
+
       // Handle specific database errors
-      if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
-        throw new ResourceNotFoundException('Table or Relation', options.tableName);
+      if (
+        error.message?.includes('relation') &&
+        error.message?.includes('does not exist')
+      ) {
+        throw new ResourceNotFoundException(
+          'Table or Relation',
+          options.tableName,
+        );
       }
-      
-      if (error.message?.includes('column') && error.message?.includes('does not exist')) {
+
+      if (
+        error.message?.includes('column') &&
+        error.message?.includes('does not exist')
+      ) {
         throw new DatabaseQueryException(
           `Invalid column in query: ${error.message}`,
           {
             tableName: options.tableName,
             fields: options.fields,
-            operation: 'query'
-          }
+            operation: 'query',
+          },
         );
       }
-      
-      throw new DatabaseQueryException(
-        `Query failed: ${error.message}`,
-        {
-          tableName: options.tableName,
-          operation: 'find',
-          originalError: error.message
-        }
-      );
+
+      throw new DatabaseQueryException(`Query failed: ${error.message}`, {
+        tableName: options.tableName,
+        operation: 'find',
+        originalError: error.message,
+      });
     }
   }
 }

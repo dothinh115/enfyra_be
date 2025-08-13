@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SchemaStateService } from '../../modules/schema-management/services/schema-state.service';
+import { SchemaStateService } from '../modules/schema-management/services/schema-state.service';
 
 describe('SchemaStateService', () => {
   let service: SchemaStateService;

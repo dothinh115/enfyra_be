@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RouteCacheService } from '../../infrastructure/redis/services/route-cache.service';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
-import { RedisLockService } from '../../infrastructure/redis/services/redis-lock.service';
+import { RouteCacheService } from '../infrastructure/redis/services/route-cache.service';
+import { DataSourceService } from '../core/database/data-source/data-source.service';
+import { RedisLockService } from '../infrastructure/redis/services/redis-lock.service';
 import { Logger } from '@nestjs/common';
 
 describe('RouteCacheService - Stress Testing', () => {

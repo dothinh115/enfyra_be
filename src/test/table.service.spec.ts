@@ -1,17 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TableHandlerService } from '../../modules/table-management/services/table-handler.service';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
-import { CommonService } from '../../shared/common/services/common.service';
-import { MetadataSyncService } from '../../modules/schema-management/services/metadata-sync.service';
-import { SchemaReloadService } from '../../modules/schema-management/services/schema-reload.service';
+import { TableHandlerService } from '../modules/table-management/services/table-handler.service';
+import { DataSourceService } from '../core/database/data-source/data-source.service';
+import { CommonService } from '../shared/common/services/common.service';
+import { MetadataSyncService } from '../modules/schema-management/services/metadata-sync.service';
+import { SchemaReloadService } from '../modules/schema-management/services/schema-reload.service';
+import { LoggingService } from '../core/exceptions/services/logging.service';
 import { Logger } from '@nestjs/common';
 
 // Mock the validation utility
-jest.mock('./utils/duplicate-field-check', () => ({
+jest.mock('../modules/table-management/utils/duplicate-field-check', () => ({
   validateUniquePropertyNames: jest.fn(),
 }));
 
-jest.mock('./utils/get-deleted-ids', () => ({
+jest.mock('../modules/table-management/utils/get-deleted-ids', () => ({
   getDeletedIds: jest.fn().mockReturnValue([]),
 }));
 
@@ -100,6 +101,15 @@ describe('TableHandlerService', () => {
             publishSchemaUpdated: jest.fn().mockResolvedValue(undefined),
           },
         },
+        {
+          provide: LoggingService,
+          useValue: {
+            log: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -157,7 +167,7 @@ describe('TableHandlerService', () => {
       mockRepo.findOne.mockResolvedValue(mockTable);
 
       await expect(service.createTable(createTableDto)).rejects.toThrow(
-        'Table new_table already exists!',
+        "Table with name 'new_table' already exists",
       );
     });
 
@@ -281,7 +291,7 @@ describe('TableHandlerService', () => {
       mockRepo.findOne.mockResolvedValue(null);
 
       await expect(service.updateTable(999, updateDto as any)).rejects.toThrow(
-        'Table undefined does not exist.',
+        "Table with identifier '999' not found",
       );
     });
 
@@ -329,7 +339,9 @@ describe('TableHandlerService', () => {
       mockRepo.delete.mockResolvedValue({ affected: 1 });
 
       // Mock getDeletedIds to return the IDs that should be deleted
-      const { getDeletedIds } = require('./utils/get-deleted-ids');
+      const {
+        getDeletedIds,
+      } = require('../modules/table-management/utils/get-deleted-ids');
       getDeletedIds
         .mockReturnValueOnce([2]) // deleted column id
         .mockReturnValueOnce([1]); // deleted relation id
@@ -385,7 +397,7 @@ describe('TableHandlerService', () => {
       mockRepo.findOne.mockResolvedValue(null);
 
       await expect(service.delete(999)).rejects.toThrow(
-        'Table with id 999 does not exist.',
+        "Table with identifier '999' not found",
       );
     });
 
