@@ -9,6 +9,8 @@ export class Extension_definition {
     id: number;
     @Column({ type: "text", nullable: false })
     code: string;
+    @Column({ type: "text", nullable: false })
+    compiledCode: string;
     @Column({ type: "text", nullable: true })
     description: string;
     @Column({ type: "varchar", nullable: false })

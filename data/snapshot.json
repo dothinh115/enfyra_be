@@ -235,7 +235,9 @@
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "description", "type": "text", "isSystem": true },
-            { "name": "code", "type": "code", "isSystem": true, "isNullable": false, "isGenerated": true}
+            { "name": "compiledCode", "type": "code", "isSystem": true, "isNullable": false, "isGenerated": true},
+            { "name": "code", "type": "code", "isSystem": true, "isNullable": false}
+
         ],
         "relations": [
             { "propertyName": "menu", "type": "one-to-one", "targetTable": "menu_definition", "isSystem": true, "inversePropertyName": "extension", "isNullable": true },
