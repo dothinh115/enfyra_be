@@ -9,6 +9,7 @@ import { MenuDefinitionProcessor } from './processors/menu-definition.processor'
 import { RouteDefinitionProcessor } from './processors/route-definition.processor';
 import { MethodDefinitionProcessor } from './processors/method-definition.processor';
 import { HookDefinitionProcessor } from './processors/hook-definition.processor';
+import { SettingDefinitionProcessor } from './processors/setting-definition.processor';
 
 @Global()
 @Module({
@@ -22,6 +23,7 @@ import { HookDefinitionProcessor } from './processors/hook-definition.processor'
     RouteDefinitionProcessor,
     MethodDefinitionProcessor,
     HookDefinitionProcessor,
+    SettingDefinitionProcessor,
   ],
   exports: [BootstrapService, CoreInitService, DefaultDataService],
 })

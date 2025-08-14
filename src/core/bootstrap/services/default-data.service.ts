@@ -11,6 +11,7 @@ import { MenuDefinitionProcessor } from '../processors/menu-definition.processor
 import { RouteDefinitionProcessor } from '../processors/route-definition.processor';
 import { MethodDefinitionProcessor } from '../processors/method-definition.processor';
 import { HookDefinitionProcessor } from '../processors/hook-definition.processor';
+import { SettingDefinitionProcessor } from '../processors/setting-definition.processor';
 import { GenericTableProcessor } from '../processors/generic-table.processor';
 
 const initJson = JSON.parse(
@@ -34,6 +35,7 @@ export class DefaultDataService {
     private readonly routeProcessor: RouteDefinitionProcessor,
     private readonly methodProcessor: MethodDefinitionProcessor,
     private readonly hookProcessor: HookDefinitionProcessor,
+    private readonly settingProcessor: SettingDefinitionProcessor,
   ) {
     this.initializeProcessors();
   }
@@ -45,6 +47,7 @@ export class DefaultDataService {
     this.processors.set('route_definition', this.routeProcessor);
     this.processors.set('method_definition', this.methodProcessor);
     this.processors.set('hook_definition', this.hookProcessor);
+    this.processors.set('setting_definition', this.settingProcessor);
     
     // Dynamic processors for remaining tables - auto-detect from initJson
     const allTables = Object.keys(initJson);

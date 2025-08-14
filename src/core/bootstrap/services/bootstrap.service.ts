@@ -67,7 +67,10 @@ export class BootstrapService implements OnApplicationBootstrap {
       return;
     }
 
-    let setting: any = await settingRepo.findOne({ where: { id: 1 } });
+    let setting: any = await settingRepo.findOne({ 
+      where: {},
+      order: { id: 'ASC' }  // Get first setting record
+    });
 
     if (!setting || !setting.isInit) {
       await this.coreInitService.createInitMetadata();
@@ -76,7 +79,10 @@ export class BootstrapService implements OnApplicationBootstrap {
       await this.metadataSyncService.syncAll();
 
       settingRepo = this.dataSourceService.getRepository('setting_definition');
-      setting = await settingRepo.findOne({ where: { id: 1 } });
+      setting = await settingRepo.findOne({ 
+        where: {},
+        order: { id: 'ASC' }  // Get first setting record
+      });
       
       if (!setting) {
         this.logger.error('❌ Setting record not found after initialization');
