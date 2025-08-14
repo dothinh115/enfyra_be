@@ -77,6 +77,12 @@ export class BootstrapService implements OnApplicationBootstrap {
 
       settingRepo = this.dataSourceService.getRepository('setting_definition');
       setting = await settingRepo.findOne({ where: { id: 1 } });
+      
+      if (!setting) {
+        this.logger.error('❌ Setting record not found after initialization');
+        throw new Error('Setting record not found after initialization. DefaultDataService may have failed.');
+      }
+      
       await settingRepo.update(setting.id, { isInit: true });
       schemaHistoryRepo =
         this.dataSourceService.getRepository('schema_history');

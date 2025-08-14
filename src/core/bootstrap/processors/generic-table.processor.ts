@@ -17,7 +17,6 @@ export class GenericTableProcessor extends BaseTableProcessor {
       'relation_definition': ['table', 'propertyName'], 
       'route_permission_definition': ['route', 'role'],
       'route_handler_definition': ['route', 'method'],
-      'setting_definition': 'key',
     };
     
     const knownKey = criticalUniqueKeys[this.tableName];
