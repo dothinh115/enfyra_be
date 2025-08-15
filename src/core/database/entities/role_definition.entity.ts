@@ -9,7 +9,7 @@ export class Role_definition {
     description: string;
     @Column({ type: "varchar", nullable: false, unique: true })
     name: string;
-    @OneToMany('Route_permission_definition', (rel: any) => rel.role, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Route_permission_definition', (rel: any) => rel.role, { cascade: true })
     routePermissions: any;
     @CreateDateColumn()
     createdAt: Date;

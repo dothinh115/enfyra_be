@@ -271,13 +271,26 @@ async function writeEntitiesFromSnapshot() {
 
       usedImports.add(relType);
 
-      const relationOpts = [
-        `onDelete: "${rel.onDelete || 'CASCADE'}"`,
-        `onUpdate: "${rel.onUpdate || 'CASCADE'}"`,
-        `nullable: ${rel.isNullable === false ? 'false' : 'true'}`,
-      ];
-
       const isInverse = !!rel.targetClass;
+      const relationOpts = [];
+      
+      // Only apply CASCADE DELETE for many-to-many (join table records)
+      // For other relations, use SET NULL to prevent data loss
+      if (rel.type === 'many-to-many') {
+        relationOpts.push(
+          `onDelete: "${rel.onDelete || 'CASCADE'}"`,
+          `onUpdate: "${rel.onUpdate || 'CASCADE'}"`
+        );
+      } else if (rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse)) {
+        // For foreign key relations, always set to NULL to allow deletion
+        relationOpts.push(
+          `onDelete: "${rel.onDelete || 'SET NULL'}"`,
+          `onUpdate: "${rel.onUpdate || 'CASCADE'}"`
+        );
+      }
+      // Note: one-to-many doesn't need onDelete/onUpdate as it doesn't have foreign key
+      
+      relationOpts.push(`nullable: ${rel.isNullable === false ? 'false' : 'true'}`);
 
       // Thêm cascade cho ManyToMany và OneToMany
       if (

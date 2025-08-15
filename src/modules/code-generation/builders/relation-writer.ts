@@ -57,7 +57,16 @@ export function addRelationToClass({
   ) {
     options.push('cascade: true');
   }
-  options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
+  
+  // Only apply CASCADE DELETE for many-to-many (join table records)
+  // For other relations, use SET NULL to prevent data loss
+  if (rel.type === 'many-to-many') {
+    options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
+  } else if (rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse)) {
+    // For foreign key relations, always set to NULL to allow deletion
+    options.push(`onDelete: 'SET NULL'`, `onUpdate: 'CASCADE'`);
+  }
+  // Note: one-to-many doesn't need onDelete/onUpdate as it doesn't have foreign key
 
   const args = [`'${target}'`];
   if (rel.inversePropertyName) {

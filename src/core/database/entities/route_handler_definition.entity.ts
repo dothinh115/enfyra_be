@@ -12,11 +12,11 @@ export class Route_handler_definition {
     @Column({ type: "text", nullable: true })
     logic: string;
     @Index()
-    @ManyToOne('Method_definition', (rel: any) => rel.handlers, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Method_definition', (rel: any) => rel.handlers, { nullable: false, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     method: any;
     @Index()
-    @ManyToOne('Route_definition', (rel: any) => rel.handlers, { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Route_definition', (rel: any) => rel.handlers, { nullable: false, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     route: any;
     @CreateDateColumn()

@@ -28,18 +28,18 @@ export class Menu_definition {
     @Column({ type: "enum", nullable: false, enum: ['mini', 'menu'] })
     type: 'mini' | 'menu';
     @Index()
-    @ManyToOne('Menu_definition', (rel: any) => rel.children, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Menu_definition', (rel: any) => rel.children, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     parent: any;
     @Index()
-    @ManyToOne('Menu_definition', (rel: any) => rel.menus, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Menu_definition', (rel: any) => rel.menus, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     sidebar: any;
-    @OneToMany('Menu_definition', (rel: any) => rel.parent, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Menu_definition', (rel: any) => rel.parent, { cascade: true })
     children: any;
-    @OneToMany('Menu_definition', (rel: any) => rel.sidebar, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Menu_definition', (rel: any) => rel.sidebar, { cascade: true })
     menus: any;
-    @OneToOne('Extension_definition', (rel: any) => rel.menu, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToOne('Extension_definition', (rel: any) => rel.menu)
     extension: any;
     @CreateDateColumn()
     createdAt: Date;

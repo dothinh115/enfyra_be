@@ -15,7 +15,7 @@ export class Setting_definition {
     projectName: string;
     @Column({ type: "varchar", nullable: true })
     projectUrl: string;
-    @OneToMany('Method_definition', (rel: any) => rel.setting, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Method_definition', (rel: any) => rel.setting, { cascade: true })
     methods: any;
     @CreateDateColumn()
     createdAt: Date;

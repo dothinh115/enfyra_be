@@ -20,10 +20,10 @@ export class Method_definition {
     @JoinTable()
     routes: any;
     @Index()
-    @ManyToOne('Setting_definition', (rel: any) => rel.methods, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Setting_definition', (rel: any) => rel.methods, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     setting: any;
-    @OneToMany('Route_handler_definition', (rel: any) => rel.method, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Route_handler_definition', (rel: any) => rel.method, { cascade: true })
     handlers: any;
     @ManyToMany('Hook_definition', (rel: any) => rel.methods, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     hooks: any;

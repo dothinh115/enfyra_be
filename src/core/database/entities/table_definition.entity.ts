@@ -18,9 +18,9 @@ export class Table_definition {
     name: string;
     @Column({ type: "simple-json", nullable: true })
     uniques: any;
-    @OneToMany('Column_definition', (rel: any) => rel.table, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Column_definition', (rel: any) => rel.table, { cascade: true })
     columns: any;
-    @OneToMany('Relation_definition', (rel: any) => rel.sourceTable, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Relation_definition', (rel: any) => rel.sourceTable, { cascade: true })
     relations: any;
     @CreateDateColumn()
     createdAt: Date;

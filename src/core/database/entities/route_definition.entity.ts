@@ -21,17 +21,17 @@ export class Route_definition {
     @Column({ type: "varchar", nullable: false })
     path: string;
     @Index()
-    @ManyToOne('Table_definition', { nullable: false, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Table_definition', { nullable: false, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     mainTable: any;
     @ManyToMany('Table_definition', { eager: true, nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinTable()
     targetTables: any;
-    @OneToMany('Route_permission_definition', (rel: any) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Route_permission_definition', (rel: any) => rel.route, { cascade: true })
     routePermissions: any;
-    @OneToMany('Route_handler_definition', (rel: any) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Route_handler_definition', (rel: any) => rel.route, { cascade: true })
     handlers: any;
-    @OneToMany('Hook_definition', (rel: any) => rel.route, { cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany('Hook_definition', (rel: any) => rel.route, { cascade: true })
     hooks: any;
     @ManyToMany('Method_definition', (rel: any) => rel.routes, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     publishedMethods: any;

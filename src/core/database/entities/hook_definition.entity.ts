@@ -24,7 +24,7 @@ export class Hook_definition {
     @JoinTable()
     methods: any;
     @Index()
-    @ManyToOne('Route_definition', (rel: any) => rel.hooks, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Route_definition', (rel: any) => rel.hooks, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     route: any;
     @CreateDateColumn()

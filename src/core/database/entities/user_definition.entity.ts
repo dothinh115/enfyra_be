@@ -16,7 +16,7 @@ export class User_definition {
     @HiddenField()
     password: string;
     @Index()
-    @ManyToOne('Role_definition', { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne('Role_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     role: any;
     @CreateDateColumn()
