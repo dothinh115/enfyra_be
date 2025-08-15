@@ -39,7 +39,7 @@ export class DynamicService {
       req.routeData.targetTables?.some(
         (table) => table.name === 'table_definition',
       );
-    const timeout = isTableDefinitionOperation ? 30000 : 10000;
+    const timeout = isTableDefinitionOperation ? 10000 : 5000;
 
     try {
       const userHandler = req.routeData.handler?.trim();
