@@ -21,7 +21,7 @@ export class Route_definition {
     @Column({ type: "varchar", nullable: false })
     path: string;
     @Index()
-    @ManyToOne('Table_definition', { nullable: false, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
+    @ManyToOne('Table_definition', { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn()
     mainTable: any;
     @ManyToMany('Table_definition', { eager: true, nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })

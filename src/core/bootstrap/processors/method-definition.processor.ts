@@ -12,14 +12,10 @@ export class MethodDefinitionProcessor extends BaseTableProcessor {
     const settingRepo = this.dataSourceService.getRepository('setting_definition');
     const setting = await settingRepo.findOne({ where: {} });
     
-    if (!setting) {
-      this.logger.warn(`⚠️ No settings to assign permissions, skipping method_definition.`);
-      return [];
-    }
-
+    // Setting is optional for methods
     return records.map((record) => ({
       ...record,
-      setting,
+      setting: setting || null,
       isSystem: true,
     }));
   }
