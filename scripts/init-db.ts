@@ -275,16 +275,19 @@ async function writeEntitiesFromSnapshot() {
       const relationOpts = [];
       
       // Only apply CASCADE DELETE for many-to-many (join table records)
-      // For other relations, use SET NULL to prevent data loss
+      // For other relations, use SET NULL or RESTRICT based on nullable constraint
       if (rel.type === 'many-to-many') {
         relationOpts.push(
           `onDelete: "${rel.onDelete || 'CASCADE'}"`,
           `onUpdate: "${rel.onUpdate || 'CASCADE'}"`
         );
       } else if (rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse)) {
-        // For foreign key relations, always set to NULL to allow deletion
+        // For foreign key relations:
+        // - If nullable: SET NULL (allow deletion, set FK to null)
+        // - If required: RESTRICT (prevent deletion to maintain data integrity)
+        const defaultDelete = rel.isNullable === false ? 'RESTRICT' : 'SET NULL';
         relationOpts.push(
-          `onDelete: "${rel.onDelete || 'SET NULL'}"`,
+          `onDelete: "${rel.onDelete || defaultDelete}"`,
           `onUpdate: "${rel.onUpdate || 'CASCADE'}"`
         );
       }
