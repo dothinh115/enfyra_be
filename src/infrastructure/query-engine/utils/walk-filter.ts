@@ -248,6 +248,58 @@ export function walkFilter({
             continue;
           }
 
+          // Handle relation _in/_not_in operators
+          if (typeof val === 'object' && (val._in || val._not_in)) {
+            const isIn = val._in !== undefined;
+            const values = isIn ? val._in : val._not_in;
+            
+            if (!Array.isArray(values)) {
+              console.log(`[Relation] ❌ ${isIn ? '_in' : '_not_in'} requires an array`);
+              continue;
+            }
+            
+            if (values.length === 0) {
+              const sql = isIn ? '1 = 0' : '1 = 1'; // Always false/true for empty array
+              parts.push({ operator, sql, params: {} });
+              continue;
+            }
+
+            // Get relation metadata
+            const relation = currentMeta.relations.find(r => r.propertyName === key);
+            if (!relation) {
+              console.log(`[Relation] ❌ Relation ${key} not found`);
+              continue;
+            }
+
+            let subquery = '';
+            const relationParam = {};
+            const inParams = values.map((v) => {
+              const paramKey = `p${paramIndex++}`;
+              relationParam[paramKey] = v;
+              return `:${paramKey}`;
+            });
+
+            if (relation.relationType === 'many-to-many') {
+              // Many-to-many: use join table
+              const joinTable = relation.joinTableName;
+              const joinColumn = relation.joinColumns[0].databaseName; // current entity column
+              const inverseJoinColumn = relation.inverseJoinColumns[0].databaseName; // target entity column
+              
+              subquery = `(SELECT ${joinColumn} FROM ${joinTable} WHERE ${inverseJoinColumn} IN (${inParams.join(', ')}))`;
+            } else {
+              // One-to-many/Many-to-one: use direct relation
+              const targetTable = nextMeta.tableName;
+              subquery = `(SELECT id FROM ${targetTable} WHERE id IN (${inParams.join(', ')}))`;
+            }
+
+            const inOrNotIn = isIn ? 'IN' : 'NOT IN';
+            const sql = `${currentAlias}.id ${inOrNotIn} ${subquery}`;
+            
+            parts.push({ operator, sql, params: relationParam });
+            log.push?.(`[${operator}] ${sql}`);
+            continue;
+          }
+
           if (
             typeof val === 'object' &&
             !Object.keys(val).some((k) => OPERATORS.includes(k))
@@ -308,6 +360,42 @@ export function walkFilter({
             sql = `${currentAlias}.${lastField} <= :${paramKey}`;
             param[paramKey] = parsedValue;
             break;
+          case '_in': {
+            if (!Array.isArray(val)) {
+              throw new Error(`_in operator requires an array, got: ${typeof val}`);
+            }
+            if (val.length === 0) {
+              sql = '1 = 0'; // Always false for empty array
+              break;
+            }
+            
+            // Standard IN operation for regular fields
+            const inParams = val.map((v, i) => {
+              const inParamKey = `${paramKey}_${i}`;
+              param[inParamKey] = parseValue(fieldType, v);
+              return `:${inParamKey}`;
+            });
+            sql = `${currentAlias}.${lastField} IN (${inParams.join(', ')})`;
+            break;
+          }
+          case '_not_in': {
+            if (!Array.isArray(val)) {
+              throw new Error(`_not_in operator requires an array, got: ${typeof val}`);
+            }
+            if (val.length === 0) {
+              sql = '1 = 1'; // Always true for empty array
+              break;
+            }
+            
+            // Standard NOT IN operation for regular fields
+            const notInParams = val.map((v, i) => {
+              const notInParamKey = `${paramKey}_${i}`;
+              param[notInParamKey] = parseValue(fieldType, v);
+              return `:${notInParamKey}`;
+            });
+            sql = `${currentAlias}.${lastField} NOT IN (${notInParams.join(', ')})`;
+            break;
+          }
           case '_between': {
             const p1 = `p${paramIndex++}`;
             const p2 = `p${paramIndex++}`;
