@@ -251,10 +251,20 @@ export function walkFilter({
           // Handle relation _in/_not_in operators
           if (typeof val === 'object' && (val._in || val._not_in)) {
             const isIn = val._in !== undefined;
-            const values = isIn ? val._in : val._not_in;
+            let values = isIn ? val._in : val._not_in;
+            
+            // Parse string to array if needed: "[1,2]" -> [1, 2]
+            if (typeof values === 'string') {
+              try {
+                values = JSON.parse(values);
+              } catch (error) {
+                console.log(`[Relation] ❌ Failed to parse ${isIn ? '_in' : '_not_in'} value: ${values}`);
+                continue;
+              }
+            }
             
             if (!Array.isArray(values)) {
-              console.log(`[Relation] ❌ ${isIn ? '_in' : '_not_in'} requires an array`);
+              console.log(`[Relation] ❌ ${isIn ? '_in' : '_not_in'} requires an array, got: ${typeof values}`);
               continue;
             }
             
@@ -271,13 +281,43 @@ export function walkFilter({
               continue;
             }
 
+            // Get target entity primary key type for type casting
+            const targetPkColumn = nextMeta.columns.find(c => c.isPrimary);
+            const targetPkType = targetPkColumn ? (
+              typeof targetPkColumn.type === 'string' 
+                ? targetPkColumn.type 
+                : targetPkColumn.type.name?.toLowerCase()
+            ) : 'number';
+
             let subquery = '';
             const relationParam = {};
             const inParams = values.map((v) => {
               const paramKey = `p${paramIndex++}`;
-              relationParam[paramKey] = v;
+              
+              // Cast value to correct type based on target PK type
+              let castedValue = v;
+              if (targetPkType && ['int', 'integer', 'number', 'bigint', 'smallint'].includes(targetPkType.toLowerCase())) {
+                castedValue = parseInt(v, 10);
+                if (isNaN(castedValue)) {
+                  console.log(`[Relation] ❌ Cannot cast value "${v}" to number for ${key}`);
+                  return null;
+                }
+              } else if (targetPkType && ['float', 'double', 'decimal', 'numeric'].includes(targetPkType.toLowerCase())) {
+                castedValue = parseFloat(v);
+                if (isNaN(castedValue)) {
+                  console.log(`[Relation] ❌ Cannot cast value "${v}" to float for ${key}`);
+                  return null;
+                }
+              }
+              
+              relationParam[paramKey] = castedValue;
               return `:${paramKey}`;
-            });
+            }).filter(Boolean); // Remove null entries
+            
+            if (inParams.length === 0) {
+              console.log(`[Relation] ❌ No valid values after type casting for ${key}`);
+              continue;
+            }
 
             if (relation.relationType === 'many-to-many') {
               // Many-to-many: use join table

@@ -247,6 +247,116 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     });
   });
 
+  describe('String Parsing and Type Casting', () => {
+    it('should parse string array for _in operator', () => {
+      const postMeta = dataSource.getMetadata(Post);
+      const filter = {
+        categories: { _in: `[${categories[0].id},${categories[1].id}]` } // String: "[1,2]"
+      };
+
+      const result = walkFilter({
+        filter,
+        currentMeta: postMeta,
+        currentAlias: 'post',
+      });
+
+      expect(result.parts).toHaveLength(1);
+      const part = result.parts[0];
+      
+      expect(part.sql).toContain('post.id IN');
+      expect(part.params).toHaveProperty('p1', categories[0].id);
+      expect(part.params).toHaveProperty('p2', categories[1].id);
+      // Check that values are numbers, not strings
+      expect(typeof part.params.p1).toBe('number');
+      expect(typeof part.params.p2).toBe('number');
+    });
+
+    it('should parse string array for _not_in operator', () => {
+      const userMeta = dataSource.getMetadata(User);
+      const filter = {
+        roles: { _not_in: `[${roles[0].id}]` } // String: "[1]"
+      };
+
+      const result = walkFilter({
+        filter,
+        currentMeta: userMeta,
+        currentAlias: 'user',
+      });
+
+      expect(result.parts).toHaveLength(1);
+      const part = result.parts[0];
+      
+      expect(part.sql).toContain('user.id NOT IN');
+      expect(part.params).toHaveProperty('p1', roles[0].id);
+      expect(typeof part.params.p1).toBe('number');
+    });
+
+    it('should handle string numbers and cast them to integers', () => {
+      const postMeta = dataSource.getMetadata(Post);
+      const filter = {
+        categories: { _in: '["1", "2"]' } // String numbers in array
+      };
+
+      const result = walkFilter({
+        filter,
+        currentMeta: postMeta,
+        currentAlias: 'post',
+      });
+
+      expect(result.parts).toHaveLength(1);
+      const part = result.parts[0];
+      
+      expect(part.params).toHaveProperty('p1', 1); // Should be number 1, not string "1"
+      expect(part.params).toHaveProperty('p2', 2); // Should be number 2, not string "2"
+      expect(typeof part.params.p1).toBe('number');
+      expect(typeof part.params.p2).toBe('number');
+    });
+
+    it('should handle invalid JSON string gracefully', () => {
+      const postMeta = dataSource.getMetadata(Post);
+      const filter = {
+        categories: { _in: '[1,2' } // Invalid JSON - missing closing bracket
+      };
+
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      
+      const result = walkFilter({
+        filter,
+        currentMeta: postMeta,
+        currentAlias: 'post',
+      });
+
+      expect(result.parts).toHaveLength(0);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[Relation] ❌ Failed to parse _in value')
+      );
+      
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle invalid number strings', () => {
+      const postMeta = dataSource.getMetadata(Post);
+      const filter = {
+        categories: { _in: '["invalid", "numbers"]' }
+      };
+
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      
+      const result = walkFilter({
+        filter,
+        currentMeta: postMeta,
+        currentAlias: 'post',
+      });
+
+      expect(result.parts).toHaveLength(0); // Should skip due to all invalid values
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[Relation] ❌ No valid values after type casting')
+      );
+      
+      consoleSpy.mockRestore();
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle empty array for _in (always false)', () => {
       const postMeta = dataSource.getMetadata(Post);
@@ -297,7 +407,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
 
       expect(result.parts).toHaveLength(0);
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[Relation] ❌ _in requires an array')
+        expect.stringContaining('[Relation] ❌ Failed to parse _in value')
       );
       
       consoleSpy.mockRestore();
