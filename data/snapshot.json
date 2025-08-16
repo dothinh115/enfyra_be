@@ -247,7 +247,7 @@
     },
     "folder_definition": {
         "name": "folder_definition",
-        "isSystem": false,
+        "isSystem": true,
         "uniques": [["slug", "parent"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false },
