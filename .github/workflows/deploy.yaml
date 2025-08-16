@@ -14,9 +14,9 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           script: |
-            # Set project variables
-            export PROJECT_NAME="enfyra-backend"
-            export APP_DIR="/apps/$PROJECT_NAME"
+            # Set project variables (FIXED: match ecosystem.config.js)
+            export PROJECT_NAME="enfyra-be"
+            export APP_DIR="/apps/enfyra-backend"
             
             # Setup PATH for tools
             export PATH="$PATH:/usr/bin:/usr/local/bin:$HOME/.local/bin"
@@ -56,6 +56,13 @@ jobs:
             echo "Installing dependencies with yarn..."
             $YARN_PATH install --frozen-lockfile
             
+            # Setup environment file
+            echo "Setting up environment..."
+            if [ ! -f .env ]; then
+              echo "⚠️  .env file not found! Creating from template..."
+              cp env_example .env || echo "env_example not found, manual .env setup required"
+            fi
+            
             # Build application
             echo "Building application..."
             $YARN_PATH build
@@ -75,6 +82,17 @@ jobs:
             
             # Show PM2 status
             $PM2_PATH status
+            
+            # Health check
+            echo "=== Health Check ==="
+            sleep 5
+            if $PM2_PATH show $PROJECT_NAME | grep -q "online"; then
+              echo "✅ Application is running successfully"
+            else
+              echo "❌ Application failed to start"
+              $PM2_PATH logs $PROJECT_NAME --lines 20 --nostream
+              exit 1
+            fi
             
             # Show logs without tailing (just print and exit)
             echo "=== Recent logs ==="
