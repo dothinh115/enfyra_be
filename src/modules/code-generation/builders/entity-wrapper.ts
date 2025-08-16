@@ -49,6 +49,12 @@ export function wrapEntityClass({
   const addedIndexKeys = new Set<string>();
 
   for (const unique of uniques || []) {
+    // CRITICAL FIX: Handle null/undefined unique.value
+    if (!unique.value || !Array.isArray(unique.value)) {
+      console.warn(`Skipping invalid @Unique constraint - value is not an array:`, unique);
+      continue;
+    }
+    
     const fields = unique.value.slice().sort(); // Don't mutate original
     
     // Skip empty arrays or arrays with null/undefined values
@@ -89,6 +95,12 @@ export function wrapEntityClass({
   }
 
   for (const index of indexes || []) {
+    // CRITICAL FIX: Handle null/undefined index.value
+    if (!index.value || !Array.isArray(index.value)) {
+      console.warn(`Skipping invalid @Index constraint - value is not an array:`, index);
+      continue;
+    }
+    
     const fields = index.value.slice().sort(); // Don't mutate original
     
     // Skip empty arrays or arrays with null/undefined values
