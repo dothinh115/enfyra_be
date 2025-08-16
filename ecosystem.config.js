@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'enfyra-app',
+      name: 'enfyra-be',
       script: 'dist/src/main.js',
       instances: '2',
       exec_mode: 'cluster',
