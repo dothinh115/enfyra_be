@@ -132,13 +132,13 @@ export class MetadataSyncService {
 
       // Step 3: Generate Migration first (needs built entities)
       const step3Start = Date.now();
-      if (options?.type === 'create' || !options?.fromRestore) {
+      if (!options?.fromRestore) {
         const migrationStart = Date.now();
         await generateMigrationFile();
         timings.generateMigration = Date.now() - migrationStart;
       } else {
         this.logger.debug(
-          'Skipping migration generation for non-structural changes',
+          'Skipping migration generation for restore operation',
         );
         timings.generateMigration = 0;
       }
@@ -152,13 +152,13 @@ export class MetadataSyncService {
         ]),
         // Run migration (now that it's generated)
         (async () => {
-          if (options?.type === 'create' || !options?.fromRestore) {
+          if (!options?.fromRestore) {
             const runStart = Date.now();
             await runMigration();
             timings.runMigration = Date.now() - runStart;
           } else {
             this.logger.debug(
-              'Skipping migration run for non-structural changes',
+              'Skipping migration run for restore operation',
             );
             timings.runMigration = 0;
           }

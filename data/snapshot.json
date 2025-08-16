@@ -244,5 +244,24 @@
             { "propertyName": "createdBy", "type": "many-to-one", "targetTable": "user_definition", "isSystem": true, "isNullable": true },
             { "propertyName": "updatedBy", "type": "many-to-one", "targetTable": "user_definition", "isSystem": true, "isNullable": true }
         ]
+    },
+    "folder_definition": {
+        "name": "folder_definition",
+        "isSystem": false,
+        "uniques": [["slug", "parent"]],
+        "columns": [
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false },
+            { "name": "name", "type": "varchar", "isNullable": false },
+            { "name": "slug", "type": "varchar", "isNullable": false },
+            { "name": "path", "type": "varchar", "isNullable": false, "isUnique": true },
+            { "name": "order", "type": "int", "isNullable": false, "defaultValue": 0 },
+            { "name": "icon", "type": "varchar", "isNullable": true, "defaultValue": "lucide:folder" },
+            { "name": "description", "type": "text", "isNullable": true },
+            { "name": "isSystem", "type": "boolean", "isNullable": false, "defaultValue": false }
+        ],
+        "relations": [
+            { "propertyName": "parent", "type": "many-to-one", "targetTable": "folder_definition", "isNullable": true, "inversePropertyName": "children" },
+            { "propertyName": "user", "type": "many-to-one", "targetTable": "user_definition", "isNullable": true }
+        ]
     }
 }

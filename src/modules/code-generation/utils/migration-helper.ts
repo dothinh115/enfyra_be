@@ -403,7 +403,7 @@ async function runMigrationDirect() {
       database: process.env.DB_NAME,
       synchronize: false,
       entities,
-      migrations: [path.resolve('dist', 'src', 'migrations', '**', '*.js')], // Look for JS files in dist
+      migrations: [path.resolve('dist', 'src', 'core', 'database', 'migrations', '**', '*.js')], // Look for JS files in dist
       migrationsRun: false, // Don't auto-run migrations
       logging: false,
     });
