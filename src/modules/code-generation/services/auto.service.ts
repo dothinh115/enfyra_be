@@ -55,6 +55,19 @@ export class AutoService {
       overwrite: true,
     });
 
+    // Extract columns with unique: true to avoid duplicate @Unique decorators
+    const columnsWithUnique = payload.columns
+      .filter(col => col.isUnique)
+      .map(col => col.name);
+
+    // Extract columns with index: true to avoid duplicate @Index decorators  
+    const columnsWithIndex = payload.columns
+      .filter(col => col.isIndex)
+      .map(col => col.name);
+
+    // Extract all valid field names from entity definition
+    const validEntityFields = payload.columns.map(col => col.name);
+
     const classDeclaration = wrapEntityClass({
       sourceFile,
       className,
@@ -62,6 +75,9 @@ export class AutoService {
       uniques: payload.uniques,
       indexes: payload.indexes,
       usedImports,
+      columnsWithUnique,
+      columnsWithIndex,
+      validEntityFields,
     });
 
     for (const col of payload.columns) {
