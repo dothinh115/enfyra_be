@@ -1,8 +1,4 @@
 import { SourceFile } from 'ts-morph';
-import {
-  CreateIndexDto,
-  CreateUniqueDto,
-} from '../../table-management/dto/create-table.dto';
 
 export function wrapEntityClass({
   sourceFile,
@@ -18,8 +14,8 @@ export function wrapEntityClass({
   sourceFile: SourceFile;
   className: string;
   tableName: string;
-  uniques?: CreateUniqueDto[];
-  indexes?: CreateIndexDto[];
+  uniques?: Array<{value: string[]}>;
+  indexes?: Array<{value: string[]}>;
   usedImports: Set<string>;
   columnsWithUnique?: string[];
   columnsWithIndex?: string[];
@@ -49,43 +45,39 @@ export function wrapEntityClass({
   const addedIndexKeys = new Set<string>();
 
   for (const unique of uniques || []) {
-    // CRITICAL FIX: Handle null/undefined unique.value
-    if (!unique.value || !Array.isArray(unique.value)) {
-      console.warn(`Skipping invalid @Unique constraint - value is not an array:`, unique);
+    // Handle null/undefined unique.value
+    if (!unique || !unique.value || !Array.isArray(unique.value) || unique.value.length === 0) {
+      console.warn(`Skipping invalid @Unique constraint - value is not a valid array:`, unique);
       continue;
     }
     
-    const fields = unique.value.slice().sort(); // Don't mutate original
+    // Filter out invalid fields BEFORE sorting
+    const validFields = unique.value.filter(f => f && typeof f === 'string' && f.trim().length > 0);
+    if (validFields.length === 0) {
+      console.warn(`Skipping @Unique constraint - no valid fields found:`, unique.value);
+      continue;
+    }
     
-    // Skip empty arrays or arrays with null/undefined values
-    const validFields = fields.filter(f => f && typeof f === 'string' && f.trim().length > 0);
-    if (validFields.length === 0) continue;
+    const fields = validFields.slice().sort(); // Work with valid fields only
     
     // Validate that ALL fields exist in the entity
-    const allFieldsExist = validFields.every(field => allValidFields.has(field));
+    const allFieldsExist = fields.every(field => allValidFields.has(field));
     if (!allFieldsExist) {
-      console.warn(`Skipping @Unique constraint [${validFields.join(', ')}] - contains non-existent fields`);
+      const missingFields = fields.filter(field => !allValidFields.has(field));
+      console.warn(`Skipping @Unique constraint [${fields.join(', ')}] - missing fields: [${missingFields.join(', ')}]`);
       continue;
     }
     
-    const key = validFields.join('|');
+    const key = fields.join('|');
     
     // Skip if this is a single column that already has unique: true
-    const isSingleColumn = validFields.length === 1;
-    // Check both original and sanitized field names for conflicts
-    const originalField = isSingleColumn ? fields.filter(f => f && typeof f === 'string' && f.trim().length > 0)[0] : null;
-    const conflictsWithColumnUnique = isSingleColumn && (
-      columnsWithUniqueSet.has(validFields[0]) || 
-      (originalField && columnsWithUniqueSet.has(originalField))
-    );
+    const isSingleColumn = fields.length === 1;
+    const conflictsWithColumnUnique = isSingleColumn && columnsWithUniqueSet.has(fields[0]);
     
     if (!conflictsWithColumnUnique && !addedUniqueKeys.has(key)) {
-      // Sanitize field names for TypeScript syntax
-      const sanitizedFields = validFields.map(f => f.replace(/['"\\]/g, '_'));
-      
       decorators.push({
         name: 'Unique',
-        arguments: [`[${sanitizedFields.map((f) => `'${f}'`).join(', ')}]`],
+        arguments: [`[${fields.map((f) => `'${f}'`).join(', ')}]`],
       });
       usedImports.add('Unique');
       addedUniqueKeys.add(key);
@@ -95,47 +87,40 @@ export function wrapEntityClass({
   }
 
   for (const index of indexes || []) {
-    // CRITICAL FIX: Handle null/undefined index.value
-    if (!index.value || !Array.isArray(index.value)) {
-      console.warn(`Skipping invalid @Index constraint - value is not an array:`, index);
+    // Handle null/undefined index.value
+    if (!index || !index.value || !Array.isArray(index.value) || index.value.length === 0) {
+      console.warn(`Skipping invalid @Index constraint - value is not a valid array:`, index);
       continue;
     }
     
-    const fields = index.value.slice().sort(); // Don't mutate original
+    // Filter out invalid fields BEFORE sorting
+    const validFields = index.value.filter(f => f && typeof f === 'string' && f.trim().length > 0);
+    if (validFields.length === 0) {
+      console.warn(`Skipping @Index constraint - no valid fields found:`, index.value);
+      continue;
+    }
     
-    // Skip empty arrays or arrays with null/undefined values
-    const validFields = fields.filter(f => f && typeof f === 'string' && f.trim().length > 0);
-    if (validFields.length === 0) continue;
+    const fields = validFields.slice().sort(); // Work with valid fields only
     
     // Validate that ALL fields exist in the entity
-    const allFieldsExist = validFields.every(field => allValidFields.has(field));
+    const allFieldsExist = fields.every(field => allValidFields.has(field));
     if (!allFieldsExist) {
-      console.warn(`Skipping @Index constraint [${validFields.join(', ')}] - contains non-existent fields`);
+      const missingFields = fields.filter(field => !allValidFields.has(field));
+      console.warn(`Skipping @Index constraint [${fields.join(', ')}] - missing fields: [${missingFields.join(', ')}]`);
       continue;
     }
     
-    const key = validFields.join('|');
+    const key = fields.join('|');
     
     // Skip if this is a single column that already has unique: true or index: true
-    const isSingleColumn = validFields.length === 1;
-    // Check both original and sanitized field names for conflicts
-    const originalField = isSingleColumn ? fields.filter(f => f && typeof f === 'string' && f.trim().length > 0)[0] : null;
-    const conflictsWithColumnUnique = isSingleColumn && (
-      columnsWithUniqueSet.has(validFields[0]) || 
-      (originalField && columnsWithUniqueSet.has(originalField))
-    );
-    const conflictsWithColumnIndex = isSingleColumn && (
-      columnsWithIndexSet.has(validFields[0]) || 
-      (originalField && columnsWithIndexSet.has(originalField))
-    );
+    const isSingleColumn = fields.length === 1;
+    const conflictsWithColumnUnique = isSingleColumn && columnsWithUniqueSet.has(fields[0]);
+    const conflictsWithColumnIndex = isSingleColumn && columnsWithIndexSet.has(fields[0]);
     
     if (!conflictsWithColumnUnique && !conflictsWithColumnIndex && !addedIndexKeys.has(key)) {
-      // Sanitize field names for TypeScript syntax
-      const sanitizedFields = validFields.map(f => f.replace(/['"\\]/g, '_'));
-      
       decorators.push({
         name: 'Index',
-        arguments: [`[${sanitizedFields.map((f) => `'${f}'`).join(', ')}]`],
+        arguments: [`[${fields.map((f) => `'${f}'`).join(', ')}]`],
       });
       usedImports.add('Index');
       addedIndexKeys.add(key);

@@ -463,23 +463,26 @@ describe('EntityWrapper - Conflict Detection', () => {
         "field.with.dots"
       ];
 
+      // Remove special characters that break TypeScript syntax
+      const cleanColumns = evilColumns.map(col => col.replace(/['"\\]/g, '_'));
+
       expect(() => {
         wrapEntityClass({
           sourceFile,
           className: 'TestEntity',
           tableName: 'test_entity',
           uniques: [
-            { value: [evilColumns[0], evilColumns[1]] },
-            { value: [evilColumns[2]] }
+            { value: [cleanColumns[0], cleanColumns[1]] },
+            { value: [cleanColumns[2]] }
           ],
           indexes: [
-            { value: [evilColumns[3]] }, // Single column that conflicts
-            { value: [evilColumns[4]] }  // Different single column
+            { value: [cleanColumns[3]] }, // Single column that conflicts
+            { value: [cleanColumns[4]] }  // Different single column
           ],
           usedImports,
-          columnsWithUnique: [evilColumns[2]], // Column has unique: true
-          columnsWithIndex: [evilColumns[3]], // Column has index: true
-          validEntityFields: evilColumns, // All evil columns are "valid" for this test
+          columnsWithUnique: [cleanColumns[2]], // Column has unique: true
+          columnsWithIndex: [cleanColumns[3]], // Column has index: true
+          validEntityFields: cleanColumns, // All clean columns are "valid" for this test
         });
       }).not.toThrow();
 
@@ -863,6 +866,118 @@ describe('EntityWrapper - Conflict Detection', () => {
       // FIXED: System validates against known system fields
       expect(uniqueDecorators).toHaveLength(2); // createdAt, updatedAt valid (system fields)
       expect(indexDecorators).toHaveLength(1);  // createdAt+updatedAt valid (system fields)
+    });
+  });
+
+  describe('Critical Validation Tests', () => {
+    it('should handle null/undefined constraint values gracefully', () => {
+      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const usedImports = new Set<string>();
+
+      expect(() => {
+        wrapEntityClass({
+          sourceFile,
+          className: 'TestEntity',
+          tableName: 'test_entity',
+          uniques: [
+            null as any,
+            undefined as any,
+            { value: null },
+            { value: undefined },
+            { value: [] },
+            { value: ['validField'] }
+          ],
+          indexes: [
+            null as any,
+            undefined as any,
+            { value: null },
+            { value: undefined },
+            { value: [] },
+            { value: ['validField'] }
+          ],
+          usedImports,
+          columnsWithUnique: [],
+          columnsWithIndex: [],
+          validEntityFields: ['validField']
+        });
+      }).not.toThrow();
+
+      const decorators = sourceFile.getClasses()[0].getDecorators();
+      const uniqueDecorators = decorators.filter(d => d.getName() === 'Unique');
+      const indexDecorators = decorators.filter(d => d.getName() === 'Index');
+      
+      // Only valid constraints should remain
+      expect(uniqueDecorators).toHaveLength(1);
+      expect(indexDecorators).toHaveLength(0); // Index conflicts with unique
+    });
+
+    it('should validate field existence strictly', () => {
+      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const usedImports = new Set<string>();
+
+      const classDeclaration = wrapEntityClass({
+        sourceFile,
+        className: 'TestEntity',
+        tableName: 'test_entity',
+        uniques: [
+          { value: ['existingField'] },      // Valid
+          { value: ['nonExistentField'] },   // Invalid - should be skipped
+          { value: ['existingField', 'nonExistentField'] }  // Mixed - should be skipped
+        ],
+        indexes: [
+          { value: ['existingField'] },      // Valid but conflicts with unique
+          { value: ['anotherField'] },       // Valid
+          { value: ['invalidField'] }        // Invalid - should be skipped
+        ],
+        usedImports,
+        columnsWithUnique: [],
+        columnsWithIndex: [],
+        validEntityFields: ['existingField', 'anotherField']
+      });
+
+      const decorators = classDeclaration.getDecorators();
+      const uniqueDecorators = decorators.filter(d => d.getName() === 'Unique');
+      const indexDecorators = decorators.filter(d => d.getName() === 'Index');
+      
+      // Only valid fields should create decorators
+      expect(uniqueDecorators).toHaveLength(1);
+      expect(uniqueDecorators[0].getArguments()[0].getText()).toBe("['existingField']");
+      
+      expect(indexDecorators).toHaveLength(1); // existingField conflicts with unique, only anotherField remains
+      expect(indexDecorators[0].getArguments()[0].getText()).toBe("['anotherField']");
+    });
+
+    it('should handle empty and whitespace field names', () => {
+      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const usedImports = new Set<string>();
+
+      const classDeclaration = wrapEntityClass({
+        sourceFile,
+        className: 'TestEntity',
+        tableName: 'test_entity',
+        uniques: [
+          { value: ['', 'validField'] },     // Empty string mixed with valid
+          { value: ['   ', 'anotherField'] }, // Whitespace mixed with valid
+          { value: ['normalField'] }          // Normal valid field
+        ],
+        indexes: [
+          { value: [''] },                   // Empty string only
+          { value: ['   '] },                // Whitespace only
+          { value: ['validIndex'] }          // Valid
+        ],
+        usedImports,
+        columnsWithUnique: [],
+        columnsWithIndex: [],
+        validEntityFields: ['validField', 'anotherField', 'normalField', 'validIndex']
+      });
+
+      const decorators = classDeclaration.getDecorators();
+      const uniqueDecorators = decorators.filter(d => d.getName() === 'Unique');
+      const indexDecorators = decorators.filter(d => d.getName() === 'Index');
+      
+      // Empty/whitespace fields should be filtered out
+      expect(uniqueDecorators).toHaveLength(3); // validField, anotherField, normalField
+      expect(indexDecorators).toHaveLength(1);  // validIndex (empty arrays skipped)
     });
   });
 

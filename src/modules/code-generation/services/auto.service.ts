@@ -65,15 +65,21 @@ export class AutoService {
       .filter(col => col.isIndex)
       .map(col => col.name);
 
-    // Extract all valid field names from entity definition
-    const validEntityFields = payload.columns.map(col => col.name);
+    // Extract all valid field names from entity definition (columns + relations)
+    const columnFields = payload.columns.map(col => col.name);
+    const relationFields = (payload.relations || []).map(rel => rel.propertyName);
+    const validEntityFields = [...columnFields, ...relationFields];
 
+    // Transform uniques/indexes from simple-json array format to expected object format
+    const transformedUniques = (payload.uniques || []).map(uniqueArray => ({ value: uniqueArray as unknown as string[] }));
+    const transformedIndexes = (payload.indexes || []).map(indexArray => ({ value: indexArray as unknown as string[] }));
+    
     const classDeclaration = wrapEntityClass({
       sourceFile,
       className,
       tableName: payload.name.toLowerCase(),
-      uniques: payload.uniques,
-      indexes: payload.indexes,
+      uniques: transformedUniques,
+      indexes: transformedIndexes,
       usedImports,
       columnsWithUnique,
       columnsWithIndex,
