@@ -6,8 +6,8 @@ import { User_definition } from './user_definition.entity';
 @Unique(['path'])
 @Index(['order'])
 export class Folder_definition {
-    @PrimaryGeneratedColumn('increment')
-    id: number;
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
     @Column({ type: "text", nullable: true })
     description: string;
     @Column({ type: "varchar", nullable: true, default: "lucide:folder" })

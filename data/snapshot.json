@@ -253,7 +253,7 @@
         "uniques": [["slug", "parent"], ["path"]],
         "indexes": [["order"]],
         "columns": [
-            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false },
+            { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false },
             { "name": "name", "type": "varchar", "isNullable": false },
             { "name": "slug", "type": "varchar", "isNullable": false },
             { "name": "path", "type": "varchar", "isNullable": false },
