@@ -24,9 +24,24 @@ export class MenuDefinitionProcessor extends BaseTableProcessor {
         
         // Convert sidebar name to ID if needed
         if (transformed.sidebar && typeof transformed.sidebar === 'string') {
-          const sidebar = await repo.findOne({
+          // Look for sidebar in both existing DB and records being processed
+          let sidebar = await repo.findOne({
             where: { type: 'Mini Sidebar', label: transformed.sidebar }
           });
+          
+          // If not found in DB, look in current batch of records
+          if (!sidebar) {
+            const sidebarRecord = records.find(r => 
+              (r.type === 'Mini Sidebar') && r.label === transformed.sidebar
+            );
+            if (sidebarRecord) {
+              // Create the sidebar first if it doesn't exist
+              const created = repo.create(sidebarRecord);
+              sidebar = await repo.save(created);
+              this.logger.debug(`Created sidebar "${transformed.sidebar}" with id ${sidebar.id}`);
+            }
+          }
+          
           if (sidebar) {
             transformed.sidebar = sidebar.id;
           } else {
