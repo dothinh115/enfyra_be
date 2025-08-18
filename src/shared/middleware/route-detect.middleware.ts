@@ -18,6 +18,7 @@ import { SystemProtectionService } from '../../modules/dynamic-api/services/syst
 import { BcryptService } from '../../core/auth/services/bcrypt.service';
 import { ScriptErrorFactory } from '../../shared/utils/script-error-factory';
 import { FolderManagementService } from '../../modules/folder-management/services/folder-management.service';
+import { autoSlug } from '../utils/auto-slug.helper';
 
 @Injectable()
 export class RouteDetectMiddleware implements NestMiddleware {
@@ -91,6 +92,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
             compare: async (p: string, h: string) =>
               await this.bcryptService.compare(p, h),
           },
+          autoSlug: autoSlug,
         },
         $params: matchedRoute.params ?? {},
         $query: req.query ?? {},

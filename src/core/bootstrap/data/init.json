@@ -172,6 +172,14 @@
             "isSystem":true,
             "route": "/user_definition",
             "methods": ["POST", "PATCH"]
+        },
+        {
+            "isEnabled": true,
+            "preHook": "if ($ctx.$body.name) { $ctx.$body.slug = $ctx.$helpers.autoSlug($ctx.$body.name); }",
+            "name": "Folder definition auto slug",
+            "isSystem": true,
+            "route": "/folder_definition",
+            "methods": ["POST", "PATCH"]
         }
     ],
     "menu_definition": [
