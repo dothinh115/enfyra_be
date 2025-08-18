@@ -175,7 +175,7 @@
         },
         {
             "isEnabled": true,
-            "preHook": "if ($ctx.$body.name) { $ctx.$body.slug = $ctx.$helpers.autoSlug($ctx.$body.name); }",
+            "preHook": "if ($ctx.$body.name) { $ctx.$body.slug = await $ctx.$helpers.autoSlug($ctx.$body.name); $ctx.$body.path = `/${$ctx.$body.slug}`; }",
             "name": "Folder definition auto slug",
             "isSystem": true,
             "route": "/folder_definition",

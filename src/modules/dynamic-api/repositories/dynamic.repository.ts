@@ -109,7 +109,7 @@ export class DynamicRepository {
         return await this.find({ where: { id: { _eq: table.id } } });
       }
 
-      if (this.tableName === 'folder_definition' && this.folderManagementService) {
+      if (this.tableName === 'folder_definition' && this.folderManagementService && body.path) {
         await this.folderManagementService.createPhysicalFolder({
           path: body.path,
           name: body.name

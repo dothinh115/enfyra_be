@@ -7,7 +7,7 @@ const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 export const pendingCalls = new Map();
 
-process.on('unhandledRejection', (reason: any, promise) => {
+process.on('unhandledRejection', (reason: any) => {
   process.send({
     type: 'error',
     error: {
@@ -27,7 +27,9 @@ process.on('message', async (msg: any) => {
       pendingCalls.delete(callId);
       if (error) {
         resolver.reject({ ...error, ...others });
-      } else resolver.resolve(result);
+      } else {
+        resolver.resolve(result);
+      }
     }
   }
   if (msg.type === 'execute') {
@@ -53,6 +55,7 @@ process.on('message', async (msg: any) => {
         `,
       );
       const result = await asyncFn(ctx);
+
       process.send({
         type: 'done',
         data: result,
