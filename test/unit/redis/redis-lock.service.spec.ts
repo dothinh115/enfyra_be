@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RedisLockService } from '../infrastructure/redis/services/redis-lock.service';
+import { RedisLockService } from '../../../src/infrastructure/redis/services/redis-lock.service';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 
 describe('RedisLockService', () => {

@@ -16,16 +16,12 @@ export class Column_definition {
     isGenerated: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
     isHidden: boolean;
-    @Column({ type: "boolean", nullable: false, default: false })
-    isIndex: boolean;
     @Column({ type: "boolean", nullable: true, default: true })
     isNullable: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
     isPrimary: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
     isSystem: boolean;
-    @Column({ type: "boolean", nullable: true, default: false })
-    isUnique: boolean;
     @Column({ type: "boolean", nullable: false, default: true })
     isUpdatable: boolean;
     @Column({ type: "varchar", nullable: false })

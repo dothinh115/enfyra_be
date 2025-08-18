@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DataSourceService } from '../core/database/data-source/data-source.service';
-import { CommonService } from '../shared/common/services/common.service';
-import { LoggingService } from '../core/exceptions/services/logging.service';
+import { DataSourceService } from '../../../src/core/database/data-source/data-source.service';
+import { CommonService } from '../../../src/shared/common/services/common.service';
+import { LoggingService } from '../../../src/core/exceptions/services/logging.service';
 import { DataSource, Repository } from 'typeorm';
 
 describe('DataSourceService', () => {

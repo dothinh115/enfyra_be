@@ -55,7 +55,20 @@ export class CoreInitService {
 
         if (exist) {
           tableNameToId[name] = exist.id;
-          this.logger.log(`⏩ Skip ${name}, already exists`);
+          
+          // Check for table-level changes (uniques, indexes, etc.)
+          const { columns, relations, ...rest } = def;
+          const hasTableChanges = this.detectTableChanges(rest, exist);
+          
+          if (hasTableChanges) {
+            await queryRunner.manager.save(tableDefRepo.target, {
+              ...rest,
+              id: exist.id,
+            });
+            this.logger.log(`🔄 Updated table ${name} due to table-level changes`);
+          } else {
+            this.logger.log(`⏩ Skip ${name}, no table-level changes`);
+          }
         } else {
           const { columns, relations, ...rest } = def;
           const created = await queryRunner.manager.save(
@@ -88,10 +101,8 @@ export class CoreInitService {
             'c.isNullable AS isNullable',
             'c.isPrimary AS isPrimary',
             'c.isGenerated AS isGenerated',
-            'c.isUnique AS isUnique',
             'c.defaultValue AS defaultValue',
             'c.enumValues AS enumValues',
-            'c.isIndex AS isIndex',
             'c.isUpdatable AS isUpdatable',
           ])
           .getRawMany();
@@ -132,6 +143,15 @@ export class CoreInitService {
               );
             }
           }
+        }
+
+        // Phase 2.5: Remove columns that no longer exist in snapshot
+        const snapshotColumnNames = new Set((def.columns || []).map(col => col.name));
+        const columnsToRemove = existingColumns.filter(col => !snapshotColumnNames.has(col.name));
+        
+        for (const colToRemove of columnsToRemove) {
+          await queryRunner.manager.delete(columnEntity, { id: colToRemove.id });
+          this.logger.log(`🗑️ Removed column ${colToRemove.name} from ${name} (no longer in snapshot)`);
         }
       }
 
@@ -201,6 +221,44 @@ export class CoreInitService {
         } else {
           this.logger.log(`⏩ No relations to add for ${name}`);
         }
+
+        // Phase 3.5: Remove relations that no longer exist in snapshot
+        const snapshotRelationKeys = new Set(
+          (def.relations || []).map(rel => {
+            const targetId = tableNameToId[rel.targetTable];
+            if (!targetId) return null;
+            return JSON.stringify({
+              sourceTable: tableId,
+              targetTable: targetId,
+              propertyName: rel.propertyName,
+              relationType: rel.type,
+            });
+          }).filter(Boolean)
+        );
+
+        const relationsToRemove = existingRelations.filter(rel => {
+          const key = JSON.stringify({
+            sourceTable: rel.sourceId,
+            targetTable: rel.targetId,
+            propertyName: rel.propertyName,
+            relationType: rel.relationType,
+          });
+          return !snapshotRelationKeys.has(key);
+        });
+
+        for (const relToRemove of relationsToRemove) {
+          await queryRunner.manager
+            .getRepository(relationEntity)
+            .createQueryBuilder()
+            .delete()
+            .where('sourceTable = :sourceId', { sourceId: relToRemove.sourceId })
+            .andWhere('targetTable = :targetId', { targetId: relToRemove.targetId })
+            .andWhere('propertyName = :propertyName', { propertyName: relToRemove.propertyName })
+            .andWhere('type = :relationType', { relationType: relToRemove.relationType })
+            .execute();
+          
+          this.logger.log(`🗑️ Removed relation ${relToRemove.propertyName} from ${name} (no longer in snapshot)`);
+        }
       }
 
       await queryRunner.commitTransaction();
@@ -214,18 +272,28 @@ export class CoreInitService {
     }
   }
 
+  private detectTableChanges(snapshotTable: any, existingTable: any): boolean {
+    // Compare table-level properties
+    const hasChanges =
+      snapshotTable.isSystem !== existingTable.isSystem ||
+      snapshotTable.alias !== existingTable.alias ||
+      snapshotTable.description !== existingTable.description ||
+      JSON.stringify(snapshotTable.uniques) !== JSON.stringify(existingTable.uniques) ||
+      JSON.stringify(snapshotTable.indexes) !== JSON.stringify(existingTable.indexes);
+
+    return hasChanges;
+  }
+
   private detectColumnChanges(snapshotCol: any, existingCol: any): boolean {
-    // Compare all relevant column properties
+    // Compare all relevant column properties (removed isUnique and isIndex)
     const hasChanges =
       snapshotCol.type !== existingCol.type ||
       snapshotCol.isNullable !== existingCol.isNullable ||
       snapshotCol.isPrimary !== existingCol.isPrimary ||
       snapshotCol.isGenerated !== existingCol.isGenerated ||
-      snapshotCol.isUnique !== existingCol.isUnique ||
       snapshotCol.defaultValue !== existingCol.defaultValue ||
       JSON.stringify(snapshotCol.enumValues) !==
         JSON.stringify(existingCol.enumValues) ||
-      snapshotCol.isIndex !== existingCol.isIndex ||
       snapshotCol.isUpdatable !== existingCol.isUpdatable;
 
     return hasChanges;

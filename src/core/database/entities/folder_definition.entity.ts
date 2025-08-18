@@ -1,8 +1,10 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Unique, Index, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { User_definition } from './user_definition.entity';
 
 @Entity('folder_definition')
 @Unique(['parent', 'slug'])
+@Unique(['path'])
+@Index(['order'])
 export class Folder_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
@@ -16,7 +18,7 @@ export class Folder_definition {
     name: string;
     @Column({ type: "int", nullable: false, default: 0 })
     order: number;
-    @Column({ type: "varchar", nullable: false, unique: true })
+    @Column({ type: "varchar", nullable: false })
     path: string;
     @Column({ type: "varchar", nullable: false })
     slug: string;

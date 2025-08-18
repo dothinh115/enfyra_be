@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { Test, TestingModule } from '@nestjs/testing';
-import { AutoService } from '../modules/code-generation/services/auto.service';
-import { DataSourceService } from '../core/database/data-source/data-source.service';
-import { CommonService } from '../shared/common/services/common.service';
+import { AutoService } from '../../../src/modules/code-generation/services/auto.service';
+import { DataSourceService } from '../../../src/core/database/data-source/data-source.service';
+import { CommonService } from '../../../src/shared/common/services/common.service';
 describe.skip('AutoService', () => {
   let service: AutoService;
   let dataSourceService: jest.Mocked<DataSourceService>;

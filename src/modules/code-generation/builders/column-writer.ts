@@ -70,7 +70,9 @@ export function addColumnToClass({
       }
     }
 
-    if (col.isUnique) opts.push('unique: true');
+    // Skip field-level unique/index - only use class-level constraints
+    // if (col.isUnique) opts.push('unique: true');
+    
     if (col.type === 'enum' && col.enumValues) {
       opts.push(`enum: [${col.enumValues.map((v) => `'${v}'`).join(', ')}]`);
     }
@@ -81,10 +83,11 @@ export function addColumnToClass({
     decorators.push({ name: 'Column', arguments: [`{ ${opts.join(', ')} }`] });
     usedImports.add('Column');
 
-    if (col.isIndex) {
-      decorators.push({ name: 'Index', arguments: [] });
-      usedImports.add('Index');
-    }
+    // Skip field-level index - only use class-level constraints
+    // if (col.isIndex) {
+    //   decorators.push({ name: 'Index', arguments: [] });
+    //   usedImports.add('Index');
+    // }
   }
 
   if (col.isHidden) {

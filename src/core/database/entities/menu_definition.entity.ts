@@ -1,10 +1,11 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, OneToMany, OneToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Unique, Index, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, OneToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Extension_definition } from './extension_definition.entity';
 
 @Entity('menu_definition')
 @Unique(['label', 'type'])
 @Unique(['label', 'sidebar', 'type'])
 @Unique(['path'])
+@Index(['order'])
 export class Menu_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
@@ -19,7 +20,6 @@ export class Menu_definition {
     @Column({ type: "varchar", nullable: false })
     label: string;
     @Column({ type: "int", nullable: false, default: 0 })
-    @Index()
     order: number;
     @Column({ type: "varchar", nullable: false })
     path: string;

@@ -9,7 +9,7 @@ import {
   DataSource,
 } from 'typeorm';
 import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
-import { walkFilter } from '../infrastructure/query-engine/utils/walk-filter';
+import { walkFilter } from '../../../src/infrastructure/query-engine/utils/walk-filter';
 
 // Test Entities
 @Entity('user')

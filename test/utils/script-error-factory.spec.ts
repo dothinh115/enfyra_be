@@ -1,4 +1,4 @@
-import { ScriptErrorFactory } from './script-error-factory';
+import { ScriptErrorFactory } from '../../src/shared/utils/script-error-factory';
 import {
   BusinessLogicException,
   ValidationException,
@@ -20,7 +20,7 @@ import {
   FileUploadException,
   FileNotFoundException,
   FileSizeExceededException,
-} from '../../core/exceptions/custom-exceptions';
+} from '../../src/core/exceptions/custom-exceptions';
 
 describe('ScriptErrorFactory', () => {
   let errorHandlers: ReturnType<typeof ScriptErrorFactory.createErrorHandlers>;

@@ -1,18 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TableHandlerService } from '../modules/table-management/services/table-handler.service';
-import { DataSourceService } from '../core/database/data-source/data-source.service';
-import { CommonService } from '../shared/common/services/common.service';
-import { MetadataSyncService } from '../modules/schema-management/services/metadata-sync.service';
-import { SchemaReloadService } from '../modules/schema-management/services/schema-reload.service';
-import { LoggingService } from '../core/exceptions/services/logging.service';
+import { TableHandlerService } from '../../../src/modules/table-management/services/table-handler.service';
+import { DataSourceService } from '../../../src/core/database/data-source/data-source.service';
+import { CommonService } from '../../../src/shared/common/services/common.service';
+import { MetadataSyncService } from '../../../src/modules/schema-management/services/metadata-sync.service';
+import { SchemaReloadService } from '../../../src/modules/schema-management/services/schema-reload.service';
+import { LoggingService } from '../../../src/core/exceptions/services/logging.service';
 import { Logger } from '@nestjs/common';
 
 // Mock the validation utility
-jest.mock('../modules/table-management/utils/duplicate-field-check', () => ({
+jest.mock('../../../src/modules/table-management/utils/duplicate-field-check', () => ({
   validateUniquePropertyNames: jest.fn(),
 }));
 
-jest.mock('../modules/table-management/utils/get-deleted-ids', () => ({
+jest.mock('../../../src/modules/table-management/utils/get-deleted-ids', () => ({
   getDeletedIds: jest.fn().mockReturnValue([]),
 }));
 
@@ -341,7 +341,7 @@ describe('TableHandlerService', () => {
       // Mock getDeletedIds to return the IDs that should be deleted
       const {
         getDeletedIds,
-      } = require('../modules/table-management/utils/get-deleted-ids');
+      } = require('../../../src/modules/table-management/utils/get-deleted-ids');
       getDeletedIds
         .mockReturnValueOnce([2]) // deleted column id
         .mockReturnValueOnce([1]); // deleted relation id

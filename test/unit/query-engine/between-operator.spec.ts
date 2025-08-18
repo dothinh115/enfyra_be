@@ -1,8 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, DataSource } from 'typeorm';
 import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
-import { QueryEngine } from '../infrastructure/query-engine/services/query-engine.service';
-import { DataSourceService } from '../core/database/data-source/data-source.service';
-import { LoggingService } from '../core/exceptions/services/logging.service';
+import { QueryEngine } from '../../../src/infrastructure/query-engine/services/query-engine.service';
+import { DataSourceService } from '../../../src/core/database/data-source/data-source.service';
+import { LoggingService } from '../../../src/core/exceptions/services/logging.service';
 
 @Entity('test_product')
 class TestProduct {

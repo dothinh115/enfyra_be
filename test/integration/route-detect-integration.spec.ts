@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RouteDetectMiddleware } from '../shared/middleware/route-detect.middleware';
-import { RouteCacheService } from '../infrastructure/redis/services/route-cache.service';
-import { CommonService } from '../shared/common/services/common.service';
-import { DataSourceService } from '../core/database/data-source/data-source.service';
+import { RouteDetectMiddleware } from '../../src/shared/middleware/route-detect.middleware';
+import { RouteCacheService } from '../../src/infrastructure/redis/services/route-cache.service';
+import { CommonService } from '../../src/shared/common/services/common.service';
+import { DataSourceService } from '../../src/core/database/data-source/data-source.service';
 import { JwtService } from '@nestjs/jwt';
-import { TableHandlerService } from '../modules/table-management/services/table-handler.service';
-import { RedisLockService } from '../infrastructure/redis/services/redis-lock.service';
-import { QueryEngine } from '../infrastructure/query-engine/services/query-engine.service';
-import { SystemProtectionService } from '../modules/dynamic-api/services/system-protection.service';
-import { BcryptService } from '../core/auth/services/bcrypt.service';
+import { TableHandlerService } from '../../src/modules/table-management/services/table-handler.service';
+import { RedisLockService } from '../../src/infrastructure/redis/services/redis-lock.service';
+import { QueryEngine } from '../../src/infrastructure/query-engine/services/query-engine.service';
+import { SystemProtectionService } from '../../src/modules/dynamic-api/services/system-protection.service';
+import { BcryptService } from '../../src/core/auth/services/bcrypt.service';
 
 interface MockRequest {
   method: string;

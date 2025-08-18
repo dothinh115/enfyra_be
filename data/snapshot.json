@@ -13,10 +13,8 @@
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "defaultValue", "type": "simple-json", "isNullable": true, "isSystem": true },
             { "name": "enumValues", "type": "simple-json", "isNullable": true, "isSystem": true },
-            { "name": "isUnique", "type": "boolean", "isNullable": true, "isSystem": true, "defaultValue": false },
             { "name": "isUpdatable", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
             { "name": "isHidden", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
-            { "name": "isIndex", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "description", "type": "richtext", "isSystem": true },
             { "name": "placeholder", "type": "text", "isSystem": true }
         ],
@@ -50,13 +48,14 @@
     "table_definition": {
         "name": "table_definition",
         "isSystem": true,
+        "uniques": [["name"], ["alias"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "isUnique": true },
+            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "uniques", "type": "simple-json", "isNullable": true, "isSystem": true },
             { "name": "indexes", "type": "simple-json", "isNullable": true, "isSystem": true },
-            { "name": "alias", "type": "varchar", "isNullable": true, "isSystem": true, "isUnique": true },
+            { "name": "alias", "type": "varchar", "isNullable": true, "isSystem": true },
             { "name": "description", "type": "text", "isSystem": true }
 
         ]
@@ -65,9 +64,10 @@
     {
         "name": "user_definition",
         "isSystem": true,
+        "uniques": [["email"]],
         "columns": [
             { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "email", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null, "isUnique": true },
+            { "name": "email", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null },
             { "name": "password", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null, "isHidden": true },
             { "name": "isRootAdmin", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false, "isUpdatable": false },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false }
@@ -109,9 +109,10 @@
     "role_definition": {
         "name": "role_definition",
         "isSystem": true,
+        "uniques": [["name"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null, "isUnique": true },
+            { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null },
             { "name": "description", "type": "text", "isSystem": true }
         ]
     },
@@ -204,6 +205,7 @@
             ["type", "sidebar", "label"],
             ["path"]
         ],
+        "indexes": [["order"]],
         "isSystem": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
@@ -214,7 +216,7 @@
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "description", "type": "text", "isSystem": true },
-            { "name": "order", "type": "int", "isNullable": false, "isSystem": true, "defaultValue": 0, "isIndex": true },
+            { "name": "order", "type": "int", "isNullable": false, "isSystem": true, "defaultValue": 0 },
             { "name": "permission", "type": "simple-json", "isNullable": true, "isSystem": true }
         ],
         "relations": [
@@ -248,12 +250,13 @@
     "folder_definition": {
         "name": "folder_definition",
         "isSystem": true,
-        "uniques": [["slug", "parent"]],
+        "uniques": [["slug", "parent"], ["path"]],
+        "indexes": [["order"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false },
             { "name": "name", "type": "varchar", "isNullable": false },
             { "name": "slug", "type": "varchar", "isNullable": false },
-            { "name": "path", "type": "varchar", "isNullable": false, "isUnique": true },
+            { "name": "path", "type": "varchar", "isNullable": false },
             { "name": "order", "type": "int", "isNullable": false, "defaultValue": 0 },
             { "name": "icon", "type": "varchar", "isNullable": true, "defaultValue": "lucide:folder" },
             { "name": "description", "type": "text", "isNullable": true },

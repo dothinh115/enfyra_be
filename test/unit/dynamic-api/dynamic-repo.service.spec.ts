@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { Test, TestingModule } from '@nestjs/testing';
-import { DynamicRepository } from '../modules/dynamic-api/repositories/dynamic.repository';
-import { TableHandlerService } from '../modules/table-management/services/table-handler.service';
-import { DataSourceService } from '../core/database/data-source/data-source.service';
-import { QueryEngine } from '../infrastructure/query-engine/services/query-engine.service';
-import { RouteCacheService } from '../infrastructure/redis/services/route-cache.service';
-import { SystemProtectionService } from '../modules/dynamic-api/services/system-protection.service';
+import { DynamicRepository } from '../../../src/modules/dynamic-api/repositories/dynamic.repository';
+import { TableHandlerService } from '../../../src/modules/table-management/services/table-handler.service';
+import { DataSourceService } from '../../../src/core/database/data-source/data-source.service';
+import { QueryEngine } from '../../../src/infrastructure/query-engine/services/query-engine.service';
+import { RouteCacheService } from '../../../src/infrastructure/redis/services/route-cache.service';
+import { SystemProtectionService } from '../../../src/modules/dynamic-api/services/system-protection.service';
 describe.skip('DynamicRepository', () => {
   let service: DynamicRepository;
   let tableHandlerService: jest.Mocked<TableHandlerService>;

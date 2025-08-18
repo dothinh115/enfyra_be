@@ -1,12 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { HiddenField } from '../../../shared/decorators/hidden-field.decorator';
 import { Role_definition } from './role_definition.entity';
 
 @Entity('user_definition')
+@Unique(['email'])
 export class User_definition {
     @PrimaryGeneratedColumn('uuid')
     id: string;
-    @Column({ type: "varchar", nullable: false, unique: true })
+    @Column({ type: "varchar", nullable: false })
     email: string;
     @Column({ type: "boolean", nullable: false, default: false, update: false })
     isRootAdmin: boolean;
