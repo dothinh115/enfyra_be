@@ -255,8 +255,8 @@
         "columns": [
             { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false },
             { "name": "name", "type": "varchar", "isNullable": false },
-            { "name": "slug", "type": "varchar", "isNullable": false },
-            { "name": "path", "type": "varchar", "isNullable": false },
+            { "name": "slug", "type": "varchar", "isNullable": false, "isGenerated": true },
+            { "name": "path", "type": "varchar", "isNullable": false, "isGenerated": true },
             { "name": "order", "type": "int", "isNullable": false, "defaultValue": 0 },
             { "name": "icon", "type": "varchar", "isNullable": true, "defaultValue": "lucide:folder" },
             { "name": "description", "type": "text", "isNullable": true },
