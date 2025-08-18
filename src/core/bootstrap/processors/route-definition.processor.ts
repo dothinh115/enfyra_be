@@ -32,20 +32,22 @@ export class RouteDefinitionProcessor extends BaseTableProcessor {
         
         // Handle publishedMethods - convert string array to method entities
         if (record.publishedMethods && Array.isArray(record.publishedMethods)) {
-          const methodEntities = await methodRepo.find({
-            where: record.publishedMethods.map((method: string) => ({ method }))
-          });
+          const methodEntities = await Promise.all(
+            record.publishedMethods.map(async (methodName: string) => {
+              const method = await methodRepo.findOne({ where: { method: methodName } });
+              if (!method) {
+                this.logger.warn(`⚠️ Method '${methodName}' not found for route ${record.path}`);
+              }
+              return method;
+            })
+          );
           
-          if (methodEntities.length !== record.publishedMethods.length) {
-            const foundMethods = methodEntities.map((m: any) => m.method);
-            const notFound = record.publishedMethods.filter((m: string) => !foundMethods.includes(m));
-            this.logger.warn(
-              `⚠️ Method(s) '${notFound.join(', ')}' not found for route ${record.path}`,
-            );
+          // Filter out null values and assign
+          transformedRecord.publishedMethods = methodEntities.filter(Boolean);
+          
+          if (transformedRecord.publishedMethods.length > 0) {
+            this.logger.debug(`🔗 Route ${record.path} linked to methods: ${transformedRecord.publishedMethods.map((m: any) => m.method).join(', ')}`);
           }
-          
-          transformedRecord.publishedMethods = methodEntities;
-          this.logger.debug(`🔗 Route ${record.path} linked to methods: ${methodEntities.map((m: any) => m.method).join(', ')}`);
         }
         
         return transformedRecord;
@@ -60,8 +62,16 @@ export class RouteDefinitionProcessor extends BaseTableProcessor {
     return { path: record.path };
   }
 
-  // TODO: Uncomment when update logic is restored
-  // protected getCompareFields(): string[] {
-  //   return ['path', 'isEnabled', 'icon', 'description'];
-  // }
+  protected getCompareFields(): string[] {
+    return ['path', 'isEnabled', 'icon', 'description'];
+  }
+
+  protected getRecordIdentifier(record: any): string {
+    const methods = record.publishedMethods || record._publishedMethods;
+    const methodsList = methods && Array.isArray(methods) 
+      ? methods.map(m => typeof m === 'string' ? m : m.method).join(', ')
+      : '';
+    
+    return `[Route] ${record.path}${methodsList ? ` (${methodsList})` : ''}`;
+  }
 }

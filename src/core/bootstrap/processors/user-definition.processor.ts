@@ -22,8 +22,7 @@ export class UserDefinitionProcessor extends BaseTableProcessor {
     return { username: record.username };
   }
 
-  // TODO: Uncomment when update logic is restored
-  // protected getCompareFields(): string[] {
-  //   return ['email', 'isRootAdmin', 'isSystem'];
-  // }
+  protected getCompareFields(): string[] {
+    return ['email', 'isRootAdmin', 'isSystem'];
+  }
 }

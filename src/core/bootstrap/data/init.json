@@ -184,7 +184,7 @@
     ],
     "menu_definition": [
         {
-            "type": "mini",
+            "type": "Mini Sidebar",
             "label": "Dashboard",
             "icon": "lucide:layout-dashboard",
             "path": "/dashboard",
@@ -197,7 +197,7 @@
             }
         },
         {
-            "type": "mini",
+            "type": "Mini Sidebar",
             "label": "Data",
             "icon": "lucide:list",
             "path": "/data",
@@ -210,7 +210,7 @@
             }
         },
         {
-            "type": "mini",
+            "type": "Mini Sidebar",
             "label": "Collections",
             "icon": "lucide:database",
             "path": "/collections",
@@ -236,7 +236,7 @@
             }
         },
         {
-            "type": "mini",
+            "type": "Mini Sidebar",
             "label": "Settings",
             "icon": "lucide:settings",
             "path": "/settings",
@@ -249,7 +249,7 @@
             }
         },
         {
-            "type": "menu",
+            "type": "Menu",
             "label": "General",
             "icon": "heroicons:cog-8-tooth",
             "path": "/settings/general",
@@ -263,7 +263,7 @@
             }
         },
         {
-            "type": "menu",
+            "type": "Menu",
             "label": "Menu",
             "icon": "heroicons:bars-3",
             "path": "/settings/menus",
@@ -282,7 +282,7 @@
             }
         },
         {
-            "type": "menu",
+            "type": "Menu",
             "label": "Extensions",
             "icon": "heroicons:puzzle-piece",
             "path": "/settings/extensions",
@@ -298,7 +298,7 @@
             }
         },
         {
-            "type": "menu",
+            "type": "Menu",
             "label": "Routings",
             "icon": "heroicons:map",
             "path": "/settings/routings",
@@ -321,7 +321,7 @@
             }
         },
         {
-            "type": "menu",
+            "type": "Menu",
             "label": "Handlers",
             "icon": "heroicons:command-line",
             "path": "/settings/handlers",
@@ -335,7 +335,7 @@
             }
         },
         {
-            "type": "menu",
+            "type": "Menu",
             "label": "Hooks",
             "icon": "heroicons:link",
             "path": "/settings/hooks",
@@ -349,7 +349,7 @@
             }
         },
         {
-            "type": "menu",
+            "type": "Menu",
             "label": "Users",
             "icon": "heroicons:users",
             "path": "/settings/users",
@@ -365,7 +365,7 @@
             }
         },
         {
-            "type": "menu",
+            "type": "Menu",
             "label": "Roles",
             "icon": "heroicons:shield-check",
             "path": "/settings/roles",
@@ -381,7 +381,7 @@
             }
         },
         {
-            "type": "menu",
+            "type": "Menu",
             "label": "Create New Table",
             "icon": "lucide:plus",
             "path": "/collections/create",
@@ -395,7 +395,7 @@
             }
         },
         {
-            "type": "mini",
+            "type": "Mini Sidebar",
             "label": "Files",
             "icon": "lucide:folder",
             "path": "/files",
@@ -410,7 +410,7 @@
             }
         },
         {
-            "type": "menu",
+            "type": "Menu",
             "label": "Folders",
             "icon": "lucide:folder-tree",
             "path": "/files/folders",

@@ -22,6 +22,20 @@ export abstract class BaseTableProcessor {
   abstract getUniqueIdentifier(record: any): object | object[];
 
   /**
+   * Get human-readable identifier for logging (can be overridden)
+   */
+  protected getRecordIdentifier(record: any): string {
+    // Default implementation - can be overridden in subclasses
+    if (record.name) return record.name;
+    if (record.label) return record.label;
+    if (record.path) return record.path;
+    if (record.type && record.label) return `${record.type}: ${record.label}`;
+    if (record.email) return record.email;
+    if (record.method) return record.method;
+    return JSON.stringify(record).substring(0, 50) + '...';
+  }
+
+  /**
    * Process upsert for all records
    */
   async process(records: any[], repo: Repository<any>, context?: any): Promise<UpsertResult> {
@@ -43,29 +57,38 @@ export abstract class BaseTableProcessor {
         // Try to find existing record
         let existingRecord = null;
         for (const whereCondition of whereConditions) {
-          existingRecord = await repo.findOne({ where: whereCondition });
+          // Remove many-to-many fields from where condition to avoid query errors
+          const cleanedCondition = { ...whereCondition };
+          for (const key in cleanedCondition) {
+            if (Array.isArray(cleanedCondition[key]) && cleanedCondition[key].length > 0 && typeof cleanedCondition[key][0] === 'object') {
+              // This looks like a many-to-many relation, remove it
+              delete cleanedCondition[key];
+            }
+          }
+          
+          existingRecord = await repo.findOne({ where: cleanedCondition });
           if (existingRecord) break;
         }
 
         if (existingRecord) {
-          // TODO: Temporarily commented - Update logic will be restored later
-          // const hasChanges = this.detectRecordChanges(record, existingRecord);
-          // if (hasChanges) {
-          //   await this.updateRecord(existingRecord.id, record, repo);
-          //   updatedCount++;
-          //   this.logger.debug(`🔄 Updated: ${JSON.stringify(record).substring(0, 50)}...`);
-          // } else {
-          //   this.logger.debug(`⏩ No changes: ${JSON.stringify(record).substring(0, 50)}...`);
-          // }
-
-          skippedCount++;
-          this.logger.debug(`⏩ Skipped (exists): ${JSON.stringify(record).substring(0, 50)}...`);
+          const hasChanges = this.detectRecordChanges(record, existingRecord);
+          if (hasChanges) {
+            await this.updateRecord(existingRecord.id, record, repo);
+            skippedCount++; // Count as skipped since not created new
+            const identifier = this.getRecordIdentifier(record);
+            this.logger.log(`   🔄 Updated: ${identifier}`);
+          } else {
+            skippedCount++;
+            const identifier = this.getRecordIdentifier(record);
+            this.logger.log(`   ⏩ Skipped (no changes): ${identifier}`);
+          }
         } else {
           // Create new record
           const created = repo.create(record);
           await repo.save(created);
           createdCount++;
-          this.logger.debug(`✅ Created: ${JSON.stringify(record).substring(0, 50)}...`);
+          const identifier = this.getRecordIdentifier(record);
+          this.logger.log(`   ✅ Created: ${identifier}`);
         }
       } catch (error) {
         this.logger.error(`❌ Error processing record: ${error.message}`);
@@ -76,35 +99,58 @@ export abstract class BaseTableProcessor {
     return { created: createdCount, skipped: skippedCount };
   }
 
-  // TODO: These will be used when update logic is uncommented
-  // protected detectRecordChanges(newRecord: any, existingRecord: any): boolean {
-  //   const compareFields = this.getCompareFields();
-  //   for (const field of compareFields) {
-  //     if (this.hasValueChanged(newRecord[field], existingRecord[field])) {
-  //       return true;
-  //     }
-  //   }
-  //   return false;
-  // }
+  protected detectRecordChanges(newRecord: any, existingRecord: any): boolean {
+    const compareFields = this.getCompareFields();
+    for (const field of compareFields) {
+      if (this.hasValueChanged(newRecord[field], existingRecord[field])) {
+        return true;
+      }
+    }
+    return false;
+  }
 
-  // protected getCompareFields(): string[] {
-  //   return ['name', 'description']; // Default fields
-  // }
+  protected getCompareFields(): string[] {
+    return ['name', 'description']; // Default fields
+  }
 
-  // protected hasValueChanged(newValue: any, existingValue: any): boolean {
-  //   if (newValue === null && existingValue === null) return false;
-  //   if (newValue === undefined && existingValue === undefined) return false;
-  //   if (newValue === null || existingValue === null) return true;
-  //   if (newValue === undefined || existingValue === undefined) return true;
-  //   
-  //   if (typeof newValue === 'object' && typeof existingValue === 'object') {
-  //     return JSON.stringify(newValue) !== JSON.stringify(existingValue);
-  //   }
-  //   
-  //   return newValue !== existingValue;
-  // }
+  protected hasValueChanged(newValue: any, existingValue: any): boolean {
+    if (newValue === null && existingValue === null) return false;
+    if (newValue === undefined && existingValue === undefined) return false;
+    if (newValue === null || existingValue === null) return true;
+    if (newValue === undefined || existingValue === undefined) return true;
+    
+    if (typeof newValue === 'object' && typeof existingValue === 'object') {
+      return JSON.stringify(newValue) !== JSON.stringify(existingValue);
+    }
+    
+    return newValue !== existingValue;
+  }
 
-  // protected async updateRecord(existingId: any, record: any, repo: Repository<any>): Promise<void> {
-  //   await repo.update(existingId, record);
-  // }
+  protected async updateRecord(existingId: any, record: any, repo: Repository<any>): Promise<void> {
+    // Separate many-to-many fields from regular fields
+    const regularFields: any = {};
+    const manyToManyFields: any = {};
+    
+    for (const key in record) {
+      if (Array.isArray(record[key]) && record[key].length > 0 && typeof record[key][0] === 'object') {
+        // This looks like a many-to-many relation
+        manyToManyFields[key] = record[key];
+      } else {
+        regularFields[key] = record[key];
+      }
+    }
+    
+    // Update regular fields first
+    if (Object.keys(regularFields).length > 0) {
+      await repo.update(existingId, regularFields);
+    }
+    
+    // Then handle many-to-many relations using save
+    if (Object.keys(manyToManyFields).length > 0) {
+      await repo.save({
+        id: existingId,
+        ...manyToManyFields
+      });
+    }
+  }
 }

@@ -209,10 +209,10 @@
         "isSystem": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "type", "type": "enum", "isNullable": false, "isSystem": true, "enumValues": ["mini", "menu"] },
+            { "name": "type", "type": "enum", "isNullable": false, "isSystem": true, "enumValues": ["Mini Sidebar", "Dropdown Menu", "Menu"] },
             { "name": "label", "type": "varchar", "isNullable": false, "isSystem": true },
             { "name": "icon", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": "lucide:menu" },
-            { "name": "path", "type": "varchar", "isNullable": false, "isSystem": true },
+            { "name": "path", "type": "varchar", "isNullable": true, "isSystem": true },
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "description", "type": "text", "isSystem": true },

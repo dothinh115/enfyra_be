@@ -21,12 +21,12 @@ export class Menu_definition {
     label: string;
     @Column({ type: "int", nullable: false, default: 0 })
     order: number;
-    @Column({ type: "varchar", nullable: false })
+    @Column({ type: "varchar", nullable: true })
     path: string;
     @Column({ type: "simple-json", nullable: true })
     permission: any;
-    @Column({ type: "enum", nullable: false, enum: ['mini', 'menu'] })
-    type: 'mini' | 'menu';
+    @Column({ type: "enum", nullable: false, enum: ['Mini Sidebar', 'Dropdown Menu', 'Menu'] })
+    type: 'Mini Sidebar' | 'Dropdown Menu' | 'Menu';
     @Index()
     @ManyToOne('Menu_definition', (rel: any) => rel.children, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()

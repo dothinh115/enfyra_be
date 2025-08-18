@@ -70,16 +70,16 @@ export class GenericTableProcessor extends BaseTableProcessor {
     return identifiers.length > 1 ? identifiers : identifiers[0] || { id: record.id };
   }
 
-  // TODO: Uncomment when update logic is restored
-  // protected getCompareFields(): string[] {
-  //   const fieldMap: Record<string, string[]> = {
-  //     'role_definition': ['name', 'description'],
-  //     'setting_definition': ['projectName', 'projectDescription', 'projectUrl'],
-  //     'route_permission_definition': ['isEnabled'],
-  //     'route_handler_definition': ['description', 'logic'],
-  //     'extension_definition': ['name', 'type', 'version', 'isEnabled', 'description', 'code'],
-  //   };
-  //   
-  //   return fieldMap[this.tableName] || ['name', 'description'];
-  // }
+  protected getCompareFields(): string[] {
+    const fieldMap: Record<string, string[]> = {
+      'role_definition': ['name', 'description'],
+      'setting_definition': ['projectName', 'projectDescription', 'projectUrl'],
+      'route_permission_definition': ['isEnabled'],
+      'route_handler_definition': ['description', 'logic'],
+      'extension_definition': ['name', 'type', 'version', 'isEnabled', 'description', 'code'],
+      'folder_definition': ['name', 'order', 'icon', 'description'],
+    };
+    
+    return fieldMap[this.tableName] || ['name', 'description'];
+  }
 }

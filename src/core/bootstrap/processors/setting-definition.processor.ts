@@ -8,8 +8,7 @@ export class SettingDefinitionProcessor extends BaseTableProcessor {
     return {};  // Empty where condition means findOne() will get first record
   }
 
-  // TODO: Uncomment when update logic is restored
-  // protected getCompareFields(): string[] {
-  //   return ['isInit', 'projectName', 'projectDescription'];
-  // }
+  protected getCompareFields(): string[] {
+    return ['isInit', 'projectName', 'projectDescription', 'projectUrl'];
+  }
 }

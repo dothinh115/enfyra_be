@@ -24,8 +24,7 @@ export class MethodDefinitionProcessor extends BaseTableProcessor {
     return { method: record.method };
   }
 
-  // TODO: Uncomment when update logic is restored
-  // protected getCompareFields(): string[] {
-  //   return ['method', 'isSystem'];
-  // }
+  protected getCompareFields(): string[] {
+    return ['method', 'isSystem'];
+  }
 }

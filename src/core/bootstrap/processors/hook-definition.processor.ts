@@ -79,10 +79,26 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
     return { name: record.name };
   }
 
-  // TODO: Uncomment when update logic is restored
-  // protected getCompareFields(): string[] {
-  //   return ['name', 'description', 'preHook', 'afterHook', 'priority', 'isEnabled'];
-  // }
+  protected getCompareFields(): string[] {
+    return ['name', 'description', 'preHook', 'afterHook', 'priority', 'isEnabled'];
+  }
+
+  protected getRecordIdentifier(record: any): string {
+    const route = record.route;
+    const methods = record.methods;
+    
+    let routeStr = '';
+    if (route) {
+      routeStr = typeof route === 'string' ? route : route.path;
+    }
+    
+    let methodsStr = '';
+    if (methods && Array.isArray(methods)) {
+      methodsStr = methods.map(m => typeof m === 'string' ? m : m.method).join(', ');
+    }
+    
+    return `[Hook] ${record.name}${routeStr ? ` on ${routeStr}` : ''}${methodsStr ? ` (${methodsStr})` : ''}`;
+  }
 
   // TODO: Special update handling for many-to-many relationships
   // protected async updateRecord(existingId: any, record: any, repo: Repository<any>): Promise<void> {
