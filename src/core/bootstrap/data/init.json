@@ -142,6 +142,20 @@
             "isSystem": true,
             "icon": "lucide:puzzle",
             "publishedMethods": ["GET"]
+        },
+        {
+            "path": "/folder_definition",
+            "mainTable": "folder_definition",
+            "isEnabled": true,
+            "isSystem": true,
+            "icon": "lucide:folder"
+        },
+        {
+            "path": "/folder_definition/tree",
+            "mainTable": "folder_definition",
+            "isEnabled": true,
+            "isSystem": true,
+            "icon": "lucide:folder-tree"
         }
     ], 
     "hook_definition": [
@@ -370,6 +384,37 @@
             "sidebar": "Collections",
             "permission": {
                 "or": [{ "route": "/table_definition", "actions": ["create"] }]
+            }
+        },
+        {
+            "type": "mini",
+            "label": "Files",
+            "icon": "lucide:folder",
+            "path": "/files",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "File & folder management",
+            "order": 5,
+            "permission": {
+                "or": [
+                    { "route": "/folder_definition", "actions": ["read"] }
+                ]
+            }
+        },
+        {
+            "type": "menu",
+            "label": "Folders",
+            "icon": "lucide:folder-tree",
+            "path": "/files/folders",
+            "isEnabled": true,
+            "isSystem": true,
+            "description": "Folder management",
+            "order": 1,
+            "sidebar": "Files",
+            "permission": {
+                "or": [
+                    { "route": "/folder_definition", "actions": ["read"] }
+                ]
             }
         }
     ]

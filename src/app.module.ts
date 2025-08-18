@@ -27,6 +27,7 @@ import { DynamicModule } from './modules/dynamic-api/dynamic.module';
 import { SystemProtectionService } from './modules/dynamic-api/services/system-protection.service';
 import { GraphqlModule } from './modules/graphql/graphql.module';
 import { MeModule } from './modules/me/me.module';
+import { FolderManagementService } from './modules/folder-management/services/folder-management.service';
 import { SchemaManagementModule } from './modules/schema-management/schema-management.module';
 import { TableModule } from './modules/table-management/table.module';
 import { CommonModule } from './shared/common/common.module';
@@ -84,6 +85,7 @@ import { RouteDetectMiddleware } from './shared/middleware/route-detect.middlewa
     SqlFunctionService,
     RouteCacheService,
     SystemProtectionService,
+    FolderManagementService,
     { provide: APP_GUARD, useClass: SchemaLockGuard },
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },

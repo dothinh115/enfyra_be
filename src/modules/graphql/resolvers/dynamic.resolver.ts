@@ -82,6 +82,7 @@ export class DynamicResolver {
           routeCacheService: this.routeCacheService,
           systemProtectionService: this.systemProtectionService,
           currentUser: user,
+          // folderManagementService is optional, not needed in GraphQL
         });
 
         await dynamicRepo.init();

@@ -1,0 +1,5 @@
+# Public folder for file management
+# This folder contains:
+# - uploads/: User uploaded files
+# - assets/: Static assets (images, documents, etc.)
+# - temp/: Temporary files (will be cleaned up periodically)
