@@ -38,9 +38,9 @@ export function walkFilter({
   path?: string[];
   log?: string[];
 }): {
-  parts: { operator: 'AND' | 'OR'; sql: string; params: any }[];
+  parts: { operator: 'AND' | 'OR'; sql: string; params: Record<string, any> }[];
 } {
-  const parts: { operator: 'AND' | 'OR'; sql: string; params: any }[] = [];
+  const parts: { operator: 'AND' | 'OR'; sql: string; params: Record<string, any> }[] = [];
   let paramIndex = 1;
 
   const operatorMap: Record<string, string> = {
@@ -53,7 +53,7 @@ export function walkFilter({
   };
 
   const walk = (
-    f: any,
+    f: Record<string, any>,
     path: string[],
     currentMeta: EntityMetadata,
     currentAlias: string,
@@ -401,16 +401,29 @@ export function walkFilter({
             param[paramKey] = parsedValue;
             break;
           case '_in': {
-            if (!Array.isArray(val)) {
+            let values = val;
+            
+            // Handle string input: "1,2,3" or "[1,2,3]"
+            if (typeof values === 'string') {
+              try {
+                // Try JSON.parse first for "[1,2,3]" format
+                values = JSON.parse(values);
+              } catch {
+                // If JSON parse fails, split by comma for "1,2,3" format
+                values = values.split(',').map(v => v.trim()).filter(v => v);
+              }
+            }
+            
+            if (!Array.isArray(values)) {
               throw new Error(`_in operator requires an array, got: ${typeof val}`);
             }
-            if (val.length === 0) {
+            if (values.length === 0) {
               sql = '1 = 0'; // Always false for empty array
               break;
             }
             
             // Standard IN operation for regular fields
-            const inParams = val.map((v, i) => {
+            const inParams = values.map((v, i) => {
               const inParamKey = `${paramKey}_${i}`;
               param[inParamKey] = parseValue(fieldType, v);
               return `:${inParamKey}`;
@@ -419,16 +432,29 @@ export function walkFilter({
             break;
           }
           case '_not_in': {
-            if (!Array.isArray(val)) {
+            let values = val;
+            
+            // Handle string input: "1,2,3" or "[1,2,3]"
+            if (typeof values === 'string') {
+              try {
+                // Try JSON.parse first for "[1,2,3]" format
+                values = JSON.parse(values);
+              } catch {
+                // If JSON parse fails, split by comma for "1,2,3" format
+                values = values.split(',').map(v => v.trim()).filter(v => v);
+              }
+            }
+            
+            if (!Array.isArray(values)) {
               throw new Error(`_not_in operator requires an array, got: ${typeof val}`);
             }
-            if (val.length === 0) {
+            if (values.length === 0) {
               sql = '1 = 1'; // Always true for empty array
               break;
             }
             
             // Standard NOT IN operation for regular fields
-            const notInParams = val.map((v, i) => {
+            const notInParams = values.map((v, i) => {
               const notInParamKey = `${paramKey}_${i}`;
               param[notInParamKey] = parseValue(fieldType, v);
               return `:${notInParamKey}`;

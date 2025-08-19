@@ -33,6 +33,6 @@ export function parseValue(fieldType: string, value: any): any {
     case 'varchar':
     case 'text':
     default:
-      return String(value);
+      return String(value).trim();
   }
 }
