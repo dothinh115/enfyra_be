@@ -28,6 +28,7 @@ import { SystemProtectionService } from './modules/dynamic-api/services/system-p
 import { GraphqlModule } from './modules/graphql/graphql.module';
 import { MeModule } from './modules/me/me.module';
 import { FolderManagementService } from './modules/folder-management/services/folder-management.service';
+import { FileManagementService } from './modules/file-management/services/file-management.service';
 import { SchemaManagementModule } from './modules/schema-management/schema-management.module';
 import { TableModule } from './modules/table-management/table.module';
 import { CommonModule } from './shared/common/common.module';
@@ -35,6 +36,7 @@ import { NotFoundDetectGuard } from './shared/guards/not-found-detect.guard';
 import { SchemaLockGuard } from './shared/guards/schema-lock.guard';
 import { DynamicInterceptor } from './shared/interceptors/dynamic.interceptor';
 import { HideFieldInterceptor } from './shared/interceptors/hidden-field.interceptor';
+import { FileUploadMiddleware } from './shared/middleware/file-upload.middleware';
 import { ParseQueryMiddleware } from './shared/middleware/parse-query.middleware';
 import { RouteDetectMiddleware } from './shared/middleware/route-detect.middleware';
 
@@ -86,6 +88,7 @@ import { RouteDetectMiddleware } from './shared/middleware/route-detect.middlewa
     RouteCacheService,
     SystemProtectionService,
     FolderManagementService,
+    FileManagementService,
     { provide: APP_GUARD, useClass: SchemaLockGuard },
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
@@ -108,5 +111,6 @@ export class AppModule implements NestModule {
     consumer.apply(RequestContextMiddleware).forRoutes('*');
     consumer.apply(ParseQueryMiddleware).forRoutes('*');
     consumer.apply(RouteDetectMiddleware).forRoutes('*');
+    consumer.apply(FileUploadMiddleware).forRoutes('*');
   }
 }

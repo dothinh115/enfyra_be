@@ -1,5 +1,6 @@
 import { Entity, Unique, Index, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { User_definition } from './user_definition.entity';
+import { File_definition } from './file_definition.entity';
 
 @Entity('folder_definition')
 @Unique(['parent', 'slug'])
@@ -32,6 +33,8 @@ export class Folder_definition {
     user: any;
     @OneToMany('Folder_definition', (rel: any) => rel.parent, { cascade: true })
     children: any;
+    @OneToMany('File_definition', (rel: any) => rel.folder, { cascade: true })
+    files: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

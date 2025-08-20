@@ -47,7 +47,7 @@ export class CreateColumnDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  enumValues?: string[];
+  values?: string[];
 
   @IsBoolean()
   @IsOptional()

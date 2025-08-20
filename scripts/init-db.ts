@@ -32,6 +32,7 @@ const dbTypeToTSType = (dbType: string): string => {
     uuid: 'string',
     enum: 'string',
     'simple-json': 'any',
+    'array-select': 'any', // Maps to simple-json in DB, any[] in TS
   };
   return map[dbType] || 'any';
 };
@@ -191,7 +192,9 @@ async function writeEntitiesFromSnapshot() {
             ? 'timestamp'
             : col.type === 'richtext' || col.type === 'code'
               ? 'text'
-              : col.type;
+              : col.type === 'array-select'
+                ? 'simple-json'
+                : col.type;
 
         const opts = [
           `type: '${dbType}'`,
@@ -226,9 +229,9 @@ async function writeEntitiesFromSnapshot() {
           }
         }
 
-        if (col.type === 'enum' && Array.isArray(col.enumValues)) {
+        if (col.type === 'enum' && Array.isArray(col.options)) {
           opts.push(
-            `enum: [${col.enumValues.map((v: string) => `'${v}'`).join(', ')}]`,
+            `enum: [${col.options.map((v: string) => `'${v}'`).join(', ')}]`,
           );
         }
 
@@ -248,7 +251,9 @@ async function writeEntitiesFromSnapshot() {
             ? 'Date'
             : col.type === 'richtext' || col.type === 'code'
               ? 'string'
-              : dbTypeToTSType(col.type),
+              : col.type === 'array-select'
+                ? 'any[]' // Array type for array-select
+                : dbTypeToTSType(col.type),
         decorators,
       });
     }

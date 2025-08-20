@@ -156,6 +156,13 @@
             "isEnabled": true,
             "isSystem": true,
             "icon": "lucide:folder-tree"
+        },
+        {
+            "path": "/file_definition",
+            "mainTable": "file_definition",
+            "isEnabled": true,
+            "isSystem": true,
+            "icon": "lucide:file"
         }
     ], 
     "hook_definition": [
@@ -405,26 +412,27 @@
             "order": 5,
             "permission": {
                 "or": [
-                    { "route": "/folder_definition", "actions": ["read"] }
+                    { "route": "/file_definition", "actions": ["read"] }
                 ]
             }
         },
         {
             "type": "Menu",
-            "label": "Folders",
+            "label": "Files management",
             "icon": "lucide:folder-tree",
-            "path": "/files/folders",
+            "path": "/files/management",
             "isEnabled": true,
             "isSystem": true,
-            "description": "Folder management",
+            "description": "Files management",
             "order": 1,
             "sidebar": "Files",
             "permission": {
                 "or": [
-                    { "route": "/folder_definition", "actions": ["read"] }
+                    { "route": "/file_definition", "actions": ["read"] }
                 ]
             }
         }
+       
     ]
 }
 

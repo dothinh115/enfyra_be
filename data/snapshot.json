@@ -12,7 +12,7 @@
             { "name": "isNullable", "type": "boolean", "isSystem": true, "defaultValue": true },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "defaultValue", "type": "simple-json", "isNullable": true, "isSystem": true },
-            { "name": "enumValues", "type": "simple-json", "isNullable": true, "isSystem": true },
+            { "name": "options", "type": "simple-json", "isNullable": true, "isSystem": true },
             { "name": "isUpdatable", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
             { "name": "isHidden", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "description", "type": "richtext", "isSystem": true },
@@ -29,7 +29,7 @@
         "uniques": [["propertyName", "sourceTable"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "type", "type": "enum", "isNullable": false, "isSystem": true, "enumValues": ["one-to-one", "many-to-one", "one-to-many", "many-to-many"] },
+            { "name": "type", "type": "enum", "isNullable": false, "isSystem": true, "options": ["one-to-one", "many-to-one", "one-to-many", "many-to-many"] },
             { "name": "propertyName", "type": "varchar", "isNullable": false, "isSystem": true},
             { "name": "inversePropertyName", "type": "varchar", "isNullable": true, "isSystem": true },
             { "name": "isEager", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
@@ -209,7 +209,7 @@
         "isSystem": true,
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "type", "type": "enum", "isNullable": false, "isSystem": true, "enumValues": ["Mini Sidebar", "Dropdown Menu", "Menu"] },
+            { "name": "type", "type": "enum", "isNullable": false, "isSystem": true, "options": ["Mini Sidebar", "Dropdown Menu", "Menu"] },
             { "name": "label", "type": "varchar", "isNullable": false, "isSystem": true },
             { "name": "icon", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": "lucide:menu" },
             { "name": "path", "type": "varchar", "isNullable": true, "isSystem": true },
@@ -230,7 +230,7 @@
         "uniques": [["menu"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
-            { "name": "type", "type": "enum", "enumValues": ["page", "widget"], "isNullable": false, "isSystem": true, "defaultValue": "page" },
+            { "name": "type", "type": "enum", "options": ["page", "widget"], "isNullable": false, "isSystem": true, "defaultValue": "page" },
             { "name": "name", "type": "varchar", "isNullable": false, "isSystem": true, "isGenerated": false },
             { "name": "extensionId", "type": "varchar", "isNullable": false, "isSystem": true, "isGenerated":true },
             { "name": "version", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": "1.0.0" },
@@ -264,6 +264,44 @@
         ],
         "relations": [
             { "propertyName": "parent", "type": "many-to-one", "targetTable": "folder_definition", "isNullable": true, "inversePropertyName": "children" },
+            { "propertyName": "user", "type": "many-to-one", "targetTable": "user_definition", "isNullable": true }
+        ]
+    },
+    "file_definition": {
+        "name": "file_definition",
+        "isSystem": true,
+        "uniques": [["filename", "folder"], ["filename_disk"]],
+        "indexes": [["type"], ["filesize"], ["status"], ["visibility"]],
+        "columns": [
+            { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false },
+            { "name": "filename", "type": "varchar", "isNullable": false },
+            { "name": "filename_disk", "type": "varchar", "isNullable": false, "isGenerated": true },
+            { "name": "mimetype", "type": "varchar", "isNullable": false, "isGenerated": true },
+            { "name": "type", "type": "enum", "isNullable": true, "options": ["image", "video", "document", "audio", "archive", "other"], "isGenerated": true },
+            { "name": "filesize", "type": "bigint", "isNullable": false, "isGenerated": true },
+            { "name": "storage", "type": "varchar", "isNullable": true, "defaultValue": "local", "isGenerated": true },
+            { "name": "location", "type": "varchar", "isNullable": false, "isGenerated": true },
+            { "name": "title", "type": "varchar", "isNullable": true },
+            { "name": "description", "type": "text", "isNullable": true },
+            { "name": "visibility", "type": "enum", "isNullable": false, "options": ["public", "private"], "defaultValue": "private" },
+            { "name": "status", "type": "enum", "isNullable": false, "options": ["active", "archived", "quarantine"], "defaultValue": "active" }
+        ],
+        "relations": [
+            { "propertyName": "folder", "type": "many-to-one", "targetTable": "folder_definition", "isNullable": true, "inversePropertyName": "files" },
+            { "propertyName": "uploaded_by", "type": "many-to-one", "targetTable": "user_definition", "isNullable": true, "isGenerated": true }
+        ]
+    },
+    "file_permission_definition": {
+        "name": "file_permission_definition",
+        "isSystem": true,
+        "uniques": [["file", "role", "user"]],
+        "columns": [
+            { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false },
+            { "name": "actions", "type": "array-select", "options": ["view", "edit", "delete", "share", "download"], "isNullable": true }
+        ],
+        "relations": [
+            { "propertyName": "file", "type": "many-to-one", "targetTable": "file_definition", "isNullable": false, "inversePropertyName": "permissions" },
+            { "propertyName": "role", "type": "many-to-one", "targetTable": "role_definition", "isNullable": true },
             { "propertyName": "user", "type": "many-to-one", "targetTable": "user_definition", "isNullable": true }
         ]
     }

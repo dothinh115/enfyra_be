@@ -102,7 +102,7 @@ export class CoreInitService {
             'c.isPrimary AS isPrimary',
             'c.isGenerated AS isGenerated',
             'c.defaultValue AS defaultValue',
-            'c.enumValues AS enumValues',
+            'c.`options` AS options',
             'c.isUpdatable AS isUpdatable',
           ])
           .getRawMany();
@@ -292,8 +292,8 @@ export class CoreInitService {
       snapshotCol.isPrimary !== existingCol.isPrimary ||
       snapshotCol.isGenerated !== existingCol.isGenerated ||
       snapshotCol.defaultValue !== existingCol.defaultValue ||
-      JSON.stringify(snapshotCol.enumValues) !==
-        JSON.stringify(existingCol.enumValues) ||
+      JSON.stringify(snapshotCol.options) !==
+        JSON.stringify(existingCol.options) ||
       snapshotCol.isUpdatable !== existingCol.isUpdatable;
 
     return hasChanges;

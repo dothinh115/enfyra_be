@@ -28,7 +28,9 @@ export function addColumnToClass({
         ? 'timestamp'
         : col.type === 'richtext' || col.type === 'code'
           ? 'text'
-          : col.type;
+          : col.type === 'array-select'
+            ? 'simple-json'
+            : col.type;
 
     const opts = [`type: "${dbType}"`];
 
@@ -73,8 +75,8 @@ export function addColumnToClass({
     // Skip field-level unique/index - only use class-level constraints
     // if (col.isUnique) opts.push('unique: true');
     
-    if (col.type === 'enum' && col.enumValues) {
-      opts.push(`enum: [${col.enumValues.map((v) => `'${v}'`).join(', ')}]`);
+    if (col.type === 'enum' && col.options) {
+      opts.push(`enum: [${col.options.map((v) => `'${v}'`).join(', ')}]`);
     }
     if (col.isUpdatable === false) {
       opts.push(`update: false`);
@@ -97,7 +99,9 @@ export function addColumnToClass({
 
   const tsType =
     col.type === 'enum'
-      ? col.enumValues.map((v) => `'${v}'`).join(' | ')
+      ? col.options.map((v) => `'${v}'`).join(' | ')
+      : col.type === 'array-select'
+        ? 'any[]'
       : col.type === 'date'
         ? 'Date'
         : col.type === 'richtext' || col.type === 'code'

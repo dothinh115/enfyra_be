@@ -10,8 +10,6 @@ export class Column_definition {
     defaultValue: any;
     @Column({ type: "text", nullable: true })
     description: string;
-    @Column({ type: "simple-json", nullable: true })
-    enumValues: any;
     @Column({ type: "boolean", nullable: false, default: false })
     isGenerated: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
@@ -26,6 +24,8 @@ export class Column_definition {
     isUpdatable: boolean;
     @Column({ type: "varchar", nullable: false })
     name: string;
+    @Column({ type: "simple-json", nullable: true })
+    options: any;
     @Column({ type: "text", nullable: true })
     placeholder: string;
     @Column({ type: "varchar", nullable: false })

@@ -18,6 +18,7 @@ import { SystemProtectionService } from '../../modules/dynamic-api/services/syst
 import { BcryptService } from '../../core/auth/services/bcrypt.service';
 import { ScriptErrorFactory } from '../../shared/utils/script-error-factory';
 import { FolderManagementService } from '../../modules/folder-management/services/folder-management.service';
+import { FileManagementService } from '../../modules/file-management/services/file-management.service';
 import { autoSlug } from '../utils/auto-slug.helper';
 
 @Injectable()
@@ -33,6 +34,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private systemProtectionService: SystemProtectionService,
     private bcryptService: BcryptService,
     private folderManagementService: FolderManagementService,
+    private fileManagementService: FileManagementService,
   ) {}
 
   async use(req: any, res: any, next: (error?: any) => void) {
@@ -49,37 +51,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
     ];
 
     if (matchedRoute) {
-      const dynamicFindEntries = await Promise.all(
-        [
-          matchedRoute.route.mainTable,
-          ...matchedRoute.route.targetTables?.filter(
-            (route) => !systemTables.includes(route.name),
-          ),
-        ]?.map(async (table) => {
-          const dynamicRepo = new DynamicRepository({
-            query: req.query,
-            tableName: table.name,
-            tableHandlerService: this.tableHandlerService,
-            dataSourceService: this.dataSourceService,
-            queryEngine: this.queryEngine,
-            routeCacheService: this.routeCacheService,
-            systemProtectionService: this.systemProtectionService,
-            currentUser: null,
-            folderManagementService: this.folderManagementService,
-          });
-
-          await dynamicRepo.init();
-          const name =
-            table.name === matchedRoute.route.mainTable.name
-              ? 'main'
-              : (table.alias ?? table.name);
-          return [`${name}`, dynamicRepo];
-        }),
-      );
-
-      const dynamicFindMap: { any: any } =
-        Object.fromEntries(dynamicFindEntries);
-
+      // Create context first
       const context: TDynamicContext = {
         $body: req.body,
         $errors: ScriptErrorFactory.createErrorHandlers(),
@@ -97,7 +69,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
         $params: matchedRoute.params ?? {},
         $query: req.query ?? {},
         $user: req.user ?? undefined,
-        $repos: dynamicFindMap,
+        $repos: {}, // Will be populated after repos are created
         $req: req,
         $share: {
           $logs: [],
@@ -106,6 +78,38 @@ export class RouteDetectMiddleware implements NestMiddleware {
       context.$logs = (...args: any[]) => {
         context.$share.$logs.push(...args);
       };
+
+      // Create dynamic repositories with context
+      const dynamicFindEntries = await Promise.all(
+        [
+          matchedRoute.route.mainTable,
+          ...matchedRoute.route.targetTables?.filter(
+            (route) => !systemTables.includes(route.name),
+          ),
+        ]?.map(async (table) => {
+          const dynamicRepo = new DynamicRepository({
+            context: context,
+            tableName: table.name,
+            tableHandlerService: this.tableHandlerService,
+            dataSourceService: this.dataSourceService,
+            queryEngine: this.queryEngine,
+            routeCacheService: this.routeCacheService,
+            systemProtectionService: this.systemProtectionService,
+            folderManagementService: this.folderManagementService,
+            fileManagementService: this.fileManagementService,
+          });
+
+          await dynamicRepo.init();
+          const name =
+            table.name === matchedRoute.route.mainTable.name
+              ? 'main'
+              : (table.alias ?? table.name);
+          return [`${name}`, dynamicRepo];
+        }),
+      );
+
+      // Populate repos in context
+      context.$repos = Object.fromEntries(dynamicFindEntries);
       const { route, params } = matchedRoute;
 
       const filteredHooks = route.hooks.filter((hook: any) => {

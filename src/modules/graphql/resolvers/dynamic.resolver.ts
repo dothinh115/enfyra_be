@@ -61,27 +61,51 @@ export class DynamicResolver {
       .filter((f) => f.startsWith('meta.'))
       .map((f) => f.replace(/^meta\./, ''));
 
-    const query = {
-      fields: fieldPicker.join(','),
-      filter: args.filter,
-      page: args.page,
-      limit: args.limit,
-      meta: metaPicker.join(',') as any,
-      sort: args.sort,
-      aggregate: args.aggregate,
+    // Create context compatible with DynamicRepository
+    const handlerCtx: any = {
+      $errors: ScriptErrorFactory.createErrorHandlers(),
+      $helpers: {
+        jwt: (payload: any, ext: string) =>
+          this.jwtService.sign(payload, { expiresIn: ext }),
+      },
+      $args: {
+        fields: fieldPicker.join(','),
+        filter: args.filter,
+        page: args.page,
+        limit: args.limit,
+        meta: metaPicker.join(',') as any,
+        sort: args.sort,
+        aggregate: args.aggregate,
+      },
+      $query: {
+        fields: fieldPicker.join(','),
+        filter: args.filter,
+        page: args.page,
+        limit: args.limit,
+        meta: metaPicker.join(',') as any,
+        sort: args.sort,
+        aggregate: args.aggregate,
+      },
+      $user: user ?? undefined,
+      $repos: {}, // Will be populated below
+      $req: context.request,
+      $body: {},
+      $params: {},
+      $logs: () => {},
+      $share: {},
     };
 
+    // Create dynamic repositories with context
     const dynamicFindEntries = await Promise.all(
       [mainTable, ...targetTables].map(async (table) => {
         const dynamicRepo = new DynamicRepository({
-          query,
+          context: handlerCtx,
           tableName: table.name,
           tableHandlerService: this.tableHandlerService,
           dataSourceService: this.dataSourceService,
           queryEngine: this.queryEngine,
           routeCacheService: this.routeCacheService,
           systemProtectionService: this.systemProtectionService,
-          currentUser: user,
           // folderManagementService is optional, not needed in GraphQL
         });
 
@@ -94,19 +118,8 @@ export class DynamicResolver {
       }),
     );
 
-    const dynamicFindMap = Object.fromEntries(dynamicFindEntries);
-
-    const handlerCtx: any = {
-      $errors: ScriptErrorFactory.createErrorHandlers(),
-      $helpers: {
-        jwt: (payload: any, ext: string) =>
-          this.jwtService.sign(payload, { expiresIn: ext }),
-      },
-      $args: args ?? {},
-      $user: user ?? undefined,
-      $repos: dynamicFindMap,
-      $req: context.request,
-    };
+    // Populate repos in context
+    handlerCtx.$repos = Object.fromEntries(dynamicFindEntries);
 
     try {
       const defaultHandler = `return await $ctx.$repos.main.find();`;
