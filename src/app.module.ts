@@ -39,6 +39,7 @@ import { HideFieldInterceptor } from './shared/interceptors/hidden-field.interce
 import { FileUploadMiddleware } from './shared/middleware/file-upload.middleware';
 import { ParseQueryMiddleware } from './shared/middleware/parse-query.middleware';
 import { RouteDetectMiddleware } from './shared/middleware/route-detect.middleware';
+import { FileManagementModule } from './modules/file-management/file-management.module';
 
 @Global()
 @Module({
@@ -73,6 +74,7 @@ import { RouteDetectMiddleware } from './shared/middleware/route-detect.middlewa
     QueryEngineModule,
     AuthModule,
     MeModule,
+    FileManagementModule,
     DynamicModule,
     BootstrapModule,
     GraphqlModule,

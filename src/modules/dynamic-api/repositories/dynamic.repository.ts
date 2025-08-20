@@ -72,10 +72,6 @@ export class DynamicRepository {
   }
 
   async create(body: any) {
-    console.log(`🔍 DynamicRepository.create - tableName: ${this.tableName}`);
-    console.log(`🔍 DynamicRepository.create - body:`, body);
-    console.log(`🔍 DynamicRepository.create - context.$body:`, this.context.$body);
-    console.log(`🔍 DynamicRepository.create - context.$uploadedFile:`, this.context.$uploadedFile ? 'EXISTS' : 'MISSING');
     
     try {
       await this.systemProtectionService.assertSystemSafe({

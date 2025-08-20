@@ -47,8 +47,10 @@ export function addRelationToClass({
 
   const options: string[] = [];
   if (rel.isEager) options.push('eager: true');
-  if (rel.isNullable !== undefined && rel.type !== 'one-to-many') {
-    options.push(`nullable: ${rel.isNullable}`);
+  if (rel.type !== 'one-to-many') {
+    // Inverse relations are always nullable
+    const nullable = isInverse ? true : (rel.isNullable ?? true);
+    options.push(`nullable: ${nullable}`);
   }
   if (
     (rel.type === 'many-to-many' && !isInverse) ||

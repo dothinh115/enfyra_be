@@ -43,7 +43,8 @@ export class DynamicService {
 
     try {
       const userHandler = req.routeData.handler?.trim();
-      const defaultHandler = this.getDefaultHandler(req.method);
+      const hasMainTable = req.routeData.mainTable && req.routeData.context.$repos?.main;
+      const defaultHandler = hasMainTable ? this.getDefaultHandler(req.method) : null;
 
       if (!userHandler && !defaultHandler) {
         throw new ResourceNotFoundException('Handler', req.method);

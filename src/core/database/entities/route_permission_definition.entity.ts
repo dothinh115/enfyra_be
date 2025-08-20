@@ -23,7 +23,7 @@ export class Route_permission_definition {
     @ManyToOne('Route_definition', (rel: any) => rel.routePermissions, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     route: any;
-    @ManyToMany('Method_definition', (rel: any) => rel.route_permissions, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToMany('Method_definition', (rel: any) => rel.route_permissions, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     methods: any;
     @CreateDateColumn()
     createdAt: Date;

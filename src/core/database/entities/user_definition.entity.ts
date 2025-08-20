@@ -21,7 +21,7 @@ export class User_definition {
     @ManyToOne('Role_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     role: any;
-    @ManyToMany('Route_permission_definition', (rel: any) => rel.allowedUsers, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToMany('Route_permission_definition', (rel: any) => rel.allowedUsers, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     allowedRoutePermissions: any;
     @CreateDateColumn()
     createdAt: Date;

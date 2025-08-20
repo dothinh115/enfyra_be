@@ -24,8 +24,8 @@ export class Method_definition {
     @JoinColumn()
     setting: any;
     @OneToMany('Route_handler_definition', (rel: any) => rel.method, { cascade: true })
-    handlers: any;
-    @ManyToMany('Hook_definition', (rel: any) => rel.methods, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    handler: any;
+    @ManyToMany('Hook_definition', (rel: any) => rel.methods, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     hooks: any;
     @CreateDateColumn()
     createdAt: Date;

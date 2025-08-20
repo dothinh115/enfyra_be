@@ -102,8 +102,8 @@
             { "name": "description", "type": "text", "isSystem": true }  
         ],
         "relations": [
-            { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isSystem": true, "isEager": true },
-            { "propertyName": "mainTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true, "isNullable": false }
+            { "propertyName": "targetTables", "type": "many-to-many", "targetTable": "table_definition", "isSystem": true },
+            { "propertyName": "mainTable", "type": "many-to-one", "targetTable": "table_definition", "isSystem": true }
         ]
     },
     "role_definition": {
@@ -140,8 +140,8 @@
             { "name": "description", "type": "text", "isSystem": true }
         ],
         "relations": [
-            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "handlers", "isNullable": false },
-            { "propertyName": "method", "type": "many-to-one", "targetTable": "method_definition", "isSystem": true, "inversePropertyName": "handlers", "isNullable": false }
+            { "propertyName": "route", "type": "many-to-one", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "handler", "isNullable": false },
+            { "propertyName": "method", "type": "many-to-one", "targetTable": "method_definition", "isSystem": true, "inversePropertyName": "handler", "isNullable": false }
 
         ]
     },
@@ -272,7 +272,7 @@
         "name": "file_definition",
         "isSystem": true,
         "uniques": [["filename", "folder"], ["filename_disk"]],
-        "indexes": [["type"], ["filesize"], ["status"], ["visibility"]],
+        "indexes": [["type"], ["filesize"], ["status"]],
         "columns": [
             { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false },
             { "name": "filename", "type": "varchar", "isNullable": false },
@@ -284,7 +284,6 @@
             { "name": "location", "type": "varchar", "isNullable": false, "isGenerated": true },
             { "name": "title", "type": "varchar", "isNullable": true },
             { "name": "description", "type": "text", "isNullable": true },
-            { "name": "visibility", "type": "enum", "isNullable": false, "options": ["public", "private"], "defaultValue": "private" },
             { "name": "status", "type": "enum", "isNullable": false, "options": ["active", "archived", "quarantine"], "defaultValue": "active" }
         ],
         "relations": [
@@ -295,10 +294,13 @@
     "file_permission_definition": {
         "name": "file_permission_definition",
         "isSystem": true,
-        "uniques": [["file", "role", "user"]],
+        "uniques": [["file", "role", "user", "isPublished"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false },
-            { "name": "actions", "type": "array-select", "options": ["view", "edit", "delete", "share", "download"], "isNullable": true }
+            { "name": "actions", "type": "array-select", "options": ["view", "edit", "delete", "share", "download"], "isNullable": true },
+            { "name": "isPublished", "type": "boolean", "isNullable": false, "defaultValue": false, "description": "Allow public access without authentication" },
+            { "name": "isEnabled", "type": "boolean", "isNullable": false, "defaultValue": true, "description": "Enable/disable this permission rule" },
+            { "name": "allowedDomains", "type": "simple-json", "isNullable": true, "description": "List of allowed domains for CORS (null = all domains)" }
         ],
         "relations": [
             { "propertyName": "file", "type": "many-to-one", "targetTable": "file_definition", "isNullable": false, "inversePropertyName": "permissions" },

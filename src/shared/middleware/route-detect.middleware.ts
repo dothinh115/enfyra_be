@@ -1,17 +1,10 @@
-import {
-  BadRequestException,
-  Injectable,
-  NestMiddleware,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 import { CommonService } from '../common/services/common.service';
-import { GLOBAL_ROUTES_KEY } from '../../shared/utils/constant';
 import { DataSourceService } from '../../core/database/data-source/data-source.service';
 import { JwtService } from '@nestjs/jwt';
 import { TableHandlerService } from '../../modules/table-management/services/table-handler.service';
 import { DynamicRepository } from '../../modules/dynamic-api/repositories/dynamic.repository';
 import { TDynamicContext } from '../utils/types/dynamic-context.type';
-import { RedisLockService } from '../../infrastructure/redis/services/redis-lock.service';
 import { QueryEngine } from '../../infrastructure/query-engine/services/query-engine.service';
 import { RouteCacheService } from '../../infrastructure/redis/services/route-cache.service';
 import { SystemProtectionService } from '../../modules/dynamic-api/services/system-protection.service';
@@ -29,7 +22,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private jwtService: JwtService,
     private queryEngine: QueryEngine,
     private tableHandlerService: TableHandlerService,
-    private redisLockService: RedisLockService,
     private routeCacheService: RouteCacheService,
     private systemProtectionService: SystemProtectionService,
     private bcryptService: BcryptService,
@@ -40,7 +32,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
   async use(req: any, res: any, next: (error?: any) => void) {
     const method = req.method;
 
-    // ⚡ Use stale-while-revalidate pattern for faster response
     const routes: any[] = await this.routeCacheService.getRoutesWithSWR();
 
     const matchedRoute = this.findMatchedRoute(routes, req.baseUrl, method);
@@ -100,16 +91,19 @@ export class RouteDetectMiddleware implements NestMiddleware {
           });
 
           await dynamicRepo.init();
-          const name =
-            table.name === matchedRoute.route.mainTable.name
-              ? 'main'
-              : (table.alias ?? table.name);
+          const name = table.alias ?? table.name;
           return [`${name}`, dynamicRepo];
         }),
       );
 
-      // Populate repos in context
+      // Create repos object and add main alias for mainTable
       context.$repos = Object.fromEntries(dynamicFindEntries);
+      
+      // Add 'main' alias for mainTable
+      const mainTableName = matchedRoute.route.mainTable.alias ?? matchedRoute.route.mainTable.name;
+      if (context.$repos[mainTableName]) {
+        context.$repos.main = context.$repos[mainTableName];
+      }
       const { route, params } = matchedRoute;
 
       const filteredHooks = route.hooks.filter((hook: any) => {

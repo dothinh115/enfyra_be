@@ -39,7 +39,7 @@ export class Menu_definition {
     children: any;
     @OneToMany('Menu_definition', (rel: any) => rel.sidebar, { cascade: true })
     menus: any;
-    @OneToOne('Extension_definition', (rel: any) => rel.menu)
+    @OneToOne('Extension_definition', (rel: any) => rel.menu, { nullable: true })
     extension: any;
     @CreateDateColumn()
     createdAt: Date;
