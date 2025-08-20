@@ -126,7 +126,8 @@
         ],
         "relations": [
             { "propertyName": "role", "type": "many-to-one", "isSystem": true, "targetTable": "role_definition", "inversePropertyName": "routePermissions" },
-            { "propertyName": "route", "type": "many-to-one", "isSystem": true, "targetTable": "route_definition", "inversePropertyName": "routePermissions" } 
+            { "propertyName": "route", "type": "many-to-one", "isSystem": true, "targetTable": "route_definition", "inversePropertyName": "routePermissions" },
+            { "propertyName": "allowedUsers", "type": "many-to-many", "isSystem": true, "targetTable": "user_definition", "inversePropertyName": "allowedRoutePermissions" }
         ]
     },
     "route_handler_definition": {

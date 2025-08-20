@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, ManyToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { User_definition } from './user_definition.entity';
 import { Role_definition } from './role_definition.entity';
 import { Route_definition } from './route_definition.entity';
 import { Method_definition } from './method_definition.entity';
@@ -11,6 +12,9 @@ export class Route_permission_definition {
     description: string;
     @Column({ type: "boolean", nullable: false, default: true })
     isEnabled: boolean;
+    @ManyToMany('User_definition', (rel: any) => rel.allowedRoutePermissions, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @JoinTable()
+    allowedUsers: any;
     @Index()
     @ManyToOne('Role_definition', (rel: any) => rel.routePermissions, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()

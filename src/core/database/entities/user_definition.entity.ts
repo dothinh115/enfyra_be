@@ -1,6 +1,7 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, ManyToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { HiddenField } from '../../../shared/decorators/hidden-field.decorator';
 import { Role_definition } from './role_definition.entity';
+import { Route_permission_definition } from './route_permission_definition.entity';
 
 @Entity('user_definition')
 @Unique(['email'])
@@ -20,6 +21,8 @@ export class User_definition {
     @ManyToOne('Role_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     role: any;
+    @ManyToMany('Route_permission_definition', (rel: any) => rel.allowedUsers, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    allowedRoutePermissions: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

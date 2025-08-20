@@ -27,9 +27,17 @@ export class RoleGuard implements CanActivate {
     if (!req.routeData?.routePermissions) return false;
 
     const canPass = req.routeData.routePermissions.find(
-      (permission: any) =>
-        permission?.role?.id === req.user.role.id &&
-        permission.methods.some((item: any) => item.method === req.method),
+      (permission: any) => {
+        // Check user-specific access first
+        if (permission?.allowedUsers?.some((user: any) => user.id === req.user.id) &&
+            permission.methods.some((item: any) => item.method === req.method)) {
+          return true;
+        }
+        
+        // Then check role-based access (existing logic)
+        return permission?.role?.id === req.user.role.id &&
+               permission.methods.some((item: any) => item.method === req.method);
+      }
     );
 
     return !!canPass;
