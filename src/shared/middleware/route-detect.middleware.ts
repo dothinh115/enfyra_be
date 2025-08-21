@@ -68,7 +68,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
         context.$share.$logs.push(...args);
       };
 
-      // Create dynamic repositories with context
+      // Create dynamic repositories without context first to avoid circular reference
       const dynamicFindEntries = await Promise.all(
         [
           matchedRoute.route.mainTable,
@@ -77,7 +77,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
           ),
         ]?.map(async (table) => {
           const dynamicRepo = new DynamicRepository({
-            context: context,
+            context: null, // Will be set later to avoid circular reference
             tableName: table.name,
             tableHandlerService: this.tableHandlerService,
             dataSourceService: this.dataSourceService,
@@ -94,6 +94,11 @@ export class RouteDetectMiddleware implements NestMiddleware {
 
       // Create repos object and add main alias for mainTable
       context.$repos = Object.fromEntries(dynamicFindEntries);
+      
+      // Set context for each repo after repos object is created
+      Object.values(context.$repos).forEach((repo: any) => {
+        repo.context = context;
+      });
       
       // Add 'main' alias for mainTable
       const mainTableName = matchedRoute.route.mainTable.alias ?? matchedRoute.route.mainTable.name;

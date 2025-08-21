@@ -7,43 +7,25 @@ import {
   Param,
   Req,
   Body,
-  Query,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
 import { FileManagementService } from '../services/file-management.service';
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
-import {
-  RequestWithRouteData,
-  TDynamicContext,
-} from '../../../shared/interfaces/dynamic-context.interface';
-import { DynamicRepository } from '../../dynamic-api/repositories/dynamic.repository';
-import { QueryEngine } from '../../../infrastructure/query-engine/services/query-engine.service';
-import { RouteCacheService } from '../../../infrastructure/redis/services/route-cache.service';
-import { SystemProtectionService } from '../../dynamic-api/services/system-protection.service';
-import { TableHandlerService } from '../../table-management/services/table-handler.service';
-import { FolderManagementService } from '../../folder-management/services/folder-management.service';
+import { RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
 
 @Controller('file_definition')
 export class FileController {
   constructor(
     private fileManagementService: FileManagementService,
     private dataSourceService: DataSourceService,
-    private queryEngine: QueryEngine,
-    private routeCacheService: RouteCacheService,
-    private systemProtectionService: SystemProtectionService,
-    private tableHandlerService: TableHandlerService,
-    private folderManagementService: FolderManagementService,
   ) {}
 
   /**
    * Upload a new file
    */
   @Post()
-  async uploadFile(
-    @Body() body: any,
-    @Req() req: RequestWithRouteData,
-  ) {
+  async uploadFile(@Body() body: any, @Req() req: RequestWithRouteData) {
     // File is parsed by FileUploadMiddleware and available in req.file
     const file = req.file;
     if (!file) {
@@ -77,64 +59,57 @@ export class FileController {
         uploaded_by: req.user?.id ? { id: req.user.id } : null,
       });
 
-      return {
-        success: true,
-        data: savedFile,
-        message: 'File uploaded successfully',
-      };
+      return savedFile;
     } catch (error) {
       // Rollback physical file creation if DB save fails
-      await this.fileManagementService.rollbackFileCreation(processedFile.location);
+      await this.fileManagementService.rollbackFileCreation(
+        processedFile.location,
+      );
       throw error;
     }
   }
 
   /**
-   * Get all files with query support using DynamicRepository
+   * Get all files with query support using existing DynamicRepository
    */
   @Get()
-  async getFiles(@Query() query: any) {
-    // Create context for DynamicRepository
-    const context: TDynamicContext = {
-      $body: {},
-      $errors: {},
-      $logs: () => {},
-      $helpers: {} as any,
-      $params: {},
-      $query: query,
-      $user: undefined,
-      $repos: {},
-      $req: {} as any,
-      $share: { $logs: [] },
-    };
+  async getFiles(@Req() req: RequestWithRouteData) {
+    // Use existing DynamicRepository from context (already initialized with prehook modifications)
+    const fileRepo =
+      req.routeData?.context?.$repos?.main ||
+      req.routeData?.context?.$repos?.file_definition;
 
-    // Create DynamicRepository instance for file_definition
-    const dynamicRepo = new DynamicRepository({
-      context,
-      tableName: 'file_definition',
-      queryEngine: this.queryEngine,
-      dataSourceService: this.dataSourceService,
-      tableHandlerService: this.tableHandlerService,
-      routeCacheService: this.routeCacheService,
-      systemProtectionService: this.systemProtectionService,
-    });
+    if (!fileRepo) {
+      throw new BadRequestException('Repository not found in context');
+    }
 
-    await dynamicRepo.init();
-
-    // Use DynamicRepository.find method
-    const result = await dynamicRepo.find(query);
+    // Use existing repo to find files
+    const result = await fileRepo.find();
 
     return result;
   }
 
   /**
-   * Update file metadata using DynamicRepository
+   * Update file metadata using existing DynamicRepository
    */
   @Patch(':id')
-  async updateFile(@Param('id') id: string, @Body() body: any) {
+  async updateFile(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Req() req: RequestWithRouteData,
+  ) {
+    // Use existing DynamicRepository from context
+    const fileRepo =
+      req.routeData?.context?.$repos?.main ||
+      req.routeData?.context?.$repos?.file_definition;
+
+    if (!fileRepo) {
+      throw new BadRequestException('Repository not found in context');
+    }
+
     // Get current file data first
-    const fileRepo = this.dataSourceService.getRepository('file_definition');
-    const currentFile: any = await fileRepo.findOne({ where: { id } });
+    const currentFiles = await fileRepo.find({ where: { id } });
+    const currentFile = currentFiles.data?.[0];
 
     if (!currentFile) {
       throw new NotFoundException(`File with ID ${id} not found`);
@@ -172,58 +147,40 @@ export class FileController {
       body.folder = newFolder;
     }
 
-    // Create context for DynamicRepository
-    const context: TDynamicContext = {
-      $body: body,
-      $errors: {},
-      $logs: () => {},
-      $helpers: {} as any,
-      $params: { id },
-      $query: {},
-      $user: undefined,
-      $repos: {},
-      $req: {} as any,
-      $share: { $logs: [] },
-    };
-
-    // Create DynamicRepository instance for file_definition
-    const dynamicRepo = new DynamicRepository({
-      context,
-      tableName: 'file_definition',
-      queryEngine: this.queryEngine,
-      dataSourceService: this.dataSourceService,
-      tableHandlerService: this.tableHandlerService,
-      routeCacheService: this.routeCacheService,
-      systemProtectionService: this.systemProtectionService,
-    });
-
-    await dynamicRepo.init();
-
-    // Use DynamicRepository.update method with rollback on failure
+    // Use existing repo to update file with rollback on failure
     try {
-      const result = await dynamicRepo.update(id, body);
+      const result = await fileRepo.update(id, body);
 
-      return {
-        success: true,
-        data: result,
-        message: 'File updated successfully',
-      };
+      return result;
     } catch (error) {
       // Rollback physical file move if DB update fails
       if (rollbackInfo && body.location) {
-        await this.fileManagementService.rollbackFileMove(rollbackInfo, body.location);
+        await this.fileManagementService.rollbackFileMove(
+          rollbackInfo,
+          body.location,
+        );
       }
       throw error;
     }
   }
 
   /**
-   * Delete file
+   * Delete file using existing DynamicRepository
    */
   @Delete(':id')
-  async deleteFile(@Param('id') id: string) {
-    const fileRepo = this.dataSourceService.getRepository('file_definition');
-    const file: any = await fileRepo.findOne({ where: { id } });
+  async deleteFile(@Param('id') id: string, @Req() req: RequestWithRouteData) {
+    // Use existing DynamicRepository from context
+    const fileRepo =
+      req.routeData?.context?.$repos?.main ||
+      req.routeData?.context?.$repos?.file_definition;
+
+    if (!fileRepo) {
+      throw new BadRequestException('Repository not found in context');
+    }
+
+    // Get file data before deletion
+    const files = await fileRepo.find({ where: { id } });
+    const file = files.data?.[0];
 
     if (!file) {
       throw new NotFoundException(`File with ID ${id} not found`);
@@ -231,8 +188,8 @@ export class FileController {
 
     const filePath = file.location;
 
-    // Delete from database first
-    await fileRepo.delete(id);
+    // Delete from database using existing repo
+    const result = await fileRepo.delete(id);
 
     // Delete physical file (with error handling but don't rollback DB)
     try {
@@ -242,9 +199,6 @@ export class FileController {
       console.error(`Failed to delete physical file ${filePath}:`, error);
     }
 
-    return {
-      success: true,
-      message: 'File deleted successfully',
-    };
+    return result;
   }
 }

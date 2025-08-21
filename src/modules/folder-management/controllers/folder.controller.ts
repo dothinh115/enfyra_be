@@ -1,12 +1,6 @@
 import { Controller, Post, Patch, Delete, Body, Param, Req, BadRequestException, Logger } from '@nestjs/common';
-import { DynamicRepository } from '../../dynamic-api/repositories/dynamic.repository';
 import { RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
 import { FolderManagementService } from '../services/folder-management.service';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
-import { TableHandlerService } from '../../table-management/services/table-handler.service';
-import { QueryEngine } from '../../../infrastructure/query-engine/services/query-engine.service';
-import { RouteCacheService } from '../../../infrastructure/redis/services/route-cache.service';
-import { SystemProtectionService } from '../../dynamic-api/services/system-protection.service';
 
 @Controller('folder_definition')
 export class FolderController {
@@ -14,11 +8,6 @@ export class FolderController {
 
   constructor(
     private folderManagementService: FolderManagementService,
-    private dataSourceService: DataSourceService,
-    private tableHandlerService: TableHandlerService,
-    private queryEngine: QueryEngine,
-    private routeCacheService: RouteCacheService,
-    private systemProtectionService: SystemProtectionService,
   ) {}
 
   @Post()
@@ -32,39 +21,29 @@ export class FolderController {
     let createdPath: string | null = null;
 
     try {
-      // Use DynamicRepository to handle folder creation
-      const folderRepo = new DynamicRepository({
-        context: req.routeData?.context,
-        tableName: 'folder_definition',
-        tableHandlerService: this.tableHandlerService,
-        dataSourceService: this.dataSourceService,
-        queryEngine: this.queryEngine,
-        routeCacheService: this.routeCacheService,
-        systemProtectionService: this.systemProtectionService,
-      });
-
-      await folderRepo.init();
-
-      // Create folder record in DB using dynamic repo
-      const result = await folderRepo.create(body);
+      // Use existing DynamicRepository from context (already initialized with prehook modifications)
+      const folderRepo = req.routeData?.context?.$repos?.main || req.routeData?.context?.$repos?.folder_definition;
       
-      // Create physical folder if DB operation succeeded
-      if (result && body.path) {
-        createdPath = body.path;
+      if (!folderRepo) {
+        throw new BadRequestException('Repository not found in context');
+      }
+
+      // Create folder record in DB using existing repo (with prehook modifications)
+      const result = await folderRepo.create(req.routeData.context.$body);
+      
+      // Create physical folder if DB operation succeeded  
+      const modifiedBody = req.routeData.context.$body;
+      if (result && modifiedBody.path) {
+        createdPath = modifiedBody.path;
         await this.folderManagementService.createPhysicalFolder({
-          path: body.path,
-          name: body.name
+          path: modifiedBody.path,
+          name: modifiedBody.name
         });
         physicalFolderCreated = true;
       }
 
-      this.logger.log(`✅ Folder created successfully: ${body.name}`);
-      return {
-        success: true,
-        data: result,
-        message: 'Folder created successfully',
-        statusCode: 201
-      };
+      this.logger.log(`✅ Folder created successfully: ${modifiedBody.name}`);
+      return result;
 
     } catch (error) {
       this.logger.error(`❌ Folder creation failed:`, error);
@@ -89,18 +68,12 @@ export class FolderController {
     let rollbackInfo: any = null;
 
     try {
-      // Use DynamicRepository to handle folder update
-      const folderRepo = new DynamicRepository({
-        context: req.routeData?.context,
-        tableName: 'folder_definition',
-        tableHandlerService: this.tableHandlerService,
-        dataSourceService: this.dataSourceService,
-        queryEngine: this.queryEngine,
-        routeCacheService: this.routeCacheService,
-        systemProtectionService: this.systemProtectionService,
-      });
-
-      await folderRepo.init();
+      // Use existing DynamicRepository from context
+      const folderRepo = req.routeData?.context?.$repos?.main || req.routeData?.context?.$repos?.folder_definition;
+      
+      if (!folderRepo) {
+        throw new BadRequestException('Repository not found in context');
+      }
 
       // Get current folder data for rollback
       const currentFolders = await folderRepo.find({ where: { id } });
@@ -121,12 +94,7 @@ export class FolderController {
       }
 
       this.logger.log(`✅ Folder updated successfully: ${id}`);
-      return {
-        success: true,
-        data: result,
-        message: 'Folder updated successfully',
-        statusCode: 200
-      };
+      return result;
 
     } catch (error) {
       this.logger.error(`❌ Folder update failed:`, error);
@@ -151,18 +119,12 @@ export class FolderController {
     let physicalFolderDeleted = false;
 
     try {
-      // Use DynamicRepository to handle folder deletion
-      const folderRepo = new DynamicRepository({
-        context: req.routeData?.context,
-        tableName: 'folder_definition',
-        tableHandlerService: this.tableHandlerService,
-        dataSourceService: this.dataSourceService,
-        queryEngine: this.queryEngine,
-        routeCacheService: this.routeCacheService,
-        systemProtectionService: this.systemProtectionService,
-      });
-
-      await folderRepo.init();
+      // Use existing DynamicRepository from context
+      const folderRepo = req.routeData?.context?.$repos?.main || req.routeData?.context?.$repos?.folder_definition;
+      
+      if (!folderRepo) {
+        throw new BadRequestException('Repository not found in context');
+      }
 
       // Get folder data before deletion
       const folders = await folderRepo.find({ where: { id } });
@@ -183,12 +145,7 @@ export class FolderController {
       const result = await folderRepo.delete(id);
 
       this.logger.log(`✅ Folder deleted successfully: ${id}`);
-      return {
-        success: true,
-        data: result,
-        message: 'Folder deleted successfully',
-        statusCode: 200
-      };
+      return result;
 
     } catch (error) {
       this.logger.error(`❌ Folder deletion failed:`, error);

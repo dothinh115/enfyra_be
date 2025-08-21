@@ -5,15 +5,12 @@ import { DataSourceModule } from '../../core/database/data-source/data-source.mo
 import { QueryEngineModule } from '../../infrastructure/query-engine/query-engine.module';
 import { RedisModule } from '../../infrastructure/redis/redis.module';
 import { TableModule } from '../table-management/table.module';
-import { DynamicModule } from '../dynamic-api/dynamic.module';
-
 @Module({
   imports: [
     DataSourceModule,
     QueryEngineModule, 
     RedisModule,
-    TableModule,
-    DynamicModule
+    TableModule
   ],
   controllers: [FolderController],
   providers: [FolderManagementService],

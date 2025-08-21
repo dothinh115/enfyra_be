@@ -26,6 +26,9 @@ export class DynamicInterceptor<T> implements NestInterceptor<T, any> {
             code,
             req.routeData.context,
           );
+          
+          // Sync modified body back to req.body so controllers can access it
+          req.body = req.routeData.context.$body;
 
           if (result !== undefined) {
             const statusCode = req.routeData.context.$statusCode ?? 200;

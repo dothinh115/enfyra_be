@@ -28,7 +28,6 @@ import { SystemProtectionService } from './modules/dynamic-api/services/system-p
 import { GraphqlModule } from './modules/graphql/graphql.module';
 import { MeModule } from './modules/me/me.module';
 import { FolderManagementModule } from './modules/folder-management/folder-management.module';
-import { FolderManagementService } from './modules/folder-management/services/folder-management.service';
 import { FileManagementService } from './modules/file-management/services/file-management.service';
 import { SchemaManagementModule } from './modules/schema-management/schema-management.module';
 import { TableModule } from './modules/table-management/table.module';
@@ -74,9 +73,9 @@ import { FileManagementModule } from './modules/file-management/file-management.
     }),
     QueryEngineModule,
     AuthModule,
-    MeModule,
-    FileManagementModule,
     FolderManagementModule,
+    FileManagementModule,
+    MeModule,
     DynamicModule,
     BootstrapModule,
     GraphqlModule,
@@ -91,7 +90,6 @@ import { FileManagementModule } from './modules/file-management/file-management.
     SqlFunctionService,
     RouteCacheService,
     SystemProtectionService,
-    FolderManagementService,
     FileManagementService,
     { provide: APP_GUARD, useClass: SchemaLockGuard },
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
