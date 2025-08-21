@@ -3,36 +3,11 @@ import { DataSourceService } from '../../../core/database/data-source/data-sourc
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-
-interface FileUploadDto {
-  filename: string;
-  mimetype: string;
-  buffer: Buffer;
-  size: number;
-  folder?: string;
-  title?: string;
-  description?: string;
-  visibility?: 'public' | 'private';
-}
-
-interface ProcessedFileInfo {
-  filename: string;
-  filename_disk: string;
-  mimetype: string;
-  type: string;
-  filesize: number;
-  storage: string;
-  location: string;
-  title?: string;
-  description?: string;
-  visibility: 'public' | 'private';
-  status: 'active' | 'archived' | 'quarantine';
-}
-
-interface RollbackInfo {
-  filePath: string;
-  fileCreated: boolean;
-}
+import { 
+  FileUploadDto, 
+  ProcessedFileInfo, 
+  RollbackInfo 
+} from '../../../shared/interfaces/file-management.interface';
 
 @Injectable()
 export class FileManagementService {
@@ -80,7 +55,7 @@ export class FileManagementService {
   /**
    * Get folder path from database
    */
-  private async getFolderPath(folderId: any): Promise<string | null> {
+  async getFolderPath(folderId: any): Promise<string | null> {
     if (!folderId) return null;
     
     try {
@@ -99,7 +74,7 @@ export class FileManagementService {
   /**
    * Get physical path for file storage
    */
-  private getFilePath(filename: string, folderPath?: string): string {
+  getFilePath(filename: string, folderPath?: string): string {
     if (folderPath) {
       const relativePath = folderPath.startsWith('/') ? folderPath.slice(1) : folderPath;
       return path.join(this.basePath, relativePath, filename);
@@ -142,7 +117,6 @@ export class FileManagementService {
         location: filePath,
         title: fileData.title || fileData.filename,
         description: fileData.description,
-        visibility: fileData.visibility || 'private',
         status: 'active'
       };
       
@@ -253,6 +227,7 @@ export class FileManagementService {
       return null;
     }
   }
+
 
   /**
    * Generate download URL for file

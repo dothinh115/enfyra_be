@@ -1,21 +1,7 @@
 import { Injectable, NestMiddleware, BadRequestException } from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import * as multer from 'multer';
-import { TDynamicContext } from '../utils/types/dynamic-context.type';
-
-interface RequestWithRouteData extends Request {
-  routeData?: {
-    context: TDynamicContext;
-    [key: string]: any;
-  };
-  file?: {
-    originalname: string;
-    mimetype: string;
-    buffer: Buffer;
-    size: number;
-    fieldname: string;
-  };
-}
+import { RequestWithRouteData } from '../interfaces/dynamic-context.interface';
 
 @Injectable()
 export class FileUploadMiddleware implements NestMiddleware {
@@ -31,18 +17,26 @@ export class FileUploadMiddleware implements NestMiddleware {
   });
 
   use(req: RequestWithRouteData, res: Response, next: NextFunction) {
-    
-    // Check originalUrl for actual path since dynamic routes all have req.url = "/"
     const actualPath = req.originalUrl || req.url;
     const isFileDefinitionRoute = actualPath.includes('/file_definition');
-    const isUploadRoute = actualPath.includes('/upload') || req.method === 'POST';
+    const isPostOrPatch = ['POST', 'PATCH'].includes(req.method);
     const isMultipartContent = req.headers['content-type']?.includes('multipart/form-data');
     
+    console.log('🔍 FileUploadMiddleware Debug:', {
+      actualPath,
+      method: req.method,
+      contentType: req.headers['content-type'],
+      isFileDefinitionRoute,
+      isPostOrPatch,
+      isMultipartContent,
+      willProcess: isFileDefinitionRoute && isPostOrPatch && isMultipartContent
+    });
     
-    if (!isFileDefinitionRoute || !isUploadRoute || !isMultipartContent) {
+    // Skip if not file_definition route, not POST/PATCH, or not multipart content
+    if (!isFileDefinitionRoute || !isPostOrPatch || !isMultipartContent) {
+      console.log('🔍 Skipping FileUploadMiddleware');
       return next();
     }
-
 
     // Use multer to parse multipart form data
     this.upload.single('file')(req, res, (error: any) => {
@@ -56,48 +50,36 @@ export class FileUploadMiddleware implements NestMiddleware {
         throw new BadRequestException(`Unexpected error: ${error.message}`);
       }
 
-
-      // Parse form fields to body (multer adds fields to req.body)
-      if (req.body && req.routeData?.context) {
-        // Process folder field if it exists - parse JSON and extract ID
-        const processedBody = { ...req.body };
-        if (processedBody.folder) {
-          try {
-            // Parse the folder JSON string and extract just the ID
-            const folderData = JSON.parse(processedBody.folder);
-            processedBody.folder = folderData.id || null;
-          } catch (error) {
-            console.warn(`⚠️ Failed to parse folder field: ${error.message}`);
-            processedBody.folder = null;
-          }
-        }
-        
-        // Merge form fields into context body
-        req.routeData.context.$body = { ...req.routeData.context.$body, ...processedBody };
-      } else {
-      }
-
-      // If file was uploaded, add it to routeData.context
-      if (req.file) {
-        // Ensure routeData and context exist
-        if (!req.routeData?.context) {
-          console.warn('⚠️ routeData.context not found, skipping file upload processing');
-          return next();
-        }
-
-        // Add uploaded file to existing context
-        req.routeData.context.$uploadedFile = {
-          originalname: req.file.originalname,
-          mimetype: req.file.mimetype,
-          buffer: req.file.buffer,
-          size: req.file.size,
-          fieldname: req.file.fieldname,
-        };
-
-      } else if (isUploadRoute) {
-        // If this is an upload route but no file was provided
+      // For POST method, require file upload
+      if (req.method === 'POST' && !req.file) {
         throw new BadRequestException('No file provided for upload');
       }
+
+      // Handle form data processing for both dynamic routes and static controllers
+      if (req.routeData?.context) {
+        // Dynamic route - process body for context
+        const processedBody: any = {};
+        
+        if (req.body.folder) {
+          processedBody.folder = typeof req.body.folder === 'object' 
+            ? req.body.folder 
+            : { id: req.body.folder };
+        }
+        
+        req.routeData.context.$body = { ...req.routeData.context.$body, ...processedBody };
+
+        // Add uploaded file to context
+        if (req.file) {
+          req.routeData.context.$uploadedFile = {
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            buffer: req.file.buffer,
+            size: req.file.size,
+            fieldname: req.file.fieldname,
+          };
+        }
+      }
+      // For static controller, multer already added file to req.file and body to req.body
 
       next();
     });

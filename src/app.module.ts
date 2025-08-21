@@ -113,6 +113,6 @@ export class AppModule implements NestModule {
     consumer.apply(RequestContextMiddleware).forRoutes('*');
     consumer.apply(ParseQueryMiddleware).forRoutes('*');
     consumer.apply(RouteDetectMiddleware).forRoutes('*');
-    consumer.apply(FileUploadMiddleware).forRoutes('*');
+    consumer.apply(FileUploadMiddleware).forRoutes('file_definition');
   }
 }

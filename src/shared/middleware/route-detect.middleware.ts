@@ -4,14 +4,13 @@ import { DataSourceService } from '../../core/database/data-source/data-source.s
 import { JwtService } from '@nestjs/jwt';
 import { TableHandlerService } from '../../modules/table-management/services/table-handler.service';
 import { DynamicRepository } from '../../modules/dynamic-api/repositories/dynamic.repository';
-import { TDynamicContext } from '../utils/types/dynamic-context.type';
+import { TDynamicContext } from '../interfaces/dynamic-context.interface';
 import { QueryEngine } from '../../infrastructure/query-engine/services/query-engine.service';
 import { RouteCacheService } from '../../infrastructure/redis/services/route-cache.service';
 import { SystemProtectionService } from '../../modules/dynamic-api/services/system-protection.service';
 import { BcryptService } from '../../core/auth/services/bcrypt.service';
 import { ScriptErrorFactory } from '../../shared/utils/script-error-factory';
 import { FolderManagementService } from '../../modules/folder-management/services/folder-management.service';
-import { FileManagementService } from '../../modules/file-management/services/file-management.service';
 import { autoSlug } from '../utils/auto-slug.helper';
 
 @Injectable()
@@ -26,7 +25,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private systemProtectionService: SystemProtectionService,
     private bcryptService: BcryptService,
     private folderManagementService: FolderManagementService,
-    private fileManagementService: FileManagementService,
   ) {}
 
   async use(req: any, res: any, next: (error?: any) => void) {
@@ -87,7 +85,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
             routeCacheService: this.routeCacheService,
             systemProtectionService: this.systemProtectionService,
             folderManagementService: this.folderManagementService,
-            fileManagementService: this.fileManagementService,
           });
 
           await dynamicRepo.init();

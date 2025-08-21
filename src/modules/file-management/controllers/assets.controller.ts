@@ -1,14 +1,9 @@
 import { Controller, Get, Req, Res } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { FileAssetsService } from '../services/file-assets.service';
 import { Public } from '../../../shared/decorators/public-route.decorator';
+import { RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
 
-interface RequestWithRouteData extends Request {
-  routeData?: {
-    params?: { [key: string]: string };
-    [key: string]: any;
-  };
-}
 
 @Controller('assets')
 export class AssetsController {

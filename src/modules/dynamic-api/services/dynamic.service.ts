@@ -12,7 +12,7 @@ import {
 } from '../../../core/exceptions/custom-exceptions';
 import { LoggingService } from '../../../core/exceptions/services/logging.service';
 import { HandlerExecutorService } from '../../../infrastructure/handler-executor/services/handler-executor.service';
-import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
+import { TDynamicContext, RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
 
 @Injectable()
 export class DynamicService {
@@ -23,16 +23,7 @@ export class DynamicService {
     private loggingService: LoggingService,
   ) {}
 
-  async runHandler(
-    req: Request & {
-      routeData: any & {
-        params: any;
-        handler: string;
-        context: TDynamicContext;
-      };
-      user: any;
-    },
-  ) {
+  async runHandler(req: RequestWithRouteData) {
     // Calculate timeout outside try block so it's available in catch
     const isTableDefinitionOperation =
       req.routeData.mainTable?.name === 'table_definition' ||

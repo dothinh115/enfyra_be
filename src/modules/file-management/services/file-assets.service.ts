@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+import { FileManagementService } from './file-management.service';
 import { Response } from 'express';
 import * as fs from 'fs';
 
@@ -7,7 +8,10 @@ import * as fs from 'fs';
 export class FileAssetsService {
   private readonly logger = new Logger(FileAssetsService.name);
 
-  constructor(private dataSourceService: DataSourceService) {}
+  constructor(
+    private dataSourceService: DataSourceService,
+    private fileManagementService: FileManagementService
+  ) {}
 
   async streamFile(fileId: string, res: Response): Promise<void> {
     try {
@@ -24,14 +28,12 @@ export class FileAssetsService {
 
       const filePath = (file as any).location;
 
-      // Check if physical file exists
-      if (!(await this.fileExists(filePath))) {
+      // Check if physical file exists and get stats
+      const stats = await this.fileManagementService.getFileStats(filePath);
+      if (!stats) {
         this.logger.error(`Physical file not found: ${filePath}`);
         throw new NotFoundException(`Physical file not found`);
       }
-
-      // Get file stats for headers
-      const stats = await fs.promises.stat(filePath);
       const filename = (file as any).filename;
       const mimetype = (file as any).mimetype;
 
@@ -64,12 +66,4 @@ export class FileAssetsService {
     }
   }
 
-  private async fileExists(filePath: string): Promise<boolean> {
-    try {
-      const stats = await fs.promises.stat(filePath);
-      return stats.isFile();
-    } catch {
-      return false;
-    }
-  }
 }

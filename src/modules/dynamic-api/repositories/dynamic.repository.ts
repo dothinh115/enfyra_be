@@ -6,8 +6,7 @@ import { QueryEngine } from '../../../infrastructure/query-engine/services/query
 import { RouteCacheService } from '../../../infrastructure/redis/services/route-cache.service';
 import { SystemProtectionService } from '../services/system-protection.service';
 import { FolderManagementService } from '../../folder-management/services/folder-management.service';
-import { FileManagementService } from '../../file-management/services/file-management.service';
-import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
+import { TDynamicContext } from '../../../shared/interfaces/dynamic-context.interface';
 
 export class DynamicRepository {
   private context: TDynamicContext;
@@ -19,7 +18,6 @@ export class DynamicRepository {
   private routeCacheService: RouteCacheService;
   private systemProtectionService: SystemProtectionService;
   private folderManagementService?: FolderManagementService;
-  private fileManagementService?: FileManagementService;
 
   constructor({
     context,
@@ -30,7 +28,6 @@ export class DynamicRepository {
     routeCacheService,
     systemProtectionService,
     folderManagementService,
-    fileManagementService,
   }: {
     context: TDynamicContext;
     tableName: string;
@@ -40,7 +37,6 @@ export class DynamicRepository {
     routeCacheService: RouteCacheService;
     systemProtectionService: SystemProtectionService;
     folderManagementService?: FolderManagementService;
-    fileManagementService?: FileManagementService;
   }) {
     this.context = context;
     this.tableName = tableName;
@@ -50,7 +46,6 @@ export class DynamicRepository {
     this.routeCacheService = routeCacheService;
     this.systemProtectionService = systemProtectionService;
     this.folderManagementService = folderManagementService;
-    this.fileManagementService = fileManagementService;
   }
 
   async init() {
@@ -96,22 +91,6 @@ export class DynamicRepository {
         });
       }
 
-      // Handle file upload for file_definition table
-      if (this.tableName === 'file_definition' && this.fileManagementService && this.context.$uploadedFile) {
-        const processedFile = await this.fileManagementService.processFileUpload({
-          filename: this.context.$uploadedFile.originalname,
-          mimetype: this.context.$uploadedFile.mimetype,
-          buffer: this.context.$uploadedFile.buffer,
-          size: this.context.$uploadedFile.size,
-          folder: body.folder || null,
-          title: body.title,
-          description: body.description,
-          visibility: body.visibility
-        });
-
-        // Merge processed file data with body
-        Object.assign(body, processedFile);
-      }
 
       const created: any = await this.repo.save(body);
       const result = await this.find({ where: { id: { _eq: created.id } } });
@@ -129,14 +108,6 @@ export class DynamicRepository {
         }
       }
 
-      // Rollback physical file creation if DB operation failed
-      if (this.tableName === 'file_definition' && body.location && this.fileManagementService) {
-        try {
-          await this.fileManagementService.rollbackFileCreation(body.location);
-        } catch (rollbackError) {
-          console.error('❌ Failed to rollback physical file creation:', rollbackError);
-        }
-      }
 
       throw new BadRequestException(error.message);
     }
@@ -171,18 +142,6 @@ export class DynamicRepository {
         );
       }
 
-      // Handle file location update for file_definition table
-      let fileRollbackInfo: any = null;
-      if (this.tableName === 'file_definition' && this.fileManagementService && body.folder && body.folder !== (exists as any).folder) {
-        const oldLocation = (exists as any).location;
-        const newLocation = this.fileManagementService.generateFileUrl(
-          (exists as any).filename_disk,
-          body.folder
-        );
-        
-        fileRollbackInfo = await this.fileManagementService.movePhysicalFile(oldLocation, newLocation);
-        body.location = newLocation;
-      }
 
       body.id = exists.id;
 
@@ -194,10 +153,6 @@ export class DynamicRepository {
           await this.folderManagementService.rollbackFolderMove(rollbackInfo);
         }
         
-        // Rollback physical file move if DB update failed
-        if (fileRollbackInfo && this.fileManagementService) {
-          await this.fileManagementService.rollbackFileMove(fileRollbackInfo, body.location);
-        }
         
         throw dbError;
       }
@@ -234,10 +189,6 @@ export class DynamicRepository {
         await this.folderManagementService.deletePhysicalFolder((exists as any).path);
       }
 
-      // Handle physical file deletion for file_definition table
-      if (this.tableName === 'file_definition' && this.fileManagementService) {
-        await this.fileManagementService.deletePhysicalFile((exists as any).location);
-      }
 
       try {
         await this.repo.delete(id);
@@ -251,11 +202,6 @@ export class DynamicRepository {
           }
         }
 
-        // For file deletion rollback, we would need to restore the file
-        // This is complex and typically handled by backup systems in production
-        if (this.tableName === 'file_definition' && this.fileManagementService) {
-          console.warn('⚠️ File deletion rollback not implemented - file may be lost');
-        }
         
         throw dbError;
       }

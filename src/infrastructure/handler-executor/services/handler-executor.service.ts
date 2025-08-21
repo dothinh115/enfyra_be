@@ -2,7 +2,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 // Internal imports
-import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
+import { TDynamicContext } from '../../../shared/interfaces/dynamic-context.interface';
 
 // Relative imports
 import { ChildProcessManager } from '../utils/child-process-manager';

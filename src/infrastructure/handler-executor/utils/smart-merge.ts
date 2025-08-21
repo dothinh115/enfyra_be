@@ -1,5 +1,5 @@
 import { merge } from 'lodash';
-import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
+import { TDynamicContext } from '../../../shared/interfaces/dynamic-context.interface';
 
 export function smartMergeContext(
   originalCtx: TDynamicContext,

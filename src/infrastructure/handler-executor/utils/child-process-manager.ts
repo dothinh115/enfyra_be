@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
+import { TDynamicContext } from '../../../shared/interfaces/dynamic-context.interface';
 import { resolvePath } from './resolve-path';
 import { ErrorHandler } from './error-handler';
 import { ScriptTimeoutException } from '../../../core/exceptions/custom-exceptions';
