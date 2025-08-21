@@ -5,7 +5,6 @@ import { TableHandlerService } from '../../table-management/services/table-handl
 import { QueryEngine } from '../../../infrastructure/query-engine/services/query-engine.service';
 import { RouteCacheService } from '../../../infrastructure/redis/services/route-cache.service';
 import { SystemProtectionService } from '../services/system-protection.service';
-import { FolderManagementService } from '../../folder-management/services/folder-management.service';
 import { TDynamicContext } from '../../../shared/interfaces/dynamic-context.interface';
 
 export class DynamicRepository {
@@ -17,7 +16,6 @@ export class DynamicRepository {
   private tableHandlerService: TableHandlerService;
   private routeCacheService: RouteCacheService;
   private systemProtectionService: SystemProtectionService;
-  private folderManagementService?: FolderManagementService;
 
   constructor({
     context,
@@ -27,7 +25,6 @@ export class DynamicRepository {
     tableHandlerService,
     routeCacheService,
     systemProtectionService,
-    folderManagementService,
   }: {
     context: TDynamicContext;
     tableName: string;
@@ -36,7 +33,6 @@ export class DynamicRepository {
     tableHandlerService: TableHandlerService;
     routeCacheService: RouteCacheService;
     systemProtectionService: SystemProtectionService;
-    folderManagementService?: FolderManagementService;
   }) {
     this.context = context;
     this.tableName = tableName;
@@ -45,7 +41,6 @@ export class DynamicRepository {
     this.tableHandlerService = tableHandlerService;
     this.routeCacheService = routeCacheService;
     this.systemProtectionService = systemProtectionService;
-    this.folderManagementService = folderManagementService;
   }
 
   async init() {
@@ -84,12 +79,6 @@ export class DynamicRepository {
         return await this.find({ where: { id: { _eq: table.id } } });
       }
 
-      if (this.tableName === 'folder_definition' && this.folderManagementService && body.path) {
-        await this.folderManagementService.createPhysicalFolder({
-          path: body.path,
-          name: body.name
-        });
-      }
 
 
       const created: any = await this.repo.save(body);
@@ -99,14 +88,6 @@ export class DynamicRepository {
     } catch (error) {
       console.error('❌ Error in dynamic repo [create]:', error);
 
-      // Rollback physical folder creation if DB operation failed
-      if (this.tableName === 'folder_definition' && body.path && this.folderManagementService) {
-        try {
-          await this.folderManagementService.rollbackFolderCreation(body.path);
-        } catch (rollbackError) {
-          console.error('❌ Failed to rollback physical folder creation:', rollbackError);
-        }
-      }
 
 
       throw new BadRequestException(error.message);
@@ -134,13 +115,6 @@ export class DynamicRepository {
         return this.find({ where: { id: { _eq: table.id } } });
       }
 
-      let rollbackInfo: any = null;
-      if (this.tableName === 'folder_definition' && this.folderManagementService && body.path !== (exists as any).path) {
-        rollbackInfo = await this.folderManagementService.movePhysicalFolder(
-          (exists as any).path,
-          body.path
-        );
-      }
 
 
       body.id = exists.id;
@@ -148,10 +122,6 @@ export class DynamicRepository {
       try {
         await this.repo.save(body);
       } catch (dbError) {
-        // Rollback physical folder move if DB update failed
-        if (rollbackInfo && this.folderManagementService) {
-          await this.folderManagementService.rollbackFolderMove(rollbackInfo);
-        }
         
         
         throw dbError;
@@ -185,22 +155,11 @@ export class DynamicRepository {
       }
 
 
-      if (this.tableName === 'folder_definition' && this.folderManagementService) {
-        await this.folderManagementService.deletePhysicalFolder((exists as any).path);
-      }
 
 
       try {
         await this.repo.delete(id);
       } catch (dbError) {
-        // Rollback physical deletion if DB deletion failed
-        if (this.tableName === 'folder_definition' && this.folderManagementService) {
-          try {
-            await this.folderManagementService.rollbackFolderDeletion((exists as any).path);
-          } catch (rollbackError) {
-            console.error('❌ Failed to rollback physical folder deletion:', rollbackError);
-          }
-        }
 
         
         throw dbError;

@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { DataSourceService } from '../../../core/database/data-source/data-source.service';
+import { DynamicRepository } from '../../dynamic-api/repositories/dynamic.repository';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -19,7 +21,7 @@ export class FolderManagementService {
   private readonly publicPath = path.join(process.cwd(), 'public');
   private readonly logger = new Logger(FolderManagementService.name);
   
-  constructor() {}
+  constructor(private dataSourceService: DataSourceService) {}
 
 
   /**

@@ -84,7 +84,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
             queryEngine: this.queryEngine,
             routeCacheService: this.routeCacheService,
             systemProtectionService: this.systemProtectionService,
-            folderManagementService: this.folderManagementService,
           });
 
           await dynamicRepo.init();

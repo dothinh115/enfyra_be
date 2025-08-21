@@ -117,7 +117,6 @@ export class FileController {
       tableHandlerService: this.tableHandlerService,
       routeCacheService: this.routeCacheService,
       systemProtectionService: this.systemProtectionService,
-      folderManagementService: this.folderManagementService,
     });
 
     await dynamicRepo.init();
@@ -196,7 +195,6 @@ export class FileController {
       tableHandlerService: this.tableHandlerService,
       routeCacheService: this.routeCacheService,
       systemProtectionService: this.systemProtectionService,
-      folderManagementService: this.folderManagementService,
     });
 
     await dynamicRepo.init();
