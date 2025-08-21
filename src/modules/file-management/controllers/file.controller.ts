@@ -11,14 +11,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { FileManagementService } from '../services/file-management.service';
-import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
 
 @Controller('file_definition')
 export class FileController {
   constructor(
     private fileManagementService: FileManagementService,
-    private dataSourceService: DataSourceService,
   ) {}
 
   /**
@@ -50,10 +48,17 @@ export class FileController {
       description: body.description || null,
     });
 
-    // Save to database with rollback on failure
+    // Save to database with rollback on failure using existing DynamicRepository
     try {
-      const fileRepo = this.dataSourceService.getRepository('file_definition');
-      const savedFile = await fileRepo.save({
+      const fileRepo =
+        req.routeData?.context?.$repos?.main ||
+        req.routeData?.context?.$repos?.file_definition;
+
+      if (!fileRepo) {
+        throw new BadRequestException('Repository not found in context');
+      }
+
+      const savedFile = await fileRepo.create({
         ...processedFile,
         folder: folderData,
         uploaded_by: req.user?.id ? { id: req.user.id } : null,
