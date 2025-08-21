@@ -94,14 +94,15 @@ export class RouteDetectMiddleware implements NestMiddleware {
 
       // Create repos object and add main alias for mainTable
       context.$repos = Object.fromEntries(dynamicFindEntries);
-      
+
       // Set context for each repo after repos object is created
       Object.values(context.$repos).forEach((repo: any) => {
         repo.context = context;
       });
-      
+
       // Add 'main' alias for mainTable
-      const mainTableName = matchedRoute.route.mainTable.alias ?? matchedRoute.route.mainTable.name;
+      const mainTableName =
+        matchedRoute.route.mainTable.alias ?? matchedRoute.route.mainTable.name;
       if (context.$repos[mainTableName]) {
         context.$repos.main = context.$repos[mainTableName];
       }

@@ -40,8 +40,8 @@ export class RouteCacheService {
         )
         .leftJoinAndSelect('hooks.methods', 'hooks_method')
         .leftJoinAndSelect('hooks.route', 'hooks_route')
-        .leftJoinAndSelect('route.handler', 'handler')
-        .leftJoinAndSelect('handler.method', 'handlers_method')
+        .leftJoinAndSelect('route.handlers', 'handlers')
+        .leftJoinAndSelect('handlers.method', 'handlers_method')
         .leftJoinAndSelect(
           'route.routePermissions',
           'routePermissions',

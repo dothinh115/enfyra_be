@@ -30,7 +30,7 @@ export class Route_definition {
     @OneToMany('Route_permission_definition', (rel: any) => rel.route, { cascade: true })
     routePermissions: any;
     @OneToMany('Route_handler_definition', (rel: any) => rel.route, { cascade: true })
-    handler: any;
+    handlers: any;
     @OneToMany('Hook_definition', (rel: any) => rel.route, { cascade: true })
     hooks: any;
     @ManyToMany('Method_definition', (rel: any) => rel.routes, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
