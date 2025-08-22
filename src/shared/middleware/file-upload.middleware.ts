@@ -35,17 +35,9 @@ export class FileUploadMiddleware implements NestMiddleware {
 
     this.upload.single('file')(req, res, (error: any) => {
       if (error) {
-        if (error instanceof multer.MulterError) {
-          if (error.code === 'LIMIT_FILE_SIZE') {
-            throw new BadRequestException('File size exceeds limit of 10MB');
-          }
-          throw new BadRequestException(`File upload error: ${error.message}`);
-        }
-        throw new BadRequestException(`Unexpected error: ${error.message}`);
-      }
-
-      if (req.method === 'POST' && !req.file) {
-        throw new BadRequestException('No file provided for upload');
+        console.warn('File upload middleware error:', error.message);
+        // Continue processing - let controller handle the missing file case
+        return next();
       }
 
       if (req.file && req.file.originalname) {
@@ -69,7 +61,11 @@ export class FileUploadMiddleware implements NestMiddleware {
       if (req.routeData?.context) {
         const processedBody: any = {};
 
-        if (req.body.folder) {
+        if (
+          req.body.folder &&
+          req.body.folder !== null &&
+          req.body.folder !== 'null'
+        ) {
           processedBody.folder =
             typeof req.body.folder === 'object'
               ? req.body.folder

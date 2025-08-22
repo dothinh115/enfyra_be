@@ -6,11 +6,14 @@ import {
   Delete,
   Param,
   Req,
-  BadRequestException,
-  NotFoundException,
 } from '@nestjs/common';
 import { FileManagementService } from '../services/file-management.service';
 import { RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
+import {
+  ValidationException,
+  FileUploadException,
+  FileNotFoundException,
+} from '../../../core/exceptions/custom-exceptions';
 
 @Controller('file_definition')
 export class FileController {
@@ -20,7 +23,7 @@ export class FileController {
   async uploadFile(@Req() req: RequestWithRouteData) {
     const file = req.file;
     if (!file) {
-      throw new BadRequestException('No file provided');
+      throw new FileUploadException('No file provided');
     }
 
     const body = req.routeData?.context?.$body || {};
@@ -47,7 +50,7 @@ export class FileController {
         req.routeData?.context?.$repos?.file_definition;
 
       if (!fileRepo) {
-        throw new BadRequestException('Repository not found in context');
+        throw new ValidationException('Repository not found in context');
       }
 
       const savedFile = await fileRepo.create({
@@ -72,7 +75,7 @@ export class FileController {
       req.routeData?.context?.$repos?.file_definition;
 
     if (!fileRepo) {
-      throw new BadRequestException('Repository not found in context');
+      throw new ValidationException('Repository not found in context');
     }
 
     const result = await fileRepo.find();
@@ -88,14 +91,14 @@ export class FileController {
       req.routeData?.context?.$repos?.file_definition;
 
     if (!fileRepo) {
-      throw new BadRequestException('Repository not found in context');
+      throw new ValidationException('Repository not found in context');
     }
 
     const currentFiles = await fileRepo.find({ where: { id: { _eq: id } } });
     const currentFile = currentFiles.data?.[0];
 
     if (!currentFile) {
-      throw new NotFoundException(`File with ID ${id} not found`);
+      throw new FileNotFoundException(`File with ID ${id} not found`);
     }
 
     if (body.folder && body.folder !== currentFile.folder) {
@@ -119,14 +122,14 @@ export class FileController {
       req.routeData?.context?.$repos?.file_definition;
 
     if (!fileRepo) {
-      throw new BadRequestException('Repository not found in context');
+      throw new ValidationException('Repository not found in context');
     }
 
     const files = await fileRepo.find({ where: { id: { _eq: id } } });
     const file = files.data?.[0];
 
     if (!file) {
-      throw new NotFoundException(`File with ID ${id} not found`);
+      throw new FileNotFoundException(`File with ID ${id} not found`);
     }
 
     const filePath = file.location;
