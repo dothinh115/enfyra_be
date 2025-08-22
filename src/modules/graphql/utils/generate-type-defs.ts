@@ -160,7 +160,7 @@ export function generateGraphQLTypeDefsFromTables(
 
     typeDefs += `}\n`;
 
-    // Generate XXXResult type
+    // Generate Result type
     resultDefs += `
 type ${typeName}Result {
   data: [${typeName}!]!

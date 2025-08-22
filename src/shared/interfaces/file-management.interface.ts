@@ -3,7 +3,7 @@ export interface FileUploadDto {
   mimetype: string;
   buffer: Buffer;
   size: number;
-  folder?: any;  // Can be ID or object {id: ...}
+  folder?: any; // Can be ID or object {id: ...}
   title?: string;
   description?: string;
 }
@@ -19,11 +19,6 @@ export interface ProcessedFileInfo {
   title?: string;
   description?: string;
   status: 'active' | 'archived' | 'quarantine';
-}
-
-export interface RollbackInfo {
-  filePath: string;
-  fileCreated: boolean;
 }
 
 export interface UploadedFileInfo {

@@ -1,14 +1,10 @@
-// External packages
 import * as path from 'path';
-
-// @nestjs packages
 import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 
-// Internal imports
 import { AuthModule } from './core/auth/auth.module';
 import { JwtAuthGuard } from './core/auth/guards/jwt-auth.guard';
 import { RoleGuard } from './core/auth/guards/role.guard';
@@ -27,7 +23,6 @@ import { DynamicModule } from './modules/dynamic-api/dynamic.module';
 import { SystemProtectionService } from './modules/dynamic-api/services/system-protection.service';
 import { GraphqlModule } from './modules/graphql/graphql.module';
 import { MeModule } from './modules/me/me.module';
-import { FolderManagementModule } from './modules/folder-management/folder-management.module';
 import { FileManagementService } from './modules/file-management/services/file-management.service';
 import { SchemaManagementModule } from './modules/schema-management/schema-management.module';
 import { TableModule } from './modules/table-management/table.module';
@@ -55,11 +50,9 @@ import { FileManagementModule } from './modules/file-management/file-management.
     AutoModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
-        return {
-          secret: configService.get('SECRET_KEY'),
-        };
-      },
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get('SECRET_KEY'),
+      }),
       inject: [ConfigService],
     }),
     RedisModule.forRootAsync({
@@ -73,7 +66,6 @@ import { FileManagementModule } from './modules/file-management/file-management.
     }),
     QueryEngineModule,
     AuthModule,
-    FolderManagementModule,
     FileManagementModule,
     MeModule,
     DynamicModule,
@@ -83,7 +75,6 @@ import { FileManagementModule } from './modules/file-management/file-management.
     SchemaManagementModule,
   ],
   providers: [
-    // RabbitMQRegistry,
     JwtStrategy,
     HideFieldInterceptor,
     RedisPubSubService,
@@ -99,7 +90,6 @@ import { FileManagementModule } from './modules/file-management/file-management.
     { provide: APP_INTERCEPTOR, useClass: HideFieldInterceptor },
   ],
   exports: [
-    // RabbitMQRegistry,
     DataSourceModule,
     JwtModule,
     RedisPubSubService,

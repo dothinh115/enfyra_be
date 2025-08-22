@@ -10,7 +10,8 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
 
   async transformRecords(records: any[]): Promise<any[]> {
     const routeRepo = this.dataSourceService.getRepository('route_definition');
-    const methodRepo = this.dataSourceService.getRepository('method_definition');
+    const methodRepo =
+      this.dataSourceService.getRepository('method_definition');
 
     const transformedRecords = await Promise.all(
       records.map(async (hook) => {
@@ -80,33 +81,42 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
   }
 
   protected getCompareFields(): string[] {
-    return ['name', 'description', 'preHook', 'afterHook', 'priority', 'isEnabled'];
+    return [
+      'name',
+      'description',
+      'preHook',
+      'afterHook',
+      'priority',
+      'isEnabled',
+    ];
   }
 
   protected getRecordIdentifier(record: any): string {
     const route = record.route;
     const methods = record.methods;
-    
+
     let routeStr = '';
     if (route) {
       routeStr = typeof route === 'string' ? route : route.path;
     }
-    
+
     let methodsStr = '';
     if (methods && Array.isArray(methods)) {
-      methodsStr = methods.map(m => typeof m === 'string' ? m : m.method).join(', ');
+      methodsStr = methods
+        .map((m) => (typeof m === 'string' ? m : m.method))
+        .join(', ');
     }
-    
+
     return `[Hook] ${record.name}${routeStr ? ` on ${routeStr}` : ''}${methodsStr ? ` (${methodsStr})` : ''}`;
   }
 
-  // TODO: Special update handling for many-to-many relationships
+  // Special update handling for many-to-many relationships
   // protected async updateRecord(existingId: any, record: any, repo: Repository<any>): Promise<void> {
   //   const { methods, ...updateData } = record;
-  //   
+  //
   //   // Update basic fields
   //   await repo.update(existingId, updateData);
-  //   
+  //
   //   // Handle many-to-many methods separately
   //   if (methods && Array.isArray(methods)) {
   //     await repo.save({

@@ -3,6 +3,7 @@ import { DataSourceService } from '../../../core/database/data-source/data-sourc
 import { FileManagementService } from './file-management.service';
 import { Response } from 'express';
 import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class FileAssetsService {
@@ -10,12 +11,11 @@ export class FileAssetsService {
 
   constructor(
     private dataSourceService: DataSourceService,
-    private fileManagementService: FileManagementService
+    private fileManagementService: FileManagementService,
   ) {}
 
   async streamFile(fileId: string, res: Response): Promise<void> {
     try {
-      // Query file_definition to get file info
       const fileRepo = this.dataSourceService.getRepository('file_definition');
       const file = await fileRepo.findOne({
         where: { id: fileId },
@@ -26,23 +26,24 @@ export class FileAssetsService {
         throw new NotFoundException(`File with ID ${fileId} not found`);
       }
 
-      const filePath = (file as any).location;
+      const location = (file as any).location;
+      const filePath = this.fileManagementService.getFilePath(
+        path.basename(location),
+      );
 
-      // Check if physical file exists and get stats
-      const stats = await this.fileManagementService.getFileStats(filePath);
-      if (!stats) {
+      if (!(await this.fileExists(filePath))) {
         this.logger.error(`Physical file not found: ${filePath}`);
         throw new NotFoundException(`Physical file not found`);
       }
+
       const filename = (file as any).filename;
       const mimetype = (file as any).mimetype;
+      const stats = await fs.promises.stat(filePath);
 
-      // Set headers
       res.setHeader('Content-Type', mimetype);
       res.setHeader('Content-Length', stats.size);
       res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
 
-      // Stream the file
       const fileStream = fs.createReadStream(filePath);
 
       fileStream.on('error', (error) => {
@@ -66,4 +67,12 @@ export class FileAssetsService {
     }
   }
 
+  private async fileExists(filePath: string): Promise<boolean> {
+    try {
+      const stats = await fs.promises.stat(filePath);
+      return stats.isFile();
+    } catch {
+      return false;
+    }
+  }
 }

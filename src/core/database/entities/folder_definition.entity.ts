@@ -4,8 +4,8 @@ import { File_definition } from './file_definition.entity';
 
 @Entity('folder_definition')
 @Unique(['parent', 'slug'])
-@Unique(['path'])
 @Index(['order'])
+@Index(['parent'])
 export class Folder_definition {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -19,8 +19,6 @@ export class Folder_definition {
     name: string;
     @Column({ type: "int", nullable: false, default: 0 })
     order: number;
-    @Column({ type: "varchar", nullable: false })
-    path: string;
     @Column({ type: "varchar", nullable: false })
     slug: string;
     @Index()

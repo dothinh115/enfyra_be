@@ -10,7 +10,6 @@ import { RouteCacheService } from '../../infrastructure/redis/services/route-cac
 import { SystemProtectionService } from '../../modules/dynamic-api/services/system-protection.service';
 import { BcryptService } from '../../core/auth/services/bcrypt.service';
 import { ScriptErrorFactory } from '../../shared/utils/script-error-factory';
-import { FolderManagementService } from '../../modules/folder-management/services/folder-management.service';
 import { autoSlug } from '../utils/auto-slug.helper';
 
 @Injectable()
@@ -24,7 +23,6 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private routeCacheService: RouteCacheService,
     private systemProtectionService: SystemProtectionService,
     private bcryptService: BcryptService,
-    private folderManagementService: FolderManagementService,
   ) {}
 
   async use(req: any, res: any, next: (error?: any) => void) {
@@ -88,6 +86,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
 
           await dynamicRepo.init();
           const name = table.alias ?? table.name;
+
           return [`${name}`, dynamicRepo];
         }),
       );

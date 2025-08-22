@@ -21,7 +21,7 @@ export class SchemaLockGuard implements CanActivate {
     let waited = 0;
 
     while (await this.redisLockService.get(SCHEMA_LOCK_EVENT_KEY)) {
-      console.log('🔁 Reloading schema, waiting...');
+      console.log('Reloading schema, waiting...');
       if (waited >= maxWaitTimeMs) {
         throw new ServiceUnavailableException(
           'Schema is being reloaded, please try again later.',
