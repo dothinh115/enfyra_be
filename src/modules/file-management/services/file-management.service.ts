@@ -79,13 +79,11 @@ export class FileManagementService {
 
       const processedInfo: ProcessedFileInfo = {
         filename: fileData.filename,
-        filename_disk: uniqueFilename,
         mimetype: fileData.mimetype,
         type: fileType,
         filesize: fileData.size,
         storage: 'local',
         location: `/uploads/${uniqueFilename}`,
-        title: fileData.title || fileData.filename,
         description: fileData.description,
         status: 'active',
       };

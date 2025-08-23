@@ -10,13 +10,11 @@ export interface FileUploadDto {
 
 export interface ProcessedFileInfo {
   filename: string;
-  filename_disk: string;
   mimetype: string;
   type: string;
   filesize: number;
   storage: string;
   location: string;
-  title?: string;
   description?: string;
   status: 'active' | 'archived' | 'quarantine';
 }

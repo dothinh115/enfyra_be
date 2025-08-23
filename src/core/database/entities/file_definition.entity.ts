@@ -5,10 +5,11 @@ import { File_permission_definition } from './file_permission_definition.entity'
 
 @Entity('file_definition')
 @Unique(['filename', 'folder'])
-@Unique(['filename_disk'])
+@Unique(['location'])
 @Index(['type'])
 @Index(['filesize'])
 @Index(['status'])
+@Index(['isPublished'])
 export class File_definition {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -16,10 +17,10 @@ export class File_definition {
     description: string;
     @Column({ type: "varchar", nullable: false })
     filename: string;
-    @Column({ type: "varchar", nullable: false })
-    filename_disk: string;
     @Column({ type: "bigint", nullable: false })
     filesize: number;
+    @Column({ type: "boolean", nullable: false, default: true })
+    isPublished: boolean;
     @Column({ type: "varchar", nullable: false })
     location: string;
     @Column({ type: "varchar", nullable: false })
@@ -28,8 +29,6 @@ export class File_definition {
     status: 'active' | 'archived' | 'quarantine';
     @Column({ type: "varchar", nullable: true, default: "local" })
     storage: string;
-    @Column({ type: "varchar", nullable: true })
-    title: string;
     @Column({ type: "enum", nullable: true, enum: ['image', 'video', 'document', 'audio', 'archive', 'other'] })
     type: 'image' | 'video' | 'document' | 'audio' | 'archive' | 'other';
     @Index()

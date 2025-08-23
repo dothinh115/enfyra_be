@@ -4,7 +4,6 @@ import { FileAssetsService } from '../services/file-assets.service';
 import { Public } from '../../../shared/decorators/public-route.decorator';
 import { RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
 
-
 @Controller('assets')
 export class AssetsController {
   constructor(private readonly fileAssetsService: FileAssetsService) {}
@@ -22,6 +21,6 @@ export class AssetsController {
       return;
     }
 
-    await this.fileAssetsService.streamFile(fileId, res);
+    return await this.fileAssetsService.streamFile(fileId, res);
   }
 }
