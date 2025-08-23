@@ -22,7 +22,8 @@
     "migration:generate": "npm run typeorm migration:generate",
     "migration:create": "npm run typeorm migration:create",
     "migration:run": "npm run typeorm migration:run",
-    "migration:revert": "npm run typeorm migration:revert"
+    "migration:revert": "npm run typeorm migration:revert",
+    "postinstall": "node -e \"if (!require('fs').existsSync('./node_modules/sharp')) { require('child_process').execSync('yarn add sharp --ignore-engines', {stdio: 'inherit'}) }\""
   },
   "dependencies": {
     "@graphql-tools/schema": "^10.0.23",
@@ -58,6 +59,7 @@
     "qs": "^6.14.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
+    "sharp": "^0.34.3",
     "sqlite3": "^5.1.7",
     "ts-morph": "^26.0.0",
     "typeorm": "^0.3.24",
