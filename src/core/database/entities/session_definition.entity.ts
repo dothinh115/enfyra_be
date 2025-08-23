@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Index, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { User_definition } from './user_definition.entity';
 
 @Entity('session_definition')
+@Index(['user'])
 export class Session_definition {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -9,7 +10,6 @@ export class Session_definition {
     expiredAt: Date;
     @Column({ type: "boolean", nullable: true, default: false })
     remember: boolean;
-    @Index()
     @ManyToOne('User_definition', { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn()
     user: any;

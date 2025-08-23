@@ -159,38 +159,61 @@ async function writeEntitiesFromSnapshot() {
       decorators: [{ name: 'Entity', arguments: [`'${tableName}'`] }],
     });
 
+    // Collect all unique constraint keys to prevent index duplicates
+    const allUniqueKeys = new Set<string>();
+    const allIndexKeys = new Set<string>();
+
     for (const uniqueGroup of (def as any).uniques || []) {
       if (Array.isArray(uniqueGroup) && uniqueGroup.length) {
+        // Sort fields để xử lý đảo thứ tự
+        const fields = uniqueGroup.slice().sort();
+        const key = fields.join('|');
+
         classDeclaration.addDecorator({
           name: 'Unique',
-          arguments: [
-            `[${uniqueGroup.map((f: string) => `'${f}'`).join(', ')}]`,
-          ],
+          arguments: [`[${fields.map((f: string) => `'${f}'`).join(', ')}]`],
         });
         usedImports.add('Unique');
+
+        // Lưu key để check conflict
+        allUniqueKeys.add(key);
+        allIndexKeys.add(key); // Unique constraints cũng act as indexes
       }
     }
 
     for (const indexGroup of (def as any).indexes || []) {
       if (Array.isArray(indexGroup) && indexGroup.length > 1) {
-        classDeclaration.addDecorator({
-          name: 'Index',
-          arguments: [
-            `[${indexGroup.map((f: string) => `'${f}'`).join(', ')}]`,
-          ],
-        });
-        usedImports.add('Index');
+        // Sort fields để xử lý đảo thứ tự
+        const fields = indexGroup.slice().sort();
+        const key = fields.join('|');
+
+        // Skip nếu duplicate index hoặc bị block bởi unique constraint
+        if (!allIndexKeys.has(key)) {
+          classDeclaration.addDecorator({
+            name: 'Index',
+            arguments: [`[${fields.map((f: string) => `'${f}'`).join(', ')}]`],
+          });
+          usedImports.add('Index');
+          allIndexKeys.add(key);
+        }
       }
     }
 
     // Thêm class-level @Index cho foreign key fields
     const tableIndexFields = indexFields.get(tableName) || [];
     for (const fieldName of tableIndexFields) {
-      classDeclaration.addDecorator({
-        name: 'Index',
-        arguments: [`['${fieldName}']`],
-      });
-      usedImports.add('Index');
+      // Check xem field có bị block bởi unique constraint đơn lẻ không
+      // (Unique cụm vẫn cho phép thêm index riêng lẻ)
+      const isBlockedBySingleUnique = allUniqueKeys.has(fieldName);
+
+      // Chỉ thêm nếu field không bị block bởi unique constraint đơn lẻ
+      if (!isBlockedBySingleUnique) {
+        classDeclaration.addDecorator({
+          name: 'Index',
+          arguments: [`['${fieldName}']`],
+        });
+        usedImports.add('Index');
+      }
     }
 
     for (const col of (def as any).columns) {

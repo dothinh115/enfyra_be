@@ -6,6 +6,8 @@ import { Extension_definition } from './extension_definition.entity';
 @Unique(['label', 'sidebar', 'type'])
 @Unique(['path'])
 @Index(['order'])
+@Index(['parent'])
+@Index(['sidebar'])
 export class Menu_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
@@ -27,11 +29,9 @@ export class Menu_definition {
     permission: any;
     @Column({ type: "enum", nullable: false, enum: ['Mini Sidebar', 'Dropdown Menu', 'Menu'] })
     type: 'Mini Sidebar' | 'Dropdown Menu' | 'Menu';
-    @Index()
     @ManyToOne('Menu_definition', (rel: any) => rel.children, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     parent: any;
-    @Index()
     @ManyToOne('Menu_definition', (rel: any) => rel.menus, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     sidebar: any;

@@ -56,21 +56,29 @@ export class AutoService {
     });
 
     // Extract all valid field names from entity definition (columns + relations)
-    const columnFields = payload.columns.map(col => col.name);
-    const relationFields = (payload.relations || []).map(rel => rel.propertyName);
+    const columnFields = payload.columns.map((col) => col.name);
+    const relationFields = (payload.relations || []).map(
+      (rel) => rel.propertyName,
+    );
     const validEntityFields = [...columnFields, ...relationFields];
 
     // Create set of actual fields that will be in the entity (columns + relations + system fields)
     const actualEntityFields = new Set([
       ...columnFields,
       ...relationFields,
-      'id', 'createdAt', 'updatedAt' // System fields
+      'id',
+      'createdAt',
+      'updatedAt', // System fields
     ]);
 
     // Transform uniques/indexes from simple-json array format to expected object format
-    const transformedUniques = (payload.uniques || []).map(uniqueArray => ({ value: uniqueArray as unknown as string[] }));
-    const transformedIndexes = (payload.indexes || []).map(indexArray => ({ value: indexArray as unknown as string[] }));
-    
+    const transformedUniques = (payload.uniques || []).map((uniqueArray) => ({
+      value: uniqueArray as unknown as string[],
+    }));
+    const transformedIndexes = (payload.indexes || []).map((indexArray) => ({
+      value: indexArray as unknown as string[],
+    }));
+
     const classDeclaration = wrapEntityClass({
       sourceFile,
       className,
@@ -80,6 +88,7 @@ export class AutoService {
       usedImports,
       validEntityFields,
       actualEntityFields,
+      relations: payload.relations || [], // Truyền relations
     });
 
     for (const col of payload.columns) {

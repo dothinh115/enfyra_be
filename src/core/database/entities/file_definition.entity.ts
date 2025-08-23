@@ -10,6 +10,8 @@ import { File_permission_definition } from './file_permission_definition.entity'
 @Index(['filesize'])
 @Index(['status'])
 @Index(['isPublished'])
+@Index(['folder'])
+@Index(['uploaded_by'])
 export class File_definition {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -31,11 +33,9 @@ export class File_definition {
     storage: string;
     @Column({ type: "enum", nullable: true, enum: ['image', 'video', 'document', 'audio', 'archive', 'other'] })
     type: 'image' | 'video' | 'document' | 'audio' | 'archive' | 'other';
-    @Index()
     @ManyToOne('Folder_definition', (rel: any) => rel.files, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     folder: any;
-    @Index()
     @ManyToOne('User_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     uploaded_by: any;

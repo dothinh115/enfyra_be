@@ -39,10 +39,11 @@ export function addRelationToClass({
 
   // ✅ Auto index for many-to-one only
   // Không thêm @Index cho OneToOne vì @JoinColumn đã tự tạo unique index
+  // Note: Field-level @Index() đã được loại bỏ, chỉ sử dụng class-level @Index([...])
   const shouldAddIndex = rel.type === 'many-to-one';
   if (shouldAddIndex) {
-    decorators.push({ name: 'Index', arguments: [] });
-    usedImports.add('Index');
+    // Thêm field name vào danh sách để generate class-level @Index
+    // Logic này sẽ được handle ở entity-writer.ts
   }
 
   const options: string[] = [];
@@ -59,12 +60,15 @@ export function addRelationToClass({
   ) {
     options.push('cascade: true');
   }
-  
+
   // Only apply CASCADE DELETE for many-to-many (join table records)
   // For other relations, use SET NULL or RESTRICT based on nullable constraint
   if (rel.type === 'many-to-many') {
     options.push(`onDelete: 'CASCADE'`, `onUpdate: 'CASCADE'`);
-  } else if (rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse)) {
+  } else if (
+    rel.type === 'many-to-one' ||
+    (rel.type === 'one-to-one' && !isInverse)
+  ) {
     // For foreign key relations:
     // - If nullable: SET NULL (allow deletion, set FK to null)
     // - If required: RESTRICT (prevent deletion to maintain data integrity)

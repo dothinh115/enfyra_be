@@ -6,6 +6,7 @@ import { File_definition } from './file_definition.entity';
 @Unique(['parent', 'slug'])
 @Index(['order'])
 @Index(['parent'])
+@Index(['user'])
 export class Folder_definition {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -21,11 +22,9 @@ export class Folder_definition {
     order: number;
     @Column({ type: "varchar", nullable: false })
     slug: string;
-    @Index()
     @ManyToOne('Folder_definition', (rel: any) => rel.children, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     parent: any;
-    @Index()
     @ManyToOne('User_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     user: any;
