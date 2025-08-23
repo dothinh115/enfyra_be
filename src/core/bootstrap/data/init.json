@@ -165,6 +165,13 @@
             "icon": "lucide:file"
         },
         {
+            "path": "/file_permission_definition",
+            "mainTable": "file_permission_definition",
+            "isEnabled": true,
+            "isSystem": true,
+            "icon": "lucide:file"
+        },
+        {
             "path": "/assets/:id",
             "mainTable": "file_definition",
             "isEnabled": true,

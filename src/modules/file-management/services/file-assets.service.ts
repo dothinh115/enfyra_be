@@ -1,4 +1,8 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  AuthenticationException,
+  AuthorizationException,
+} from '../../../core/exceptions/custom-exceptions';
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { FileManagementService } from './file-management.service';
 import { Response } from 'express';
@@ -17,61 +21,53 @@ export class FileAssetsService {
   ) {}
 
   async streamFile(req: RequestWithRouteData, res: Response): Promise<void> {
-    try {
-      // Lấy fileId từ request params
-      const fileId = req.routeData?.params?.id || req.params.id;
+    // Lấy fileId từ request params
+    const fileId = req.routeData?.params?.id || req.params.id;
 
-      if (!fileId) {
-        res.status(400).json({ error: 'File ID is required' });
-        return;
-      }
-
-      const fileRepo = this.dataSourceService.getRepository('file_definition');
-      const file = await fileRepo.findOne({
-        where: { id: fileId },
-        relations: ['folder'],
-      });
-
-      if (!file) {
-        throw new NotFoundException(`File with ID ${fileId} not found`);
-      }
-
-      const location = (file as any).location;
-      const filePath = this.fileManagementService.getFilePath(
-        path.basename(location),
-      );
-
-      if (!(await this.fileExists(filePath))) {
-        this.logger.error(`Physical file not found: ${filePath}`);
-        throw new NotFoundException(`Physical file not found`);
-      }
-
-      const filename = (file as any).filename;
-      const mimetype = (file as any).mimetype;
-      const fileType = (file as any).type;
-
-      // Kiểm tra nếu là ảnh và có query parameters để xử lý
-      if (
-        this.isImageFile(mimetype, fileType) &&
-        this.hasImageQueryParams(req)
-      ) {
-        await this.processImageWithQuery(filePath, req, res, filename);
-        return;
-      }
-
-      // Xử lý file thông thường
-      await this.streamRegularFile(filePath, res, filename, mimetype);
-    } catch (error) {
-      this.logger.error(`Failed to stream file:`, error);
-
-      if (!res.headersSent) {
-        if (error instanceof NotFoundException) {
-          res.status(404).json({ error: error.message });
-        } else {
-          res.status(500).json({ error: 'Internal server error' });
-        }
-      }
+    if (!fileId) {
+      res.status(400).json({ error: 'File ID is required' });
+      return;
     }
+
+    const fileRepo = this.dataSourceService.getRepository('file_definition');
+    const file = await fileRepo.findOne({
+      where: { id: fileId },
+      relations: [
+        'folder',
+        'permissions',
+        'permissions.allowedUsers',
+        'permissions.role',
+      ],
+    });
+
+    if (!file) {
+      throw new NotFoundException(`File with ID ${fileId} not found`);
+    }
+    // Check permissions
+    await this.checkFilePermissions(file, req);
+
+    const location = (file as any).location;
+    const filePath = this.fileManagementService.getFilePath(
+      path.basename(location),
+    );
+
+    if (!(await this.fileExists(filePath))) {
+      this.logger.error(`Physical file not found: ${filePath}`);
+      throw new NotFoundException(`Physical file not found`);
+    }
+
+    const filename = (file as any).filename;
+    const mimetype = (file as any).mimetype;
+    const fileType = (file as any).type;
+
+    // Kiểm tra nếu là ảnh và có query parameters để xử lý
+    if (this.isImageFile(mimetype, fileType) && this.hasImageQueryParams(req)) {
+      await this.processImageWithQuery(filePath, req, res, filename);
+      return;
+    }
+
+    // Xử lý file thông thường
+    await this.streamRegularFile(filePath, res, filename, mimetype);
   }
 
   private isImageFile(mimetype: string, fileType: string): boolean {
@@ -249,6 +245,59 @@ export class FileAssetsService {
       return stats.isFile();
     } catch {
       return false;
+    }
+  }
+
+  private async checkFilePermissions(
+    file: any,
+    req: RequestWithRouteData,
+  ): Promise<void> {
+    // 1. Nếu file.isPublished = true -> bypass permission
+    if (file.isPublished === true) {
+      this.logger.log('File is published, bypassing permission checks');
+      return;
+    }
+
+    // 2. Nếu isPublished = false mà chưa login -> 401
+    const user = req.routeData?.context?.$user || req.user;
+    if (!user?.id) {
+      this.logger.log('User not logged in, file not published');
+      throw new AuthenticationException(
+        'Authentication required to access this file',
+      );
+    }
+
+    this.logger.log(`Checking permissions for user: ${user.id}`);
+
+    if (user.isRootAdmin === true) {
+      this.logger.log('User is root admin, granting access');
+      return;
+    }
+
+    const filePermissions = file.permissions || [];
+    const canPass = filePermissions.find((permission: any) => {
+      if (permission.isEnabled === false) return false;
+
+      if (permission.allowedUsers?.id === user.id) {
+        this.logger.log(
+          `User ${user.id} found in allowedUsers, granting access`,
+        );
+        return true;
+      }
+
+      if (permission.role && user.role?.id === permission.role.id) {
+        this.logger.log(
+          `User ${user.id} has role ${permission.role.name}, granting access`,
+        );
+        return true;
+      }
+
+      return false;
+    });
+
+    if (!canPass) {
+      this.logger.log(`User ${user.id} denied access to file ${file.id}`);
+      throw new AuthorizationException('Access denied to this file');
     }
   }
 }

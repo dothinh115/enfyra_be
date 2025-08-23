@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res } from '@nestjs/common';
+import { Controller, Get, Req, Res, Logger } from '@nestjs/common';
 import { Response } from 'express';
 import { FileAssetsService } from '../services/file-assets.service';
 import { Public } from '../../../shared/decorators/public-route.decorator';
@@ -6,6 +6,8 @@ import { RequestWithRouteData } from '../../../shared/interfaces/dynamic-context
 
 @Controller('assets')
 export class AssetsController {
+  private readonly logger = new Logger(AssetsController.name);
+
   constructor(private readonly fileAssetsService: FileAssetsService) {}
 
   @Public()
@@ -14,6 +16,11 @@ export class AssetsController {
     @Req() req: RequestWithRouteData,
     @Res() res: Response,
   ): Promise<void> {
-    return await this.fileAssetsService.streamFile(req, res);
+    try {
+      return await this.fileAssetsService.streamFile(req, res);
+    } catch (error) {
+      this.logger.error('Failed to get asset:', error);
+      throw error;
+    }
   }
 }

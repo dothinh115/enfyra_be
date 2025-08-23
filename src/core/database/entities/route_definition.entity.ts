@@ -21,10 +21,10 @@ export class Route_definition {
     @Column({ type: "varchar", nullable: false })
     path: string;
     @Index()
-    @ManyToOne('Table_definition', { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
+    @ManyToOne('Table_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     mainTable: any;
-    @ManyToMany('Table_definition', { eager: true, nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToMany('Table_definition', { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinTable()
     targetTables: any;
     @OneToMany('Route_permission_definition', (rel: any) => rel.route, { cascade: true })

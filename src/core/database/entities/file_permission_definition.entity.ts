@@ -1,10 +1,10 @@
 import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { User_definition } from './user_definition.entity';
 import { File_definition } from './file_definition.entity';
 import { Role_definition } from './role_definition.entity';
-import { User_definition } from './user_definition.entity';
 
 @Entity('file_permission_definition')
-@Unique(['file', 'role', 'user'])
+@Unique(['allowedUsers', 'file', 'role'])
 export class File_permission_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
@@ -15,17 +15,17 @@ export class File_permission_definition {
     @Column({ type: "boolean", nullable: false, default: true })
     isEnabled: boolean;
     @Index()
-    @ManyToOne('File_definition', (rel: any) => rel.permissions, { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
+    @ManyToOne('User_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
+    @JoinColumn()
+    allowedUsers: any;
+    @Index()
+    @ManyToOne('File_definition', (rel: any) => rel.permissions, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     file: any;
     @Index()
     @ManyToOne('Role_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     role: any;
-    @Index()
-    @ManyToOne('User_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
-    @JoinColumn()
-    user: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

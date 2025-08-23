@@ -124,8 +124,14 @@ async function writeEntitiesFromSnapshot() {
     manipulationSettings: { quoteKind: QuoteKind.Single },
   });
 
+  // Map để lưu các field cần tạo index cho mỗi table
+  const indexFields = new Map<string, string[]>();
+
   const entitiesDir = path.resolve(process.cwd(), 'src/core/database/entities');
-  const distEntitiesDir = path.resolve(process.cwd(), 'dist/src/core/database/entities');
+  const distEntitiesDir = path.resolve(
+    process.cwd(),
+    'dist/src/core/database/entities',
+  );
 
   if (!fs.existsSync(entitiesDir))
     fs.mkdirSync(entitiesDir, { recursive: true });
@@ -175,6 +181,16 @@ async function writeEntitiesFromSnapshot() {
         });
         usedImports.add('Index');
       }
+    }
+
+    // Thêm class-level @Index cho foreign key fields
+    const tableIndexFields = indexFields.get(tableName) || [];
+    for (const fieldName of tableIndexFields) {
+      classDeclaration.addDecorator({
+        name: 'Index',
+        arguments: [`['${fieldName}']`],
+      });
+      usedImports.add('Index');
     }
 
     for (const col of (def as any).columns) {
@@ -278,27 +294,33 @@ async function writeEntitiesFromSnapshot() {
 
       const isInverse = !!rel.targetClass;
       const relationOpts = [];
-      
+
       // Only apply CASCADE DELETE for many-to-many (join table records)
       // For other relations, use SET NULL or RESTRICT based on nullable constraint
       if (rel.type === 'many-to-many') {
         relationOpts.push(
           `onDelete: "${rel.onDelete || 'CASCADE'}"`,
-          `onUpdate: "${rel.onUpdate || 'CASCADE'}"`
+          `onUpdate: "${rel.onUpdate || 'CASCADE'}"`,
         );
-      } else if (rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse)) {
+      } else if (
+        rel.type === 'many-to-one' ||
+        (rel.type === 'one-to-one' && !isInverse)
+      ) {
         // For foreign key relations:
         // - If nullable: SET NULL (allow deletion, set FK to null)
         // - If required: RESTRICT (prevent deletion to maintain data integrity)
-        const defaultDelete = rel.isNullable === false ? 'RESTRICT' : 'SET NULL';
+        const defaultDelete =
+          rel.isNullable === false ? 'RESTRICT' : 'SET NULL';
         relationOpts.push(
           `onDelete: "${rel.onDelete || defaultDelete}"`,
-          `onUpdate: "${rel.onUpdate || 'CASCADE'}"`
+          `onUpdate: "${rel.onUpdate || 'CASCADE'}"`,
         );
       }
       // Note: one-to-many doesn't need onDelete/onUpdate as it doesn't have foreign key
-      
-      relationOpts.push(`nullable: ${rel.isNullable === false ? 'false' : 'true'}`);
+
+      relationOpts.push(
+        `nullable: ${rel.isNullable === false ? 'false' : 'true'}`,
+      );
 
       // Thêm cascade cho ManyToMany và OneToMany
       if (
@@ -322,8 +344,11 @@ async function writeEntitiesFromSnapshot() {
       const shouldAddIndex = rel.type === 'many-to-one';
 
       if (shouldAddIndex) {
-        decorators.push({ name: 'Index', arguments: [] });
-        usedImports.add('Index');
+        // Thêm field name vào danh sách để generate class-level @Index
+        if (!indexFields.has(tableName)) {
+          indexFields.set(tableName, []);
+        }
+        indexFields.get(tableName)!.push(rel.propertyName);
       }
 
       decorators.push({ name: relType, arguments: args });
@@ -476,7 +501,12 @@ export async function initializeDatabase() {
     username: DB_USERNAME,
     password: DB_PASSWORD,
     database: DB_NAME,
-    entities: [path.resolve(process.cwd(), 'dist/src/core/database/entities/*.entity.js')],
+    entities: [
+      path.resolve(
+        process.cwd(),
+        'dist/src/core/database/entities/*.entity.js',
+      ),
+    ],
     synchronize: true,
     logging: false,
   });

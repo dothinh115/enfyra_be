@@ -292,7 +292,7 @@
     "file_permission_definition": {
         "name": "file_permission_definition",
         "isSystem": true,
-        "uniques": [["file", "role", "user"]],
+        "uniques": [["file", "role", "allowedUsers"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false },
             { "name": "actions", "type": "array-select", "options": ["view", "edit", "delete", "share", "download"], "isNullable": true },
@@ -300,9 +300,9 @@
             { "name": "allowedDomains", "type": "simple-json", "isNullable": true, "description": "List of allowed domains for CORS (null = all domains)" }
         ],
         "relations": [
-            { "propertyName": "file", "type": "many-to-one", "targetTable": "file_definition", "isNullable": false, "inversePropertyName": "permissions" },
+            { "propertyName": "file", "type": "many-to-one", "targetTable": "file_definition", "isNullable": true, "inversePropertyName": "permissions" },
             { "propertyName": "role", "type": "many-to-one", "targetTable": "role_definition", "isNullable": true },
-            { "propertyName": "user", "type": "many-to-one", "targetTable": "user_definition", "isNullable": true }
+            { "propertyName": "allowedUsers", "type": "many-to-one", "targetTable": "user_definition", "isNullable": true }
         ]
     }
 }
