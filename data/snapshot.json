@@ -297,7 +297,8 @@
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false },
             { "name": "actions", "type": "array-select", "options": ["view", "edit", "delete", "share", "download"], "isNullable": true },
             { "name": "isEnabled", "type": "boolean", "isNullable": false, "defaultValue": true, "description": "Enable/disable this permission rule" },
-            { "name": "allowedDomains", "type": "simple-json", "isNullable": true, "description": "List of allowed domains for CORS (null = all domains)" }
+            { "name": "allowedDomains", "type": "simple-json", "isNullable": true, "description": "List of allowed domains for CORS (null = all domains)" },
+            { "name": "description", "type": "text", "isNullable": true }
         ],
         "relations": [
             { "propertyName": "file", "type": "many-to-one", "targetTable": "file_definition", "isNullable": true, "inversePropertyName": "permissions" },

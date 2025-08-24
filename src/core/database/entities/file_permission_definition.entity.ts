@@ -15,6 +15,8 @@ export class File_permission_definition {
     actions: any[];
     @Column({ type: "simple-json", nullable: true })
     allowedDomains: any;
+    @Column({ type: "text", nullable: true })
+    description: string;
     @Column({ type: "boolean", nullable: false, default: true })
     isEnabled: boolean;
     @ManyToOne('User_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
