@@ -85,6 +85,7 @@ export class FileController {
   @Patch(':id')
   async updateFile(@Param('id') id: string, @Req() req: RequestWithRouteData) {
     const body = req.routeData?.context?.$body || {};
+    const file = req.file; // File mới nếu có
 
     const fileRepo =
       req.routeData?.context?.$repos?.main ||
@@ -101,6 +102,71 @@ export class FileController {
       throw new FileNotFoundException(`File with ID ${id} not found`);
     }
 
+    // ✅ Nếu có file mới → REPLACE FILE
+    if (file) {
+      try {
+        // 1. Process file mới (generate metadata mới)
+        const processedFile =
+          await this.fileManagementService.processFileUpload({
+            filename: file.originalname,
+            mimetype: file.mimetype,
+            buffer: file.buffer,
+            size: file.size,
+            folder: currentFile.folder, // Giữ nguyên folder
+            title: body.title || file.originalname,
+            description: body.description || currentFile.description,
+          });
+
+        // 2. Backup file cũ (để rollback nếu cần)
+        const backupPath = await this.fileManagementService.backupFile(
+          currentFile.location,
+        );
+
+        try {
+          // 3. Replace physical file
+          await this.fileManagementService.replacePhysicalFile(
+            currentFile.location,
+            processedFile.location,
+          );
+
+          // 4. Update metadata vào database (id cũ)
+          const updateData = {
+            filename: processedFile.filename,
+            mimetype: processedFile.mimetype,
+            type: processedFile.type,
+            filesize: processedFile.filesize,
+            location: currentFile.location, // Giữ nguyên location cũ
+            description: processedFile.description,
+            // Giữ nguyên các field khác
+            folder: currentFile.folder,
+            uploaded_by: currentFile.uploaded_by,
+            status: currentFile.status,
+          };
+
+          const result = await fileRepo.update(id, updateData);
+
+          // 5. Cleanup temporary file mới và backup file cũ (vì đã thành công)
+          await this.fileManagementService.rollbackFileCreation(
+            processedFile.location,
+          );
+          await this.fileManagementService.deleteBackupFile(backupPath);
+
+          return result;
+        } catch (error) {
+          // Nếu replace thất bại → restore từ backup
+          await this.fileManagementService.restoreFromBackup(
+            currentFile.location,
+            backupPath,
+          );
+          throw error;
+        }
+      } catch (error) {
+        // Rollback nếu có lỗi
+        throw error;
+      }
+    }
+
+    // ✅ Nếu không có file mới → UPDATE METADATA ONLY (logic cũ)
     if (body.folder && body.folder !== currentFile.folder) {
       const newFolder =
         typeof body.folder === 'object' ? body.folder : { id: body.folder };

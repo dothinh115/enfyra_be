@@ -163,4 +163,92 @@ export class FileManagementService {
       return false;
     }
   }
+
+  // ✅ File replacement methods
+  async backupFile(location: string): Promise<string> {
+    const absolutePath = this.convertToAbsolutePath(location);
+    const backupPath = `${absolutePath}.backup.${Date.now()}`;
+
+    try {
+      if (await this.fileExists(absolutePath)) {
+        await fs.promises.copyFile(absolutePath, backupPath);
+        this.logger.log(`File backed up: ${absolutePath} → ${backupPath}`);
+        return backupPath;
+      }
+      throw new Error(`Source file not found: ${absolutePath}`);
+    } catch (error) {
+      this.logger.error(`Failed to backup file: ${absolutePath}`, error);
+      throw new BadRequestException(`Failed to backup file: ${error.message}`);
+    }
+  }
+
+  async replacePhysicalFile(
+    oldLocation: string,
+    newLocation: string,
+  ): Promise<void> {
+    const oldAbsolutePath = this.convertToAbsolutePath(oldLocation);
+    const newAbsolutePath = this.convertToAbsolutePath(newLocation);
+
+    try {
+      // Kiểm tra file mới có tồn tại không
+      if (!(await this.fileExists(newAbsolutePath))) {
+        throw new Error(`New file not found: ${newAbsolutePath}`);
+      }
+
+      // Kiểm tra file cũ có tồn tại không
+      if (!(await this.fileExists(oldAbsolutePath))) {
+        throw new Error(`Old file not found: ${oldAbsolutePath}`);
+      }
+
+      // Xóa file cũ và copy file mới
+      await fs.promises.unlink(oldAbsolutePath);
+      await fs.promises.copyFile(newAbsolutePath, oldAbsolutePath);
+
+      this.logger.log(
+        `File replaced successfully: ${oldAbsolutePath} ← ${newAbsolutePath}`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to replace file: ${oldLocation}`, error);
+      throw new BadRequestException(`Failed to replace file: ${error.message}`);
+    }
+  }
+
+  async deleteBackupFile(backupPath: string): Promise<void> {
+    try {
+      if (await this.fileExists(backupPath)) {
+        await fs.promises.unlink(backupPath);
+        this.logger.log(`Backup file deleted: ${backupPath}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to delete backup file: ${backupPath}`, error);
+      // Không throw error vì đây chỉ là cleanup
+    }
+  }
+
+  async restoreFromBackup(
+    originalLocation: string,
+    backupPath: string,
+  ): Promise<void> {
+    const originalAbsolutePath = this.convertToAbsolutePath(originalLocation);
+
+    try {
+      if (await this.fileExists(backupPath)) {
+        await fs.promises.copyFile(backupPath, originalAbsolutePath);
+        this.logger.log(
+          `File restored from backup: ${backupPath} → ${originalAbsolutePath}`,
+        );
+
+        // Xóa backup sau khi restore thành công
+        await this.deleteBackupFile(backupPath);
+      } else {
+        this.logger.warn(`Backup file not found for restore: ${backupPath}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to restore file from backup: ${backupPath}`,
+        error,
+      );
+      throw new BadRequestException(`Failed to restore file: ${error.message}`);
+    }
+  }
 }
