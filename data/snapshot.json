@@ -277,7 +277,6 @@
             { "name": "filename", "type": "varchar", "isNullable": false },
             { "name": "isPublished", "type": "boolean", "isNullable": false, "defaultValue": true, "description": "Allow public access without authentication" },
             { "name": "mimetype", "type": "varchar", "isNullable": false, "isGenerated": true },
-            { "name": "type", "type": "enum", "isNullable": true, "options": ["image", "video", "document", "audio", "archive", "other"], "isGenerated": true },
             { "name": "filesize", "type": "bigint", "isNullable": false, "isGenerated": true },
             { "name": "storage", "type": "varchar", "isNullable": true, "defaultValue": "local", "isGenerated": true },
             { "name": "location", "type": "varchar", "isNullable": false, "isGenerated": true },
