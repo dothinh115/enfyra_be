@@ -8,6 +8,11 @@ export class RedisLockService {
 
   constructor(private readonly redisService: RedisService) {
     this.redis = this.redisService.getOrNil();
+    if (!this.redis) {
+      throw new Error(
+        'Redis connection not available - RedisLockService cannot initialize',
+      );
+    }
   }
 
   private serialize(value: any): string {

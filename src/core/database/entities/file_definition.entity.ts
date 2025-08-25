@@ -6,7 +6,6 @@ import { File_permission_definition } from './file_permission_definition.entity'
 @Entity('file_definition')
 @Unique(['filename', 'folder'])
 @Unique(['location'])
-@Index(['type'])
 @Index(['filesize'])
 @Index(['status'])
 @Index(['isPublished'])
@@ -31,8 +30,6 @@ export class File_definition {
     status: 'active' | 'archived' | 'quarantine';
     @Column({ type: "varchar", nullable: true, default: "local" })
     storage: string;
-    @Column({ type: "enum", nullable: true, enum: ['image', 'video', 'document', 'audio', 'archive', 'other'] })
-    type: 'image' | 'video' | 'document' | 'audio' | 'archive' | 'other';
     @ManyToOne('Folder_definition', (rel: any) => rel.files, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     folder: any;

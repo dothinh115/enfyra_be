@@ -271,7 +271,7 @@
         "name": "file_definition",
         "isSystem": true,
         "uniques": [["filename", "folder"], ["location"]],
-        "indexes": [["type"], ["filesize"], ["status"], ["isPublished"]],
+        "indexes": [["filesize"], ["status"], ["isPublished"]],
         "columns": [
             { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false },
             { "name": "filename", "type": "varchar", "isNullable": false },
