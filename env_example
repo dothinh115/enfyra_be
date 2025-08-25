@@ -6,6 +6,12 @@ DB_USERNAME=root
 DB_PASSWORD=1234
 DB_NAME=enfyra
 
+#DATABASE CONNECTION POOL SETTINGS
+DB_POOL_SIZE=100                    # Max connections in pool (all databases)
+DB_CONNECTION_LIMIT=100             # MySQL/MariaDB connection limit, PostgreSQL max connections
+DB_ACQUIRE_TIMEOUT=60000            # Connection acquisition timeout (ms)
+DB_IDLE_TIMEOUT=30000               # PostgreSQL idle connection timeout (ms)
+
 #REDIS SETTING
 REDIS_URI=redis://localhost:6379
 DEFAULT_TTL=5
