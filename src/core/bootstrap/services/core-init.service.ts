@@ -171,10 +171,12 @@ export class CoreInitService {
           .leftJoin('r.sourceTable', 'source')
           .leftJoin('r.targetTable', 'target')
           .select([
+            'r.id AS id',  // Need ID for update
             'r.propertyName AS propertyName',
             'source.id AS sourceId',
             'target.id AS targetId',
             'r.type AS relationType',
+            'r.isNullable AS isNullable',  // Get current value
           ])
           .where('source.id = :tableId', { tableId })
           .getRawMany();
@@ -204,7 +206,63 @@ export class CoreInitService {
             relationType: rel.type,
           });
 
-          if (existingKeys.has(key)) continue;
+          if (existingKeys.has(key)) {
+            // Update existing relation with snapshot values (especially isNullable)
+            const existingRel = existingRelations.find(r => 
+              r.sourceId === tableId && 
+              r.targetId === targetId && 
+              r.propertyName === rel.propertyName &&
+              r.relationType === rel.type
+            );
+            
+            if (existingRel && existingRel.id) {
+              // Debug log
+              this.logger.debug(`🔍 Checking relation ${rel.propertyName} for ${name}:`, {
+                snapshotIsNullable: rel.isNullable,
+                dbIsNullable: existingRel.isNullable,
+                relId: existingRel.id,
+                targetTable: rel.targetTable
+              });
+              
+              // Check if values need updating
+              const needsUpdate = 
+                (rel.isNullable !== undefined && rel.isNullable !== existingRel.isNullable) ||
+                (rel.inversePropertyName !== undefined && rel.inversePropertyName !== existingRel.inversePropertyName);
+                
+              if (needsUpdate) {
+                const updateData: any = {};
+                if (rel.isNullable !== undefined) updateData.isNullable = rel.isNullable;
+                if (rel.inversePropertyName !== undefined) updateData.inversePropertyName = rel.inversePropertyName;
+                if (rel.isSystem !== undefined) updateData.isSystem = rel.isSystem;
+                
+                this.logger.log(`📝 UPDATING relation ${rel.propertyName} (ID: ${existingRel.id}) for ${name}:`, {
+                  updateData,
+                  oldIsNullable: existingRel.isNullable,
+                  newIsNullable: rel.isNullable
+                });
+                
+                await queryRunner.manager
+                  .getRepository(relationEntity)
+                  .update(existingRel.id, updateData);
+                  
+                // Verify update
+                const verifyUpdated = await queryRunner.manager
+                  .getRepository(relationEntity)
+                  .findOne({ where: { id: existingRel.id }});
+                  
+                this.logger.log(`✅ Updated relation ${rel.propertyName} for ${name}:`, {
+                  updateData,
+                  verifyIsNullable: verifyUpdated?.isNullable,
+                  success: verifyUpdated?.isNullable === rel.isNullable
+                });
+              } else {
+                this.logger.debug(`⏩ No update needed for relation ${rel.propertyName} of ${name}`);
+              }
+            } else {
+              this.logger.warn(`⚠️ Could not find existing relation ${rel.propertyName} for update`);
+            }
+            continue;
+          }
 
           newRelations.push({
             ...rel,

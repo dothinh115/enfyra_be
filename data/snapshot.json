@@ -32,10 +32,8 @@
             { "name": "type", "type": "enum", "isNullable": false, "isSystem": true, "options": ["one-to-one", "many-to-one", "one-to-many", "many-to-many"] },
             { "name": "propertyName", "type": "varchar", "isNullable": false, "isSystem": true},
             { "name": "inversePropertyName", "type": "varchar", "isNullable": true, "isSystem": true },
-            { "name": "isEager", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "isNullable", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": true },
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
-            { "name": "isInverseEager", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false },
             { "name": "description", "type": "text", "isSystem": true }
 
         ],

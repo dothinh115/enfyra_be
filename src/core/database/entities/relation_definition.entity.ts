@@ -12,10 +12,6 @@ export class Relation_definition {
     description: string;
     @Column({ type: "varchar", nullable: true })
     inversePropertyName: string;
-    @Column({ type: "boolean", nullable: false, default: false })
-    isEager: boolean;
-    @Column({ type: "boolean", nullable: false, default: false })
-    isInverseEager: boolean;
     @Column({ type: "boolean", nullable: false, default: true })
     isNullable: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
@@ -27,7 +23,7 @@ export class Relation_definition {
     @ManyToOne('Table_definition', (rel: any) => rel.relations, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     sourceTable: any;
-    @ManyToOne('Table_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
+    @ManyToOne('Table_definition', { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn()
     targetTable: any;
     @CreateDateColumn()
