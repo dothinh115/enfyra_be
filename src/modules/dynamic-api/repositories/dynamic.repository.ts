@@ -62,7 +62,6 @@ export class DynamicRepository {
   }
 
   async create(body: any) {
-    
     try {
       await this.systemProtectionService.assertSystemSafe({
         operation: 'create',
@@ -79,8 +78,6 @@ export class DynamicRepository {
         return await this.find({ where: { id: { _eq: table.id } } });
       }
 
-
-
       const created: any = await this.repo.save(body);
       const result = await this.find({ where: { id: { _eq: created.id } } });
       await this.reload();
@@ -88,15 +85,14 @@ export class DynamicRepository {
     } catch (error) {
       console.error('❌ Error in dynamic repo [create]:', error);
 
-
-
       throw new BadRequestException(error.message);
     }
   }
 
   async update(id: string | number, body: any) {
     try {
-      const exists = await this.repo.findOne({ where: { id } });
+      const existsResult = await this.find({ where: { id: { _eq: id } } });
+      const exists = existsResult?.data?.[0];
       if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
 
       await this.systemProtectionService.assertSystemSafe({
@@ -115,15 +111,11 @@ export class DynamicRepository {
         return this.find({ where: { id: { _eq: table.id } } });
       }
 
-
-
       body.id = exists.id;
 
       try {
         await this.repo.save(body);
       } catch (dbError) {
-        
-        
         throw dbError;
       }
 
@@ -138,7 +130,8 @@ export class DynamicRepository {
 
   async delete(id: string | number) {
     try {
-      const exists = await this.repo.findOne({ where: { id } });
+      const existsResult = await this.find({ where: { id: { _eq: id } } });
+      const exists = existsResult?.data?.[0];
       if (!exists) throw new BadRequestException(`id ${id} is not exists!`);
 
       await this.systemProtectionService.assertSystemSafe({
@@ -154,14 +147,9 @@ export class DynamicRepository {
         return { message: 'Success', statusCode: 200 };
       }
 
-
-
-
       try {
         await this.repo.delete(id);
       } catch (dbError) {
-
-        
         throw dbError;
       }
 

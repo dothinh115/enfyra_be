@@ -28,7 +28,14 @@ export class SystemProtectionService {
         }
       }
 
-      return [...new Set([...relations, ...inverseRelations])];
+      const baseRelations = [...new Set([...relations, ...inverseRelations])];
+      
+      // For table_definition, add nested relations
+      if (tableName === 'table_definition') {
+        baseRelations.push('columns.table', 'relations.sourceTable', 'relations.targetTable');
+      }
+      
+      return baseRelations;
     } catch {
       return [];
     }
@@ -135,6 +142,7 @@ export class SystemProtectionService {
     currentUser?: any;
   }) {
     const fullExisting = await this.reloadIfSystem(existing, tableName);
+    
     const relationFields = this.getAllRelationFieldsWithInverse(tableName);
     const changedFields = this.getChangedFields(
       data,
@@ -220,6 +228,7 @@ export class SystemProtectionService {
         throw new Error('Cannot delete Root Admin user');
 
       if (operation === 'update') {
+        // isRootAdmin field cannot be changed by anyone
         if (
           'isRootAdmin' in data &&
           data.isRootAdmin !== fullExisting?.isRootAdmin
@@ -229,17 +238,11 @@ export class SystemProtectionService {
 
         const isSelf = currentUser?.id === fullExisting?.id;
 
+        // Only Root Admin can modify themselves
         if (isRoot && !isSelf)
           throw new Error('Only Root Admin can modify themselves');
 
-        if (isSelf) {
-          const allowed = this.getAllowedFields(['email', 'password']);
-          const disallowed = changedFields.filter((k) => !allowed.includes(k));
-          if (disallowed.length > 0)
-            throw new Error(
-              `Root Admin can only modify: ${allowed.join(', ')}. Violations: ${disallowed.join(', ')}`,
-            );
-        }
+        // Allow Root Admin to modify all fields (except isRootAdmin which is blocked above)
       }
     }
 
@@ -284,28 +287,67 @@ export class SystemProtectionService {
         for (const oldCol of oldCols.filter((c) => c.isSystem)) {
           const updated = newCols.find((c) => c.id === oldCol.id);
           if (!updated || typeof updated !== 'object') continue;
+          
+          // Only check fields that actually changed, with special handling for reference fields
+          const changedFields = Object.keys(updated).filter((key) => {
+            // Special handling for table reference - compare by ID only
+            if (key === 'table') {
+              const updatedTableId = updated[key]?.id;
+              const oldTableId = oldCol[key]?.id;
+              
+              // If old table is undefined, infer from parent context
+              // Column belongs to the table being updated, so table ID should match
+              const inferredOldTableId = oldTableId || fullExisting.id;
+              
+              return updatedTableId !== inferredOldTableId;
+            }
+            return !isEqual(updated[key], oldCol[key]);
+          });
+          
+          
           const allowed = this.getAllowedFields(['description']);
-          const changed = Object.keys(updated).filter(
-            (key) =>
-              !allowed.includes(key) && !isEqual(updated[key], oldCol[key]),
-          );
-          if (changed.length > 0)
+          const disallowedChanges = changedFields.filter((k) => !allowed.includes(k));
+          
+          if (disallowedChanges.length > 0)
             throw new Error(
-              `Cannot modify system column '${oldCol.name}' (only allowed: ${allowed.join(', ')})`,
+              `Cannot modify system column '${oldCol.name}' (only allowed: ${allowed.join(', ')}): ${disallowedChanges.join(', ')}`,
             );
         }
 
         for (const oldRel of oldRels.filter((r) => r.isSystem)) {
           const updated = newRels.find((r) => r.id === oldRel.id);
           if (!updated || typeof updated !== 'object') continue;
+          
+          // Only check fields that actually changed, with special handling for reference fields  
+          const changedFields = Object.keys(updated).filter((key) => {
+            // Special handling for table references - compare by ID only
+            if (key === 'sourceTable' || key === 'targetTable') {
+              const updatedTableId = updated[key]?.id;
+              const oldTableId = oldRel[key]?.id;
+              
+              // If old is undefined, the relation reference hasn't changed if IDs match
+              // This handles the case where TypeORM doesn't always populate nested relations
+              if (!oldTableId && updatedTableId) {
+                // For sourceTable, it should match the parent table being updated
+                if (key === 'sourceTable') {
+                  return updatedTableId !== fullExisting.id;
+                }
+                // For targetTable, we can't infer - assume no change if old was undefined
+                return false;
+              }
+              
+              return updatedTableId !== oldTableId;
+            }
+            return !isEqual(updated[key], oldRel[key]);
+          });
+          
+          
           const allowed = this.getAllowedFields(['description']);
-          const changed = Object.keys(updated).filter(
-            (key) =>
-              !allowed.includes(key) && !isEqual(updated[key], oldRel[key]),
-          );
-          if (changed.length > 0)
+          const disallowedChanges = changedFields.filter((k) => !allowed.includes(k));
+          
+          if (disallowedChanges.length > 0)
             throw new Error(
-              `Cannot modify system relation '${oldRel.propertyName}' (only allowed: ${allowed.join(', ')})`,
+              `Cannot modify system relation '${oldRel.propertyName}' (only allowed: ${allowed.join(', ')}): ${disallowedChanges.join(', ')}`,
             );
         }
       }
