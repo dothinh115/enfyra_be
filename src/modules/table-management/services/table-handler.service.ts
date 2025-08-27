@@ -7,6 +7,7 @@ import {
   DatabaseException,
   DuplicateResourceException,
   ResourceNotFoundException,
+  ValidationException,
 } from '../../../core/exceptions/custom-exceptions';
 import { validateUniquePropertyNames } from '../utils/duplicate-field-check';
 import { getDeletedIds } from '../utils/get-deleted-ids';
@@ -22,7 +23,25 @@ export class TableHandlerService {
     private loggingService: LoggingService,
   ) {}
 
+  private validateRelations(relations: any[]) {
+    for (const relation of relations || []) {
+      if (relation.type === 'one-to-many' && !relation.inversePropertyName) {
+        throw new ValidationException(
+          `One-to-many relation '${relation.propertyName}' must have inversePropertyName`,
+          {
+            relationName: relation.propertyName,
+            relationType: relation.type,
+            missingField: 'inversePropertyName'
+          }
+        );
+      }
+    }
+  }
+
   async createTable(body: any) {
+    // Validate relations before proceeding
+    this.validateRelations(body.relations);
+    
     const dataSource = this.dataSourceService.getDataSource();
     const tableEntity =
       this.dataSourceService.entityClassMap.get('table_definition');
@@ -120,6 +139,9 @@ export class TableHandlerService {
   }
 
   async updateTable(id: number, body: CreateTableDto) {
+    // Validate relations before proceeding
+    this.validateRelations(body.relations);
+    
     const dataSource = this.dataSourceService.getDataSource();
 
     const tableEntity =

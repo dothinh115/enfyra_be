@@ -203,14 +203,13 @@ export class MetadataSyncService {
         });
       }
 
-      throw new SchemaException(
-        `Schema synchronization failed: ${err.message || 'Please check your table schema'}`,
-        {
-          entityName: options?.entityName,
-          operationType: options?.type,
-          originalError: err.message,
-        },
-      );
+      // Log warning instead of throwing to prevent app crash in async context
+      this.logger.warn(`⚠️ Schema synchronization failed but was restored: ${err.message || 'Please check your table schema'}`, {
+        entityName: options?.entityName,
+        operationType: options?.type,
+        originalError: err.message,
+        restored: true
+      });
     }
   }
 }
