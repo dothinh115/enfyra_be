@@ -28,7 +28,6 @@ import { SchemaManagementModule } from './modules/schema-management/schema-manag
 import { TableModule } from './modules/table-management/table.module';
 import { CommonModule } from './shared/common/common.module';
 import { NotFoundDetectGuard } from './shared/guards/not-found-detect.guard';
-import { SchemaLockGuard } from './shared/guards/schema-lock.guard';
 import { DynamicInterceptor } from './shared/interceptors/dynamic.interceptor';
 import { HideFieldInterceptor } from './shared/interceptors/hidden-field.interceptor';
 import { FileUploadMiddleware } from './shared/middleware/file-upload.middleware';
@@ -94,7 +93,6 @@ import { FileManagementModule } from './modules/file-management/file-management.
     RouteCacheService,
     SystemProtectionService,
     FileManagementService,
-    { provide: APP_GUARD, useClass: SchemaLockGuard },
     { provide: APP_GUARD, useClass: NotFoundDetectGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RoleGuard },

@@ -88,27 +88,31 @@ export class SchemaReloadService {
       return;
     }
 
+    // Different node - need lock to prevent multiple instances syncing
     const acquired = await this.redisLockService.acquire(
       `${SCHEMA_PULLING_EVENT_KEY}:${this.configService.get('NODE_NAME')}`,
       this.sourceInstanceId,
       10000,
     );
+    
     if (acquired) {
-      this.logger.log('Lock acquired, proceeding to pull...');
-      await this.metadataSyncService.syncAll();
+      this.logger.log('Lock acquired, proceeding to pull schema changes...');
+      // Fire & forget syncAll
+      this.metadataSyncService.syncAll();
       this.schemaStateService.setVersion(newestSchema['id']);
       this.logger.log(
-        `DataSource reload complete, set version = ${newestSchema['id']}`,
+        `Schema sync initiated, set version = ${newestSchema['id']}`,
       );
       await this.redisLockService.release(
-        SCHEMA_PULLING_EVENT_KEY,
+        `${SCHEMA_PULLING_EVENT_KEY}:${this.configService.get('NODE_NAME')}`,
         this.sourceInstanceId,
       );
-      this.logger.log('Pull completed and lock removed');
+      this.logger.log('Schema sync lock released');
       return;
     }
 
-    this.logger.log('Lock pulling exists, waiting...');
+    // Lock exists, wait then just reload DataSource
+    this.logger.log('Another instance is syncing, waiting then reload...');
     while (
       await this.redisLockService.get(
         `${SCHEMA_PULLING_EVENT_KEY}:${this.configService.get('NODE_NAME')}`,
@@ -117,49 +121,13 @@ export class SchemaReloadService {
       await this.commonService.delay(Math.random() * 300 + 300);
     }
 
-    this.logger.log('Lock removed, proceeding to reload DataSource');
+    this.logger.log('Sync completed by other instance, reloading DataSource...');
     await this.dataSourceService.reloadDataSource();
     await this.graphqlService.reloadSchema();
     this.schemaStateService.setVersion(newestSchema['id']);
-    this.logger.log(`Reload complete, set version = ${newestSchema['id']}`);
+    this.logger.log(`DataSource reloaded, set version = ${newestSchema['id']}`);
   }
 
-  async lockSchema() {
-    const isLocked = await this.redisLockService.get(SCHEMA_LOCK_EVENT_KEY);
-    if (!isLocked) {
-      await this.redisLockService.acquire(
-        SCHEMA_LOCK_EVENT_KEY,
-        this.sourceInstanceId,
-        10000,
-      );
-      this.logger.log(`🔐 Set schema lock: true`);
-    } else {
-      this.logger.warn('Schema was already locked');
-    }
-  }
-
-  async unlockSchema() {
-    const maxWaitTimeMs = 10000;
-    const intervalMs = 500;
-    let waited = 0;
-
-    while (await this.redisLockService.get(SCHEMA_PULLING_EVENT_KEY)) {
-      if (waited >= maxWaitTimeMs) {
-        this.logger.warn('⏳ Waited too long, force unlock schema!');
-        break;
-      }
-
-      this.logger.log('🔁 Reloading schema, waiting...');
-      await this.commonService.delay(intervalMs);
-      waited += intervalMs;
-    }
-
-    await this.redisLockService.release(
-      SCHEMA_LOCK_EVENT_KEY,
-      this.sourceInstanceId,
-    );
-    this.logger.log('🔓 Schema lock has been released');
-  }
 
   async publishSchemaUpdated(version: number) {
     const reloadSchemaMsg: TReloadSchema = {
@@ -179,8 +147,4 @@ export class SchemaReloadService {
     this.logger.log('Schema updated event broadcast complete');
   }
 
-  async checkLockChangeSchema() {
-    const lock = await this.redisLockService.get(SCHEMA_LOCK_EVENT_KEY);
-    return lock;
-  }
 }

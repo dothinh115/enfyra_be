@@ -66,7 +66,8 @@ export class SchemaHistoryService {
     if (oldest) {
       await tableDefRepo.save(oldest.schema);
       this.logger.warn('⚠️ Đã khôi phục metadata từ schema_history');
-      await this.metadataSyncService.syncAll({
+      // Fire & forget syncAll
+      this.metadataSyncService.syncAll({
         fromRestore: true,
         type: options?.type,
       });

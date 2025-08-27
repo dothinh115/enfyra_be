@@ -42,18 +42,34 @@ export class DataSourceService implements OnModuleInit {
       const entities = await this.commonService.loadDynamicEntities(entityDir);
       const newDataSource = createDataSource(entities);
       await newDataSource.initialize();
-      this.logger.debug('✅ DataSource reinitialization successful!');
+      this.logger.debug('✅ New DataSource initialized successfully!');
 
-      if (this.dataSource?.isInitialized) {
-        await this.dataSource.destroy();
-        this.clearMetadata();
-        this.logger.debug('✅ Old DataSource destroyed successfully!');
-      }
+      // Keep reference to old DataSource for cleanup
+      const oldDataSource = this.dataSource;
+
+      // Swap immediately - ZERO downtime!
       this.dataSource = newDataSource;
+      
+      // Update entity class map
+      this.entityClassMap.clear();
       entities.forEach((entityClass) => {
         const name = this.getTableNameFromEntity(entityClass);
         this.entityClassMap.set(name, entityClass);
       });
+
+      // Now safely destroy old DataSource after swap
+      if (oldDataSource?.isInitialized) {
+        // Small delay to let any ongoing queries finish
+        setTimeout(async () => {
+          try {
+            await oldDataSource.destroy();
+            this.logger.debug('✅ Old DataSource destroyed successfully!');
+          } catch (error) {
+            this.logger.warn('Failed to destroy old DataSource:', error);
+          }
+        }, 500);
+      }
+
       return this.dataSource;
     } catch (error: any) {
       this.loggingService.error('DataSource reinitialization failed', {
@@ -132,11 +148,5 @@ export class DataSourceService implements OnModuleInit {
   getTableNameFromEntity(entity: EntityTarget<any>): string {
     const metadata = this.dataSource.getMetadata(entity);
     return metadata.tableName;
-  }
-
-  clearMetadata() {
-    (this.dataSource as any).entityMetadatas = [];
-    (this.dataSource as any).entityMetadatasMap = new Map();
-    (this.dataSource as any).repositories = [];
   }
 }

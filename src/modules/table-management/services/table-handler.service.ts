@@ -327,19 +327,13 @@ export class TableHandlerService {
     type: 'create' | 'update';
   }) {
     try {
-      this.logger.warn('⏳ Locking schema for sync...');
-      await this.schemaReloadService.lockSchema();
-
-      const version = await this.metadataSyncService.syncAll({
+      // Fire & forget syncAll - it will handle publish internally
+      this.metadataSyncService.syncAll({
         entityName: options.entityName,
         type: options.type,
       });
-
-      await this.schemaReloadService.publishSchemaUpdated(version);
-      await this.commonService.delay(1000);
-
-      this.logger.log('✅ Unlocking schema');
-      await this.schemaReloadService.unlockSchema();
+      
+      this.logger.log('✅ Schema sync initiated');
     } catch (error) {
       this.loggingService.error('Schema synchronization failed', {
         context: 'afterEffect',
@@ -348,8 +342,6 @@ export class TableHandlerService {
         entityName: options.entityName,
         operationType: options.type,
       });
-
-      await this.schemaReloadService.unlockSchema();
 
       throw new DatabaseException(
         `Schema synchronization failed: ${error.message}`,

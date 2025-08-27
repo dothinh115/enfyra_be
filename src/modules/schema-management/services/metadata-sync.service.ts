@@ -1,12 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import {
-  BadRequestException,
-  forwardRef,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { AutoService } from '../../code-generation/services/auto.service';
 import { buildTypeScriptToJs } from '../../code-generation/utils/build-helper';
 import {
@@ -19,10 +13,10 @@ import { clearOldEntitiesJs } from '../utils/clear-old-entities';
 import { GraphqlService } from '../../graphql/services/graphql.service';
 import { LoggingService } from '../../../core/exceptions/services/logging.service';
 import {
-  DatabaseException,
   ResourceNotFoundException,
   SchemaException,
 } from '../../../core/exceptions/custom-exceptions';
+import { SchemaReloadService } from './schema-reload.service';
 
 @Injectable()
 export class MetadataSyncService {
@@ -37,6 +31,8 @@ export class MetadataSyncService {
     private graphqlService: GraphqlService,
     @Inject(forwardRef(() => LoggingService))
     private loggingService: LoggingService,
+    @Inject(forwardRef(() => SchemaReloadService))
+    private schemaReloadService: SchemaReloadService,
   ) {}
 
   async pullMetadataFromDb() {
@@ -157,9 +153,7 @@ export class MetadataSyncService {
             await runMigration();
             timings.runMigration = Date.now() - runStart;
           } else {
-            this.logger.debug(
-              'Skipping migration run for restore operation',
-            );
+            this.logger.debug('Skipping migration run for restore operation');
             timings.runMigration = 0;
           }
         })(),
@@ -171,6 +165,11 @@ export class MetadataSyncService {
       const step4Start = Date.now();
       const version = await this.schemaHistoryService.backup();
       timings.step4 = Date.now() - step4Start;
+
+      // Step 6: Publish schema update event (only if not from restore)
+      if (!options?.fromRestore) {
+        await this.schemaReloadService.publishSchemaUpdated(version);
+      }
 
       timings.total = Date.now() - startTime;
       this.logger.log(`🏁 syncAll completed in ${timings.total}ms`, timings);
