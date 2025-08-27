@@ -8,11 +8,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   ResourceNotFoundException,
   ScriptExecutionException,
-  ScriptTimeoutException,
 } from '../../../core/exceptions/custom-exceptions';
 import { LoggingService } from '../../../core/exceptions/services/logging.service';
 import { HandlerExecutorService } from '../../../infrastructure/handler-executor/services/handler-executor.service';
-import { TDynamicContext, RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
+import { RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
 
 @Injectable()
 export class DynamicService {
@@ -30,12 +29,14 @@ export class DynamicService {
       req.routeData.targetTables?.some(
         (table) => table.name === 'table_definition',
       );
-    const timeout = isTableDefinitionOperation ? 10000 : 5000;
 
     try {
       const userHandler = req.routeData.handler?.trim();
-      const hasMainTable = req.routeData.mainTable && req.routeData.context.$repos?.main;
-      const defaultHandler = hasMainTable ? this.getDefaultHandler(req.method) : null;
+      const hasMainTable =
+        req.routeData.mainTable && req.routeData.context.$repos?.main;
+      const defaultHandler = hasMainTable
+        ? this.getDefaultHandler(req.method)
+        : null;
 
       if (!userHandler && !defaultHandler) {
         throw new ResourceNotFoundException('Handler', req.method);
@@ -46,7 +47,6 @@ export class DynamicService {
       const result = await this.handlerExecutorService.run(
         scriptCode,
         req.routeData.context,
-        timeout,
       );
 
       return result;
@@ -59,18 +59,12 @@ export class DynamicService {
         url: req.url,
         handler: req.routeData?.handler,
         isTableOperation: isTableDefinitionOperation,
-        timeout: timeout,
         userId: req.user?.id,
       });
 
       // Re-throw custom exceptions as-is (they already have proper error codes)
       if (error.constructor.name.includes('Exception')) {
         throw error;
-      }
-
-      // Handle timeout errors specifically
-      if (error.message === 'Timeout') {
-        throw new ScriptTimeoutException(timeout, req.routeData?.handler);
       }
 
       // Handle other script errors

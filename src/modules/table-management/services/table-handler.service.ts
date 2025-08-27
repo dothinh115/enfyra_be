@@ -2,11 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 // import { isEqual } from 'lodash'; // Unused import removed
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { MetadataSyncService } from '../../schema-management/services/metadata-sync.service';
-import { SchemaReloadService } from '../../schema-management/services/schema-reload.service';
-import { CommonService } from '../../../shared/common/services/common.service';
 import { LoggingService } from '../../../core/exceptions/services/logging.service';
 import {
-  BusinessLogicException,
   DatabaseException,
   DuplicateResourceException,
   ResourceNotFoundException,
@@ -22,8 +19,6 @@ export class TableHandlerService {
   constructor(
     private dataSourceService: DataSourceService,
     private metadataSyncService: MetadataSyncService,
-    private schemaReloadService: SchemaReloadService,
-    private commonService: CommonService,
     private loggingService: LoggingService,
   ) {}
 
@@ -332,7 +327,7 @@ export class TableHandlerService {
         entityName: options.entityName,
         type: options.type,
       });
-      
+
       this.logger.log('✅ Schema sync initiated');
     } catch (error) {
       this.loggingService.error('Schema synchronization failed', {
