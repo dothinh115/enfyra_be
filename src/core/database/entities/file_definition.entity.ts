@@ -4,7 +4,6 @@ import { User_definition } from './user_definition.entity';
 import { File_permission_definition } from './file_permission_definition.entity';
 
 @Entity('file_definition')
-@Unique(['filename', 'folder'])
 @Unique(['location'])
 @Index(['filesize'])
 @Index(['status'])

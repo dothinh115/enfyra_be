@@ -270,7 +270,7 @@
     "file_definition": {
         "name": "file_definition",
         "isSystem": true,
-        "uniques": [["filename", "folder"], ["location"]],
+        "uniques": [["location"]],
         "indexes": [["filesize"], ["status"], ["isPublished"]],
         "columns": [
             { "name": "id", "type": "uuid", "isPrimary": true, "isGenerated": true, "isNullable": false },
