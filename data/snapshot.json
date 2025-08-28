@@ -192,7 +192,6 @@
             { "name": "isSystem", "type": "boolean", "isNullable": false, "isSystem": true, "defaultValue": false }
         ],
         "relations": [
-            { "propertyName": "setting", "type": "many-to-one", "targetTable": "setting_definition", "isSystem": true, "inversePropertyName": "methods" },
             { "propertyName": "route_permissions", "type": "many-to-many", "targetTable": "route_permission_definition", "isSystem": true, "inversePropertyName": "methods" },
             { "propertyName": "routes", "type": "many-to-many", "targetTable": "route_definition", "isSystem": true, "inversePropertyName": "publishedMethods" }
         ]
