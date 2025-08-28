@@ -29,18 +29,43 @@ export class SchemaHistoryService {
       where: {},
       order: { createdAt: 'DESC' },
     });
+    // Normalize tables by removing timestamps and sorting
+    const normalizedTables = tables.map((table: any) => ({
+      ...table,
+      createdAt: undefined,
+      updatedAt: undefined,
+      columns: table.columns?.map((col: any) => ({
+        ...col,
+        createdAt: undefined,
+        updatedAt: undefined
+      })).sort((a: any, b: any) => a.id - b.id),
+      relations: table.relations?.map((rel: any) => ({
+        ...rel,
+        createdAt: undefined,
+        updatedAt: undefined
+      })).sort((a: any, b: any) => a.id - b.id)
+    })).sort((a: any, b: any) => a.id - b.id);
+    
+    const tableJson = JSON.stringify(normalizedTables);
     const hash = crypto
       .createHash('sha256')
-      .update(JSON.stringify(tables))
+      .update(tableJson)
       .digest('hex');
+      
+    
     if (hash === oldestSchema?.hash) {
-      this.logger.debug(`Trùng hash, bỏ qua!!`);
-      return;
+      this.logger.debug(`Schema unchanged, skipping backup`);
+      return oldestSchema.id;
     }
     const historyCount = await schemaHistoryRepo.count();
     if (historyCount > 20) {
-      if (oldestSchema) {
-        await schemaHistoryRepo.delete(oldestSchema.id);
+      const oldestRecord: any = await schemaHistoryRepo.findOne({
+        where: {},
+        order: { createdAt: 'ASC' },
+      });
+      if (oldestRecord) {
+        await schemaHistoryRepo.delete(oldestRecord.id);
+        this.logger.debug(`Cleaned up old schema history record: ${oldestRecord.id}`);
       }
     }
 
