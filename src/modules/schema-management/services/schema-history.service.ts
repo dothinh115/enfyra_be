@@ -95,6 +95,8 @@ export class SchemaHistoryService {
       this.metadataSyncService.syncAll({
         fromRestore: true,
         type: options?.type,
+      }).catch(error => {
+        this.logger.error('Restore syncAll failed:', error.message);
       });
     } else {
       this.logger.warn('⚠️ Không có bản backup schema nào để khôi phục');

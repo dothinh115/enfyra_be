@@ -12,11 +12,17 @@ import { DataSourceService } from '../../../core/database/data-source/data-sourc
 import { clearOldEntitiesJs } from '../utils/clear-old-entities';
 import { GraphqlService } from '../../graphql/services/graphql.service';
 import { LoggingService } from '../../../core/exceptions/services/logging.service';
-import {
-  ResourceNotFoundException,
-  SchemaException,
-} from '../../../core/exceptions/custom-exceptions';
+import { ResourceNotFoundException } from '../../../core/exceptions/custom-exceptions';
 import { SchemaReloadService } from './schema-reload.service';
+import { RedisLockService } from '../../../infrastructure/redis/services/redis-lock.service';
+import {
+  SCHEMA_SYNC_LATEST_KEY,
+  SCHEMA_SYNC_LOCK_NAME,
+  SCHEMA_SYNC_MAX_RETRIES,
+  SCHEMA_SYNC_RETRY_DELAY,
+  SCHEMA_SYNC_LATEST_TTL,
+  SCHEMA_SYNC_LOCK_TIMEOUT,
+} from '../../../shared/utils/constant';
 
 @Injectable()
 export class MetadataSyncService {
@@ -33,6 +39,7 @@ export class MetadataSyncService {
     private loggingService: LoggingService,
     @Inject(forwardRef(() => SchemaReloadService))
     private schemaReloadService: SchemaReloadService,
+    private redisLockService: RedisLockService,
   ) {}
 
   async pullMetadataFromDb() {
@@ -101,7 +108,78 @@ export class MetadataSyncService {
     entityName?: string;
     fromRestore?: boolean;
     type: 'create' | 'update';
-  }) {
+  }): Promise<{ status: string; result?: any; reason?: string }> {
+    const syncId = `sync_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    const instanceId = this.schemaReloadService.sourceInstanceId;
+
+    this.logger.debug(`🔄 Initiating sync: ${syncId} (instance: ${instanceId})`);
+
+    // 1. Set as latest sync in Redis with TTL
+    await this.redisLockService.set(SCHEMA_SYNC_LATEST_KEY, syncId, SCHEMA_SYNC_LATEST_TTL * 1000);
+    
+    // 2. Try to acquire database lock with retry mechanism
+    for (let attempt = 1; attempt <= SCHEMA_SYNC_MAX_RETRIES; attempt++) {
+      this.logger.debug(`🔒 Attempting to acquire DB lock (attempt ${attempt}/${SCHEMA_SYNC_MAX_RETRIES}): ${syncId}`);
+      
+      const dataSource = this.dataSourceService.getDataSource();
+      const lockResult = await dataSource.query(
+        'SELECT GET_LOCK(?, ?) as lock_acquired',
+        [SCHEMA_SYNC_LOCK_NAME, SCHEMA_SYNC_LOCK_TIMEOUT]
+      );
+
+      if (lockResult[0]?.lock_acquired) {
+        this.logger.debug(`✅ DB lock acquired: ${syncId}`);
+        
+        try {
+          // 3. Double-check we're still the latest sync
+          const currentLatest = await this.redisLockService.get(SCHEMA_SYNC_LATEST_KEY);
+          if (currentLatest !== syncId) {
+            this.logger.debug(`⏩ No longer latest sync, exiting: ${syncId} (current: ${currentLatest})`);
+            return { status: 'skipped', reason: 'newer_sync_exists' };
+          }
+
+          // 4. Execute the actual sync
+          this.logger.debug(`🚀 Executing sync: ${syncId}`);
+          const result = await this.syncAllInternal(options);
+          
+          this.logger.log(`✅ Sync completed: ${syncId}`);
+          return { status: 'completed', result };
+          
+        } finally {
+          // Always release the database lock
+          try {
+            await dataSource.query('SELECT RELEASE_LOCK(?)', [SCHEMA_SYNC_LOCK_NAME]);
+            this.logger.debug(`🔓 DB lock released: ${syncId}`);
+          } catch (lockReleaseError) {
+            this.logger.error('Failed to release DB lock:', lockReleaseError.message);
+          }
+        }
+      } else {
+        // 5. Lock acquisition failed, check if we're still latest before retry
+        const currentLatest = await this.redisLockService.get(SCHEMA_SYNC_LATEST_KEY);
+        if (currentLatest !== syncId) {
+          this.logger.debug(`⏩ No longer latest sync, stopping retries: ${syncId} (current: ${currentLatest})`);
+          return { status: 'skipped', reason: 'newer_sync_exists' };
+        }
+        
+        // 6. Still latest, wait before retry (unless it's the last attempt)
+        if (attempt < SCHEMA_SYNC_MAX_RETRIES) {
+          this.logger.debug(`⏸️ DB lock busy, waiting ${SCHEMA_SYNC_RETRY_DELAY}ms before retry: ${syncId}`);
+          await new Promise(resolve => setTimeout(resolve, SCHEMA_SYNC_RETRY_DELAY));
+        }
+      }
+    }
+
+    // Max retries exceeded
+    this.logger.warn(`⏰ Max retries exceeded for sync: ${syncId}`);
+    return { status: 'timeout', reason: 'max_retries_exceeded' };
+  }
+
+  private async syncAllInternal(options?: {
+    entityName?: string;
+    fromRestore?: boolean;
+    type: 'create' | 'update';
+  }): Promise<any> {
     const startTime = Date.now();
     const timings: Record<string, number> = {};
 
@@ -204,12 +282,15 @@ export class MetadataSyncService {
       }
 
       // Log warning instead of throwing to prevent app crash in async context
-      this.logger.warn(`⚠️ Schema synchronization failed but was restored: ${err.message || 'Please check your table schema'}`, {
-        entityName: options?.entityName,
-        operationType: options?.type,
-        originalError: err.message,
-        restored: true
-      });
+      this.logger.warn(
+        `⚠️ Schema synchronization failed but was restored: ${err.message || 'Please check your table schema'}`,
+        {
+          entityName: options?.entityName,
+          operationType: options?.type,
+          originalError: err.message,
+          restored: true,
+        },
+      );
     }
   }
 }

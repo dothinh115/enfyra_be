@@ -345,12 +345,15 @@ export class TableHandlerService {
   }) {
     try {
       // Fire & forget syncAll - it will handle publish internally
-      this.metadataSyncService.syncAll({
+      const syncResult = await this.metadataSyncService.syncAll({
         entityName: options.entityName,
         type: options.type,
       });
 
-      this.logger.log('✅ Schema sync initiated');
+      this.logger.log(`✅ Schema sync result: ${syncResult.status}`, { 
+        reason: syncResult.reason,
+        entityName: options.entityName 
+      });
     } catch (error) {
       this.loggingService.error('Schema synchronization failed', {
         context: 'afterEffect',

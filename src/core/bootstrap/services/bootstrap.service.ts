@@ -76,7 +76,8 @@ export class BootstrapService implements OnApplicationBootstrap {
       await this.coreInitService.createInitMetadata();
 
       await this.defaultDataService.insertAllDefaultRecords();
-      await this.metadataSyncService.syncAll();
+      const syncResult = await this.metadataSyncService.syncAll();
+      this.logger.debug(`Bootstrap sync result: ${syncResult.status}`, syncResult);
 
       settingRepo = this.dataSourceService.getRepository('setting_definition');
       setting = await settingRepo.findOne({ 
@@ -114,7 +115,8 @@ export class BootstrapService implements OnApplicationBootstrap {
         15000,
       );
       if (acquired) {
-        await this.metadataSyncService.syncAll();
+        const syncResult = await this.metadataSyncService.syncAll();
+      this.logger.debug(`Bootstrap sync result: ${syncResult.status}`, syncResult);
         this.logger.warn('Lock acquired successfully', acquired);
         schemaHistoryRepo =
           this.dataSourceService.getRepository('schema_history');
