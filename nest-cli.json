@@ -6,8 +6,8 @@
     "deleteOutDir": true,
     "assets": [
       {
-        "include": "**/*.json", 
-        "exclude": "**/node_modules/**" 
+        "include": "**/*.json",
+        "exclude": "**/node_modules/**"
       },
       {
         "include": "data/**/*",

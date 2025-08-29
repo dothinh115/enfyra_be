@@ -15,7 +15,9 @@ describe('EntityWrapper - Simplified Approach', () => {
 
   describe('Class-level Constraints Only', () => {
     it('should create @Unique decorator when requested', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -30,14 +32,16 @@ describe('EntityWrapper - Simplified Approach', () => {
 
       const decorators = classDeclaration.getDecorators();
       const uniqueDecorators = decorators.filter(d => d.getName() === 'Unique');
-      
+
       expect(uniqueDecorators).toHaveLength(1);
       expect(uniqueDecorators[0].getArguments()[0].getText()).toBe("['path']");
       expect(usedImports.has('Unique')).toBe(true);
     });
 
     it('should create @Index decorator when requested', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -52,14 +56,16 @@ describe('EntityWrapper - Simplified Approach', () => {
 
       const decorators = classDeclaration.getDecorators();
       const indexDecorators = decorators.filter(d => d.getName() === 'Index');
-      
+
       expect(indexDecorators).toHaveLength(1);
       expect(indexDecorators[0].getArguments()[0].getText()).toBe("['userId']");
       expect(usedImports.has('Index')).toBe(true);
     });
 
     it('should handle composite unique constraints', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -74,13 +80,17 @@ describe('EntityWrapper - Simplified Approach', () => {
 
       const decorators = classDeclaration.getDecorators();
       const uniqueDecorators = decorators.filter(d => d.getName() === 'Unique');
-      
+
       expect(uniqueDecorators).toHaveLength(1);
-      expect(uniqueDecorators[0].getArguments()[0].getText()).toBe("['parent', 'slug']");
+      expect(uniqueDecorators[0].getArguments()[0].getText()).toBe(
+        "['parent', 'slug']"
+      );
     });
 
     it('should handle composite index constraints', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -95,13 +105,17 @@ describe('EntityWrapper - Simplified Approach', () => {
 
       const decorators = classDeclaration.getDecorators();
       const indexDecorators = decorators.filter(d => d.getName() === 'Index');
-      
+
       expect(indexDecorators).toHaveLength(1);
-      expect(indexDecorators[0].getArguments()[0].getText()).toBe("['category', 'user']"); // Sorted alphabetically
+      expect(indexDecorators[0].getArguments()[0].getText()).toBe(
+        "['category', 'user']"
+      ); // Sorted alphabetically
     });
 
     it('should handle both unique and index constraints together', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -117,7 +131,7 @@ describe('EntityWrapper - Simplified Approach', () => {
       const decorators = classDeclaration.getDecorators();
       const uniqueDecorators = decorators.filter(d => d.getName() === 'Unique');
       const indexDecorators = decorators.filter(d => d.getName() === 'Index');
-      
+
       expect(uniqueDecorators).toHaveLength(1);
       expect(indexDecorators).toHaveLength(1);
       expect(uniqueDecorators[0].getArguments()[0].getText()).toBe("['email']");
@@ -125,7 +139,9 @@ describe('EntityWrapper - Simplified Approach', () => {
     });
 
     it('should prevent duplicate unique constraints', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -143,14 +159,18 @@ describe('EntityWrapper - Simplified Approach', () => {
 
       const decorators = classDeclaration.getDecorators();
       const uniqueDecorators = decorators.filter(d => d.getName() === 'Unique');
-      
+
       // Should only have 1 unique decorator (duplicates removed)
       expect(uniqueDecorators).toHaveLength(1);
-      expect(uniqueDecorators[0].getArguments()[0].getText()).toBe("['parent', 'slug']");
+      expect(uniqueDecorators[0].getArguments()[0].getText()).toBe(
+        "['parent', 'slug']"
+      );
     });
 
     it('should prevent duplicate index constraints', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -168,14 +188,18 @@ describe('EntityWrapper - Simplified Approach', () => {
 
       const decorators = classDeclaration.getDecorators();
       const indexDecorators = decorators.filter(d => d.getName() === 'Index');
-      
+
       // Should only have 1 index decorator (duplicates removed)
       expect(indexDecorators).toHaveLength(1);
-      expect(indexDecorators[0].getArguments()[0].getText()).toBe("['category', 'user']");
+      expect(indexDecorators[0].getArguments()[0].getText()).toBe(
+        "['category', 'user']"
+      );
     });
 
     it('should prevent index duplicates when unique exists for same fields', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -191,7 +215,7 @@ describe('EntityWrapper - Simplified Approach', () => {
       const decorators = classDeclaration.getDecorators();
       const uniqueDecorators = decorators.filter(d => d.getName() === 'Unique');
       const indexDecorators = decorators.filter(d => d.getName() === 'Index');
-      
+
       // Should have 1 unique and 0 indexes (unique prevents duplicate index)
       expect(uniqueDecorators).toHaveLength(1);
       expect(indexDecorators).toHaveLength(0);
@@ -200,7 +224,9 @@ describe('EntityWrapper - Simplified Approach', () => {
 
   describe('Field Validation', () => {
     it('should throw errors for constraints with non-existent fields', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       // Test unique constraint with non-existent field
@@ -221,7 +247,9 @@ describe('EntityWrapper - Simplified Approach', () => {
       // Test index constraint with non-existent field
       expect(() => {
         wrapEntityClass({
-          sourceFile: project.createSourceFile('test2.ts', '', { overwrite: true }),
+          sourceFile: project.createSourceFile('test2.ts', '', {
+            overwrite: true,
+          }),
           className: 'TestEntity2',
           tableName: 'test_entity2',
           uniques: [],
@@ -235,7 +263,9 @@ describe('EntityWrapper - Simplified Approach', () => {
     });
 
     it('should throw errors for constraints with mixed valid/invalid fields', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       // Test constraint with mixed valid/invalid fields
@@ -255,7 +285,9 @@ describe('EntityWrapper - Simplified Approach', () => {
     });
 
     it('should include system fields in validation', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -276,7 +308,7 @@ describe('EntityWrapper - Simplified Approach', () => {
       const decorators = classDeclaration.getDecorators();
       const uniqueDecorators = decorators.filter(d => d.getName() === 'Unique');
       const indexDecorators = decorators.filter(d => d.getName() === 'Index');
-      
+
       expect(uniqueDecorators).toHaveLength(2);
       expect(indexDecorators).toHaveLength(1);
     });
@@ -284,7 +316,9 @@ describe('EntityWrapper - Simplified Approach', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty arrays gracefully', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -300,7 +334,7 @@ describe('EntityWrapper - Simplified Approach', () => {
       const decorators = classDeclaration.getDecorators();
       const uniqueDecorators = decorators.filter(d => d.getName() === 'Unique');
       const indexDecorators = decorators.filter(d => d.getName() === 'Index');
-      
+
       expect(uniqueDecorators).toHaveLength(0);
       expect(indexDecorators).toHaveLength(0);
       expect(usedImports.has('Unique')).toBe(false);
@@ -308,7 +342,9 @@ describe('EntityWrapper - Simplified Approach', () => {
     });
 
     it('should handle undefined parameters', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       expect(() => {
@@ -324,7 +360,9 @@ describe('EntityWrapper - Simplified Approach', () => {
     });
 
     it('should filter out empty field arrays', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -346,13 +384,15 @@ describe('EntityWrapper - Simplified Approach', () => {
       const decorators = classDeclaration.getDecorators();
       const uniqueDecorators = decorators.filter(d => d.getName() === 'Unique');
       const indexDecorators = decorators.filter(d => d.getName() === 'Index');
-      
+
       expect(uniqueDecorators).toHaveLength(1);
       expect(indexDecorators).toHaveLength(1);
     });
 
     it('should preserve decorator order consistently', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -366,15 +406,15 @@ describe('EntityWrapper - Simplified Approach', () => {
       });
 
       const decorators = classDeclaration.getDecorators();
-      
+
       // @Entity should always be first
       expect(decorators[0].getName()).toBe('Entity');
-      
+
       // @Unique should come before @Index
       const decoratorNames = decorators.map(d => d.getName());
       const uniqueIndex = decoratorNames.indexOf('Unique');
       const indexIndex = decoratorNames.indexOf('Index');
-      
+
       if (uniqueIndex !== -1 && indexIndex !== -1) {
         expect(uniqueIndex).toBeLessThan(indexIndex);
       }

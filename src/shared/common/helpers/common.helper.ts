@@ -17,7 +17,7 @@ export function lowerFirst(str: string): string {
 }
 
 export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export function dbTypeToTSType(dbType: string): string {
@@ -80,7 +80,7 @@ export async function loadDynamicEntities(entityDir: string) {
   const entities = [];
   if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
 
-  const files = fs.readdirSync(entityDir).filter((f) => f.endsWith('.js'));
+  const files = fs.readdirSync(entityDir).filter(f => f.endsWith('.js'));
 
   // 1️⃣ Clear all cache first
   for (const file of files) {
@@ -92,12 +92,14 @@ export async function loadDynamicEntities(entityDir: string) {
   // 2️⃣ Require all to repopulate cache in correct order
   for (const file of files) {
     const fullPath = path.join(entityDir, file);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require(fullPath);
   }
 
   // 3️⃣ Extract exports from cache
   for (const file of files) {
     const fullPath = path.join(entityDir, file);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const module = require(fullPath);
     for (const exported of Object.values(module)) {
       entities.push(exported);
@@ -119,9 +121,9 @@ export function isRouteMatched({
   if (!routePath || !reqPath) return null;
 
   try {
-    const cleanPrefix = prefix?.replace(/^\//, '').replace(/\/$/, '');
-    const cleanRoute = routePath.replace(/^\//, '').replace(/\/$/, '');
-    const cleanReqPath = reqPath.replace(/^\//, '').replace(/\/$/, '');
+    const cleanPrefix = prefix?.replace(/^\/+/, '').replace(/\/+$/, '');
+    const cleanRoute = routePath.replace(/^\/+/, '').replace(/\/+$/, '');
+    const cleanReqPath = reqPath.replace(/^\/+/, '').replace(/\/+$/, '');
 
     // Handle wildcard routes
     if (cleanRoute.includes('*')) {
@@ -172,7 +174,10 @@ export function getAllTsFiles(dirPath: string): string[] {
   return result;
 }
 
-export function checkTsErrors(dirPath: string, tsconfigPath = 'tsconfig.json'): void {
+export function checkTsErrors(
+  dirPath: string,
+  tsconfigPath = 'tsconfig.json'
+): void {
   const configPath = ts.findConfigFile(tsconfigPath, ts.sys.fileExists);
   if (!configPath) throw new Error(`tsconfig not found at ${tsconfigPath}`);
 
@@ -180,7 +185,7 @@ export function checkTsErrors(dirPath: string, tsconfigPath = 'tsconfig.json'): 
   const parsedConfig = ts.parseJsonConfigFileContent(
     configFile.config,
     ts.sys,
-    path.dirname(configPath),
+    path.dirname(configPath)
   );
 
   const allFiles = getAllTsFiles(dirPath);
@@ -198,28 +203,33 @@ export function checkTsErrors(dirPath: string, tsconfigPath = 'tsconfig.json'): 
 
   let hasError = false;
   for (const [filePath, diagnostics] of errorMap.entries()) {
-    const errors = diagnostics.map((d) => {
+    const errors = diagnostics.map(d => {
       const msg = ts.flattenDiagnosticMessageText(d.messageText, '\n');
       const pos = d.file?.getLineAndCharacterOfPosition(d.start || 0);
-      return `Line ${pos?.line! + 1}, Col ${pos?.character! + 1}: ${msg}`;
+      const line = pos?.line !== undefined ? pos.line + 1 : 'unknown';
+      const col = pos?.character !== undefined ? pos.character + 1 : 'unknown';
+      return `Line ${line}, Col ${col}: ${msg}`;
     });
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
       console.error(`🗑️ Deleted error file: ${filePath}`);
     }
     console.error(
-      `❌ TypeScript error in file ${filePath}:\n${errors.join('\n')}`,
+      `❌ TypeScript error in file ${filePath}:\n${errors.join('\n')}`
     );
     hasError = true;
   }
 
   if (hasError)
     throw new Error(
-      'One or more files with TypeScript errors have been deleted.',
+      'One or more files with TypeScript errors have been deleted.'
     );
 }
 
-export async function removeOldFile(filePathOrPaths: string | string[], logger: Logger) {
+export async function removeOldFile(
+  filePathOrPaths: string | string[],
+  logger: Logger
+) {
   const paths = Array.isArray(filePathOrPaths)
     ? filePathOrPaths
     : [filePathOrPaths];
@@ -267,9 +277,7 @@ export function assertNoSystemFlagDeep(arr: any[], path = 'root') {
 
     // 🚨 If it's a new record (no id) and isSystem = true → throw error
     if (!item?.id && item?.isSystem === true) {
-      throw new Error(
-        `Cannot create new ${currentPath} with isSystem = true`,
-      );
+      throw new Error(`Cannot create new ${currentPath} with isSystem = true`);
     }
 
     // Continue checking nested objects
@@ -295,7 +303,7 @@ export function assertNoSystemFlagDeepRecursive(obj: any, path = 'root') {
 export function parseRouteParams(routePath: string): string[] {
   if (!routePath) return [];
 
-  const paramRegex = /:([^\/\?]+)/g;
+  const paramRegex = /:([^/?]+)/g;
   const params: string[] = [];
   let execResult: RegExpExecArray | null;
 

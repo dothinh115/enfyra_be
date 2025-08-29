@@ -19,7 +19,7 @@ export class DynamicService {
 
   constructor(
     private handlerExecutorService: HandlerExecutorService,
-    private loggingService: LoggingService,
+    private loggingService: LoggingService
   ) {}
 
   async runHandler(req: RequestWithRouteData) {
@@ -27,7 +27,7 @@ export class DynamicService {
     const isTableDefinitionOperation =
       req.routeData.mainTable?.name === 'table_definition' ||
       req.routeData.targetTables?.some(
-        (table) => table.name === 'table_definition',
+        table => table.name === 'table_definition'
       );
 
     try {
@@ -46,15 +46,15 @@ export class DynamicService {
 
       const result = await this.handlerExecutorService.run(
         scriptCode,
-        req.routeData.context,
+        req.routeData.context
       );
 
       return result;
     } catch (error) {
       this.loggingService.error('Handler execution failed', {
         context: 'runHandler',
-        error: error.message,
-        stack: error.stack,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
         method: req.method,
         url: req.url,
         handler: req.routeData?.handler,
@@ -69,14 +69,14 @@ export class DynamicService {
 
       // Handle other script errors
       throw new ScriptExecutionException(
-        error.message,
+        error instanceof Error ? error.message : String(error),
         req.routeData?.handler,
         {
           method: req.method,
           url: req.url,
           userId: req.user?.id,
           isTableOperation: isTableDefinitionOperation,
-        },
+        }
       );
     }
   }

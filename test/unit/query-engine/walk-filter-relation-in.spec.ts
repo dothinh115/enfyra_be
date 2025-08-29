@@ -20,14 +20,14 @@ class User {
   @Column()
   name: string;
 
-  @OneToMany(() => Post, (post) => post.author)
+  @OneToMany(() => Post, post => post.author)
   posts: Post[];
 
-  @ManyToMany(() => Role, (role) => role.users)
+  @ManyToMany(() => Role, role => role.users)
   @JoinTable({
     name: 'user_roles',
     joinColumn: { name: 'user_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' }
+    inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' },
   })
   roles: Role[];
 }
@@ -40,14 +40,14 @@ class Post {
   @Column()
   title: string;
 
-  @ManyToOne(() => User, (user) => user.posts)
+  @ManyToOne(() => User, user => user.posts)
   author: User;
 
-  @ManyToMany(() => Category, (category) => category.posts)
+  @ManyToMany(() => Category, category => category.posts)
   @JoinTable({
     name: 'post_categories',
     joinColumn: { name: 'post_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'category_id', referencedColumnName: 'id' }
+    inverseJoinColumn: { name: 'category_id', referencedColumnName: 'id' },
   })
   categories: Category[];
 }
@@ -60,7 +60,7 @@ class Category {
   @Column()
   name: string;
 
-  @ManyToMany(() => Post, (post) => post.categories)
+  @ManyToMany(() => Post, post => post.categories)
   posts: Post[];
 }
 
@@ -72,7 +72,7 @@ class Role {
   @Column()
   name: string;
 
-  @ManyToMany(() => User, (user) => user.roles)
+  @ManyToMany(() => User, user => user.roles)
   users: User[];
 }
 
@@ -104,7 +104,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
       { name: 'Technology' },
       { name: 'Sports' },
       { name: 'Music' },
-      { name: 'Travel' }
+      { name: 'Travel' },
     ];
     categories = await categoryRepo.save(categoryData);
 
@@ -112,7 +112,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     const roleData = [
       { name: 'Admin' },
       { name: 'Editor' },
-      { name: 'Viewer' }
+      { name: 'Viewer' },
     ];
     roles = await roleRepo.save(roleData);
 
@@ -121,7 +121,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
       { name: 'John' },
       { name: 'Jane' },
       { name: 'Bob' },
-      { name: 'Alice' }
+      { name: 'Alice' },
     ];
     users = await userRepo.save(userData);
 
@@ -138,7 +138,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
       { title: 'Sports Post 1', author: users[1] },
       { title: 'Music Post 1', author: users[2] },
       { title: 'Travel Post 1', author: users[3] },
-      { title: 'Tech Post 2', author: users[0] }
+      { title: 'Tech Post 2', author: users[0] },
     ];
     posts = await postRepo.save(postData);
 
@@ -161,7 +161,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     it('should handle _in operator for post categories', () => {
       const postMeta = dataSource.getMetadata(Post);
       const filter = {
-        categories: { _in: [categories[0].id, categories[1].id] } // Technology, Sports
+        categories: { _in: [categories[0].id, categories[1].id] }, // Technology, Sports
       };
 
       const result = walkFilter({
@@ -172,7 +172,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
 
       expect(result.parts).toHaveLength(1);
       const part = result.parts[0];
-      
+
       // Should generate subquery for many-to-many relation
       expect(part.sql).toContain('post.id IN');
       expect(part.sql).toContain('SELECT post_id FROM post_categories');
@@ -184,7 +184,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     it('should handle _not_in operator for post categories', () => {
       const postMeta = dataSource.getMetadata(Post);
       const filter = {
-        categories: { _not_in: [categories[2].id] } // Not Music
+        categories: { _not_in: [categories[2].id] }, // Not Music
       };
 
       const result = walkFilter({
@@ -195,7 +195,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
 
       expect(result.parts).toHaveLength(1);
       const part = result.parts[0];
-      
+
       expect(part.sql).toContain('post.id NOT IN');
       expect(part.sql).toContain('SELECT post_id FROM post_categories');
       expect(part.params).toHaveProperty('p1', categories[2].id);
@@ -204,7 +204,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     it('should handle _in operator for user roles', () => {
       const userMeta = dataSource.getMetadata(User);
       const filter = {
-        roles: { _in: [roles[0].id] } // Admin role only
+        roles: { _in: [roles[0].id] }, // Admin role only
       };
 
       const result = walkFilter({
@@ -215,7 +215,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
 
       expect(result.parts).toHaveLength(1);
       const part = result.parts[0];
-      
+
       expect(part.sql).toContain('user.id IN');
       expect(part.sql).toContain('SELECT user_id FROM user_roles');
       expect(part.sql).toContain('role_id IN');
@@ -227,7 +227,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     it('should handle _in operator for user posts', () => {
       const userMeta = dataSource.getMetadata(User);
       const filter = {
-        posts: { _in: [posts[0].id, posts[4].id] } // John's posts
+        posts: { _in: [posts[0].id, posts[4].id] }, // John's posts
       };
 
       const result = walkFilter({
@@ -238,7 +238,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
 
       expect(result.parts).toHaveLength(1);
       const part = result.parts[0];
-      
+
       // For one-to-many, should use direct relation
       expect(part.sql).toContain('user.id IN');
       expect(part.sql).toContain('SELECT id FROM post');
@@ -251,7 +251,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     it('should parse string array for _in operator', () => {
       const postMeta = dataSource.getMetadata(Post);
       const filter = {
-        categories: { _in: `[${categories[0].id},${categories[1].id}]` } // String: "[1,2]"
+        categories: { _in: `[${categories[0].id},${categories[1].id}]` }, // String: "[1,2]"
       };
 
       const result = walkFilter({
@@ -262,7 +262,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
 
       expect(result.parts).toHaveLength(1);
       const part = result.parts[0];
-      
+
       expect(part.sql).toContain('post.id IN');
       expect(part.params).toHaveProperty('p1', categories[0].id);
       expect(part.params).toHaveProperty('p2', categories[1].id);
@@ -274,7 +274,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     it('should parse string array for _not_in operator', () => {
       const userMeta = dataSource.getMetadata(User);
       const filter = {
-        roles: { _not_in: `[${roles[0].id}]` } // String: "[1]"
+        roles: { _not_in: `[${roles[0].id}]` }, // String: "[1]"
       };
 
       const result = walkFilter({
@@ -285,7 +285,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
 
       expect(result.parts).toHaveLength(1);
       const part = result.parts[0];
-      
+
       expect(part.sql).toContain('user.id NOT IN');
       expect(part.params).toHaveProperty('p1', roles[0].id);
       expect(typeof part.params.p1).toBe('number');
@@ -294,7 +294,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     it('should handle string numbers and cast them to integers', () => {
       const postMeta = dataSource.getMetadata(Post);
       const filter = {
-        categories: { _in: '["1", "2"]' } // String numbers in array
+        categories: { _in: '["1", "2"]' }, // String numbers in array
       };
 
       const result = walkFilter({
@@ -305,7 +305,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
 
       expect(result.parts).toHaveLength(1);
       const part = result.parts[0];
-      
+
       expect(part.params).toHaveProperty('p1', 1); // Should be number 1, not string "1"
       expect(part.params).toHaveProperty('p2', 2); // Should be number 2, not string "2"
       expect(typeof part.params.p1).toBe('number');
@@ -315,11 +315,11 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     it('should handle invalid JSON string gracefully', () => {
       const postMeta = dataSource.getMetadata(Post);
       const filter = {
-        categories: { _in: '[1,2' } // Invalid JSON - missing closing bracket
+        categories: { _in: '[1,2' }, // Invalid JSON - missing closing bracket
       };
 
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      
+
       const result = walkFilter({
         filter,
         currentMeta: postMeta,
@@ -330,18 +330,18 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('[Relation] ❌ Failed to parse _in value')
       );
-      
+
       consoleSpy.mockRestore();
     });
 
     it('should handle invalid number strings', () => {
       const postMeta = dataSource.getMetadata(Post);
       const filter = {
-        categories: { _in: '["invalid", "numbers"]' }
+        categories: { _in: '["invalid", "numbers"]' },
       };
 
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      
+
       const result = walkFilter({
         filter,
         currentMeta: postMeta,
@@ -350,9 +350,11 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
 
       expect(result.parts).toHaveLength(0); // Should skip due to all invalid values
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[Relation] ❌ No valid values after type casting')
+        expect.stringContaining(
+          '[Relation] ❌ No valid values after type casting'
+        )
       );
-      
+
       consoleSpy.mockRestore();
     });
   });
@@ -361,7 +363,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     it('should handle empty array for _in (always false)', () => {
       const postMeta = dataSource.getMetadata(Post);
       const filter = {
-        categories: { _in: [] }
+        categories: { _in: [] },
       };
 
       const result = walkFilter({
@@ -377,7 +379,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     it('should handle empty array for _not_in (always true)', () => {
       const postMeta = dataSource.getMetadata(Post);
       const filter = {
-        categories: { _not_in: [] }
+        categories: { _not_in: [] },
       };
 
       const result = walkFilter({
@@ -393,12 +395,12 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
     it('should handle non-array value with error', () => {
       const postMeta = dataSource.getMetadata(Post);
       const filter = {
-        categories: { _in: "not-an-array" }
+        categories: { _in: 'not-an-array' },
       };
 
       // Should not throw but log error and skip
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      
+
       const result = walkFilter({
         filter,
         currentMeta: postMeta,
@@ -409,7 +411,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('[Relation] ❌ Failed to parse _in value')
       );
-      
+
       consoleSpy.mockRestore();
     });
   });
@@ -419,7 +421,7 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
       const userMeta = dataSource.getMetadata(User);
       const filter = {
         roles: { _in: [roles[0].id, roles[1].id] }, // Admin or Editor
-        posts: { _in: [posts[0].id] } // Has specific post
+        posts: { _in: [posts[0].id] }, // Has specific post
       };
 
       const result = walkFilter({
@@ -438,8 +440,8 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
       const filter = {
         _or: [
           { roles: { _in: [roles[0].id] } }, // Admin
-          { roles: { _in: [roles[2].id] } }  // Viewer
-        ]
+          { roles: { _in: [roles[2].id] } }, // Viewer
+        ],
       };
 
       const result = walkFilter({

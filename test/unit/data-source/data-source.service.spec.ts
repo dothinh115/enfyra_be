@@ -55,7 +55,7 @@ describe('DataSourceService', () => {
         { tableName: 'post', target: function Post() {} },
         { tableName: 'comment', target: function Comment() {} },
       ],
-      getMetadata: jest.fn().mockImplementation((entity) => {
+      getMetadata: jest.fn().mockImplementation(entity => {
         if (entity === 'TestEntity') {
           return { tableName: 'test_entity' };
         }
@@ -119,7 +119,7 @@ describe('DataSourceService', () => {
 
     it('should handle reload errors', async () => {
       commonService.loadDynamicEntities.mockRejectedValue(
-        new Error('Load failed'),
+        new Error('Load failed')
       );
 
       await expect(service.reloadDataSource()).rejects.toThrow('Load failed');
@@ -155,13 +155,13 @@ describe('DataSourceService', () => {
     it('should handle concurrent repository requests', () => {
       const promises = Array.from(
         { length: 10 },
-        (_, i) => Promise.resolve(service.getRepository(`user`)), // Use existing entity name
+        (_, i) => Promise.resolve(service.getRepository(`user`)) // Use existing entity name
       );
 
-      return Promise.all(promises).then((results) => {
+      return Promise.all(promises).then(results => {
         expect(results).toHaveLength(10);
         // All results should be the same mock repository
-        results.forEach((result) => {
+        results.forEach(result => {
           expect(result).toBe(mockRepository);
         });
       });
@@ -183,7 +183,7 @@ describe('DataSourceService', () => {
       Object.defineProperty(mockEntityClass, 'name', { value: 'TestEntity' });
 
       const tableName = (service as any).getTableNameFromEntity(
-        mockEntityClass,
+        mockEntityClass
       );
 
       expect(typeof tableName).toBe('string');

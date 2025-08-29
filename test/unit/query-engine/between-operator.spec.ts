@@ -69,7 +69,7 @@ describe('QueryEngine - _between operator tests', () => {
 
     const dsService = new DataSourceService(
       fakeCommonService as any,
-      mockLoggingService as any,
+      mockLoggingService as any
     );
     (dsService as any).dataSource = dataSource;
     dsService.entityClassMap.set('test_product', TestProduct);
@@ -91,8 +91,8 @@ describe('QueryEngine - _between operator tests', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBe(7); // Products 4-10 (prices 200-500)
-      expect(result.data.every((p) => p.price >= 200 && p.price <= 500)).toBe(
-        true,
+      expect(result.data.every(p => p.price >= 200 && p.price <= 500)).toBe(
+        true
       );
       expect(result.data[0].price).toBe(200);
       expect(result.data[result.data.length - 1].price).toBe(500);
@@ -107,8 +107,8 @@ describe('QueryEngine - _between operator tests', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data.length).toBe(7); // Products 4-10 (prices 200-500)
-      expect(result.data.every((p) => p.price >= 200 && p.price <= 500)).toBe(
-        true,
+      expect(result.data.every(p => p.price >= 200 && p.price <= 500)).toBe(
+        true
       );
     });
 
@@ -120,8 +120,8 @@ describe('QueryEngine - _between operator tests', () => {
       });
 
       expect(result.data).toBeDefined();
-      expect(result.data.every((p) => p.rating >= 1.5 && p.rating <= 2.5)).toBe(
-        true,
+      expect(result.data.every(p => p.rating >= 1.5 && p.rating <= 2.5)).toBe(
+        true
       );
     });
 
@@ -133,8 +133,8 @@ describe('QueryEngine - _between operator tests', () => {
       });
 
       expect(result.data).toBeDefined();
-      expect(result.data.every((p) => p.rating >= 1.5 && p.rating <= 2.5)).toBe(
-        true,
+      expect(result.data.every(p => p.rating >= 1.5 && p.rating <= 2.5)).toBe(
+        true
       );
     });
 
@@ -146,8 +146,8 @@ describe('QueryEngine - _between operator tests', () => {
       });
 
       expect(result.data).toBeDefined();
-      expect(result.data.every((p) => p.price >= 300 && p.price <= 700)).toBe(
-        true,
+      expect(result.data.every(p => p.price >= 300 && p.price <= 700)).toBe(
+        true
       );
     });
 
@@ -231,9 +231,9 @@ describe('QueryEngine - _between operator tests', () => {
         queryEngine.find({
           tableName: 'test_product',
           filter: { price: { _between: '100' } },
-        }),
+        })
       ).rejects.toThrow(
-        '_between operator requires exactly 2 comma-separated values',
+        '_between operator requires exactly 2 comma-separated values'
       );
     });
 
@@ -242,9 +242,9 @@ describe('QueryEngine - _between operator tests', () => {
         queryEngine.find({
           tableName: 'test_product',
           filter: { price: { _between: '100,200,300' } },
-        }),
+        })
       ).rejects.toThrow(
-        '_between operator requires exactly 2 comma-separated values',
+        '_between operator requires exactly 2 comma-separated values'
       );
     });
 
@@ -253,7 +253,7 @@ describe('QueryEngine - _between operator tests', () => {
         queryEngine.find({
           tableName: 'test_product',
           filter: { price: { _between: [100] } },
-        }),
+        })
       ).rejects.toThrow('_between operator requires exactly 2 values');
     });
 
@@ -262,7 +262,7 @@ describe('QueryEngine - _between operator tests', () => {
         queryEngine.find({
           tableName: 'test_product',
           filter: { price: { _between: [100, 200, 300] } },
-        }),
+        })
       ).rejects.toThrow('_between operator requires exactly 2 values');
     });
 
@@ -271,9 +271,9 @@ describe('QueryEngine - _between operator tests', () => {
         queryEngine.find({
           tableName: 'test_product',
           filter: { price: { _between: 100 } },
-        }),
+        })
       ).rejects.toThrow(
-        '_between operator requires either a comma-separated string or array of 2 values',
+        '_between operator requires either a comma-separated string or array of 2 values'
       );
     });
 
@@ -282,7 +282,7 @@ describe('QueryEngine - _between operator tests', () => {
         queryEngine.find({
           tableName: 'test_product',
           filter: { price: { _between: 'abc,xyz' } },
-        }),
+        })
       ).rejects.toThrow('_between operator requires valid numeric values');
     });
 
@@ -291,7 +291,7 @@ describe('QueryEngine - _between operator tests', () => {
         queryEngine.find({
           tableName: 'test_product',
           filter: { createdAt: { _between: 'invalid-date,2024-01-15' } },
-        }),
+        })
       ).rejects.toThrow('Invalid date value');
     });
   });
@@ -312,8 +312,8 @@ describe('QueryEngine - _between operator tests', () => {
       expect(result.data).toBeDefined();
       expect(
         result.data.every(
-          (p) => p.price >= 200 && p.price <= 600 && p.rating >= 2.0,
-        ),
+          p => p.price >= 200 && p.price <= 600 && p.rating >= 2.0
+        )
       ).toBe(true);
     });
 
@@ -332,10 +332,10 @@ describe('QueryEngine - _between operator tests', () => {
       expect(result.data).toBeDefined();
       expect(
         result.data.every(
-          (p) =>
+          p =>
             (p.price >= 100 && p.price <= 200) ||
-            (p.rating >= 2.5 && p.rating <= 3.0),
-        ),
+            (p.rating >= 2.5 && p.rating <= 3.0)
+        )
       ).toBe(true);
     });
 
@@ -353,14 +353,14 @@ describe('QueryEngine - _between operator tests', () => {
       expect(result.data).toBeDefined();
       expect(
         result.data.every(
-          (p) =>
+          p =>
             p.price >= 200 &&
             p.price <= 800 &&
             p.rating >= 1.5 &&
             p.rating <= 2.5 &&
             new Date(p.createdAt) >= new Date('2024-01-05') &&
-            new Date(p.createdAt) <= new Date('2024-01-15'),
-        ),
+            new Date(p.createdAt) <= new Date('2024-01-15')
+        )
       ).toBe(true);
     });
 

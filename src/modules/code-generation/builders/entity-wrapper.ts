@@ -51,15 +51,13 @@ export function wrapEntityClass({
     )
       continue;
     const validFields = unique.value
-      .filter((f) => f && typeof f === 'string' && f.trim().length > 0)
-      .map((f) => f.trim());
+      .filter(f => f && typeof f === 'string' && f.trim().length > 0)
+      .map(f => f.trim());
     if (validFields.length === 0) continue;
     const fields = validFields.slice().sort();
-    const allFieldsExist = fields.every((field) => allValidFields.has(field));
+    const allFieldsExist = fields.every(field => allValidFields.has(field));
     if (!allFieldsExist) {
-      const missingFields = fields.filter(
-        (field) => !allValidFields.has(field),
-      );
+      const missingFields = fields.filter(field => !allValidFields.has(field));
       throw new ValidationException(
         `@Unique constraint [${fields.join(', ')}] contains non-existent fields: [${missingFields.join(', ')}]`,
         {
@@ -67,18 +65,18 @@ export function wrapEntityClass({
           fields,
           missingFields,
           availableFields: Array.from(allValidFields),
-        },
+        }
       );
     }
 
     // Optional: Additional validation against actual entity fields
     if (actualEntityFields) {
-      const allFieldsActuallyExist = fields.every((field) =>
-        actualEntityFields.has(field),
+      const allFieldsActuallyExist = fields.every(field =>
+        actualEntityFields.has(field)
       );
       if (!allFieldsActuallyExist) {
         const missingActualFields = fields.filter(
-          (field) => !actualEntityFields.has(field),
+          field => !actualEntityFields.has(field)
         );
         throw new ValidationException(
           `@Unique constraint [${fields.join(', ')}] contains fields not found in actual entity: [${missingActualFields.join(', ')}]`,
@@ -87,7 +85,7 @@ export function wrapEntityClass({
             fields,
             missingFields: missingActualFields,
             actualEntityFields: Array.from(actualEntityFields),
-          },
+          }
         );
       }
     }
@@ -105,19 +103,19 @@ export function wrapEntityClass({
     ) {
       console.warn(
         `Skipping invalid @Unique constraint - value is not a valid array:`,
-        unique,
+        unique
       );
       continue;
     }
 
     // Filter out invalid fields and trim whitespace BEFORE sorting
     const validFields = unique.value
-      .filter((f) => f && typeof f === 'string' && f.trim().length > 0)
-      .map((f) => f.trim());
+      .filter(f => f && typeof f === 'string' && f.trim().length > 0)
+      .map(f => f.trim());
     if (validFields.length === 0) {
       console.warn(
         `Skipping @Unique constraint - no valid fields found:`,
-        unique.value,
+        unique.value
       );
       continue;
     }
@@ -125,11 +123,9 @@ export function wrapEntityClass({
     const fields = validFields.slice().sort(); // Work with trimmed valid fields only
 
     // Validate that ALL fields exist in the entity
-    const allFieldsExist = fields.every((field) => allValidFields.has(field));
+    const allFieldsExist = fields.every(field => allValidFields.has(field));
     if (!allFieldsExist) {
-      const missingFields = fields.filter(
-        (field) => !allValidFields.has(field),
-      );
+      const missingFields = fields.filter(field => !allValidFields.has(field));
       throw new ValidationException(
         `@Unique constraint [${fields.join(', ')}] contains non-existent fields: [${missingFields.join(', ')}]`,
         {
@@ -137,18 +133,18 @@ export function wrapEntityClass({
           fields,
           missingFields,
           availableFields: Array.from(allValidFields),
-        },
+        }
       );
     }
 
     // Optional: Additional validation against actual entity fields
     if (actualEntityFields) {
-      const allFieldsActuallyExist = fields.every((field) =>
-        actualEntityFields.has(field),
+      const allFieldsActuallyExist = fields.every(field =>
+        actualEntityFields.has(field)
       );
       if (!allFieldsActuallyExist) {
         const missingActualFields = fields.filter(
-          (field) => !actualEntityFields.has(field),
+          field => !actualEntityFields.has(field)
         );
         throw new ValidationException(
           `@Unique constraint [${fields.join(', ')}] contains fields not found in actual entity: [${missingActualFields.join(', ')}]`,
@@ -157,7 +153,7 @@ export function wrapEntityClass({
             fields,
             missingFields: missingActualFields,
             actualEntityFields: Array.from(actualEntityFields),
-          },
+          }
         );
       }
     }
@@ -168,7 +164,7 @@ export function wrapEntityClass({
     if (!addedUniqueKeys.has(key)) {
       decorators.push({
         name: 'Unique',
-        arguments: [`[${fields.map((f) => `'${f}'`).join(', ')}]`],
+        arguments: [`[${fields.map(f => `'${f}'`).join(', ')}]`],
       });
       usedImports.add('Unique');
       addedUniqueKeys.add(key);
@@ -187,19 +183,19 @@ export function wrapEntityClass({
     ) {
       console.warn(
         `Skipping invalid @Index constraint - value is not a valid array:`,
-        index,
+        index
       );
       continue;
     }
 
     // Filter out invalid fields and trim whitespace BEFORE sorting
     const validFields = index.value
-      .filter((f) => f && typeof f === 'string' && f.trim().length > 0)
-      .map((f) => f.trim());
+      .filter(f => f && typeof f === 'string' && f.trim().length > 0)
+      .map(f => f.trim());
     if (validFields.length === 0) {
       console.warn(
         `Skipping @Index constraint - no valid fields found:`,
-        index.value,
+        index.value
       );
       continue;
     }
@@ -207,11 +203,9 @@ export function wrapEntityClass({
     const fields = validFields.slice().sort(); // Work with trimmed valid fields only
 
     // Validate that ALL fields exist in the entity
-    const allFieldsExist = fields.every((field) => allValidFields.has(field));
+    const allFieldsExist = fields.every(field => allValidFields.has(field));
     if (!allFieldsExist) {
-      const missingFields = fields.filter(
-        (field) => !allValidFields.has(field),
-      );
+      const missingFields = fields.filter(field => !allValidFields.has(field));
       throw new ValidationException(
         `@Index constraint [${fields.join(', ')}] contains non-existent fields: [${missingFields.join(', ')}]`,
         {
@@ -219,18 +213,18 @@ export function wrapEntityClass({
           fields,
           missingFields,
           availableFields: Array.from(allValidFields),
-        },
+        }
       );
     }
 
     // Optional: Additional validation against actual entity fields
     if (actualEntityFields) {
-      const allFieldsActuallyExist = fields.every((field) =>
-        actualEntityFields.has(field),
+      const allFieldsActuallyExist = fields.every(field =>
+        actualEntityFields.has(field)
       );
       if (!allFieldsActuallyExist) {
         const missingActualFields = fields.filter(
-          (field) => !actualEntityFields.has(field),
+          field => !actualEntityFields.has(field)
         );
         throw new ValidationException(
           `@Index constraint [${fields.join(', ')}] contains fields not found in actual entity: [${missingActualFields.join(', ')}]`,
@@ -239,7 +233,7 @@ export function wrapEntityClass({
             fields,
             missingFields: missingActualFields,
             actualEntityFields: Array.from(actualEntityFields),
-          },
+          }
         );
       }
     }
@@ -252,7 +246,7 @@ export function wrapEntityClass({
     if (!addedIndexKeys.has(key) && !isBlockedByUnique) {
       decorators.push({
         name: 'Index',
-        arguments: [`[${fields.map((f) => `'${f}'`).join(', ')}]`],
+        arguments: [`[${fields.map(f => `'${f}'`).join(', ')}]`],
       });
       usedImports.add('Index');
       addedIndexKeys.add(key);

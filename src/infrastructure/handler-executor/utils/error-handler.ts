@@ -15,7 +15,7 @@ export class ErrorHandler {
     statusCode?: number,
     message?: string,
     code?: string,
-    details?: any,
+    details?: any
   ): any {
     // Handle $errors calls from child process
     if (errorPath?.includes('$errors')) {
@@ -24,11 +24,11 @@ export class ErrorHandler {
           return new BusinessLogicException(message || 'Bad request');
         case '$errors.throw401':
           return new AuthenticationException(
-            message || 'Authentication required',
+            message || 'Authentication required'
           );
         case '$errors.throw403':
           return new AuthorizationException(
-            message || 'Insufficient permissions',
+            message || 'Insufficient permissions'
           );
         default:
           return new ScriptExecutionException(message || 'Unknown error', code);
@@ -42,17 +42,17 @@ export class ErrorHandler {
           return new BusinessLogicException(message || 'Bad request');
         case 401:
           return new AuthenticationException(
-            message || 'Authentication required',
+            message || 'Authentication required'
           );
         case 403:
           return new AuthorizationException(
-            message || 'Insufficient permissions',
+            message || 'Insufficient permissions'
           );
         default:
           return new ScriptExecutionException(
             message || 'Unknown error',
             code,
-            details,
+            details
           );
       }
     }
@@ -61,7 +61,7 @@ export class ErrorHandler {
     return new ScriptExecutionException(
       message || 'Unknown error',
       code,
-      details,
+      details
     );
   }
 
@@ -72,7 +72,7 @@ export class ErrorHandler {
     errorType: string,
     message: string,
     code: string,
-    additionalData?: any,
+    additionalData?: any
   ): void {
     this.logger.error(`Handler Executor ${errorType}`, {
       message,
@@ -94,7 +94,7 @@ export class ErrorHandler {
     message: string,
     code: string,
     reject: (error: any) => void,
-    additionalData?: any,
+    additionalData?: any
   ): boolean {
     if (isDone) return true;
 

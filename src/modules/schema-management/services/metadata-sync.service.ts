@@ -39,7 +39,7 @@ export class MetadataSyncService {
     private loggingService: LoggingService,
     @Inject(forwardRef(() => SchemaReloadService))
     private schemaReloadService: SchemaReloadService,
-    private redisLockService: RedisLockService,
+    private redisLockService: RedisLockService
   ) {}
 
   async pullMetadataFromDb() {
@@ -61,7 +61,7 @@ export class MetadataSyncService {
 
     if (tables.length === 0) return;
 
-    tables.forEach((table) => {
+    tables.forEach(table => {
       table.columns.sort((a, b) => {
         if (a.isPrimary && !b.isPrimary) return -1;
         if (!a.isPrimary && b.isPrimary) return 1;
@@ -69,7 +69,7 @@ export class MetadataSyncService {
       });
 
       table.relations.sort((a, b) =>
-        a.propertyName.localeCompare(b.propertyName),
+        a.propertyName.localeCompare(b.propertyName)
       );
     });
 
@@ -77,7 +77,7 @@ export class MetadataSyncService {
 
     const entityDir = path.resolve('src', 'core', 'database', 'entities');
     const validFileNames = tables.map(
-      (table) => `${table.name.toLowerCase()}.entity.ts`,
+      table => `${table.name.toLowerCase()}.entity.ts`
     );
 
     if (!fs.existsSync(entityDir)) {
@@ -98,9 +98,9 @@ export class MetadataSyncService {
 
     await Promise.all(
       tables.map(
-        async (table) =>
-          await this.autoService.entityGenerate(table, inverseRelationMap),
-      ),
+        async table =>
+          await this.autoService.entityGenerate(table, inverseRelationMap)
+      )
     );
   }
 
@@ -114,7 +114,7 @@ export class MetadataSyncService {
 
     try {
       this.logger.debug(
-        `🔄 Initiating sync: ${syncId} (instance: ${instanceId})`,
+        `🔄 Initiating sync: ${syncId} (instance: ${instanceId})`
       );
 
       // 1. Set as latest sync in Redis with TTL
@@ -122,12 +122,12 @@ export class MetadataSyncService {
         await this.redisLockService.set(
           SCHEMA_SYNC_LATEST_KEY,
           syncId,
-          SCHEMA_SYNC_LATEST_TTL * 1000,
+          SCHEMA_SYNC_LATEST_TTL * 1000
         );
       } catch (redisError) {
         this.logger.error(
           `❌ Redis set failed for sync ${syncId}:`,
-          redisError.message,
+          redisError instanceof Error ? redisError.message : String(redisError)
         );
         return { status: 'error', reason: 'redis_set_failed' };
       }
@@ -135,7 +135,7 @@ export class MetadataSyncService {
       // 2. Try to acquire Redis processing lock with retry mechanism
       for (let attempt = 1; attempt <= SCHEMA_SYNC_MAX_RETRIES; attempt++) {
         this.logger.debug(
-          `🔒 Attempting to acquire processing lock (attempt ${attempt}/${SCHEMA_SYNC_MAX_RETRIES}): ${syncId}`,
+          `🔒 Attempting to acquire processing lock (attempt ${attempt}/${SCHEMA_SYNC_MAX_RETRIES}): ${syncId}`
         );
 
         let lockAcquired: boolean;
@@ -143,12 +143,12 @@ export class MetadataSyncService {
           lockAcquired = await this.redisLockService.acquire(
             SCHEMA_SYNC_PROCESSING_LOCK_KEY,
             syncId,
-            SCHEMA_SYNC_LOCK_TTL,
+            SCHEMA_SYNC_LOCK_TTL
           );
         } catch (lockError) {
           this.logger.error(
             `❌ Redis lock acquisition failed for sync ${syncId}:`,
-            lockError.message,
+            lockError instanceof Error ? lockError.message : String(lockError)
           );
           return { status: 'error', reason: 'redis_lock_failed' };
         }
@@ -161,18 +161,20 @@ export class MetadataSyncService {
             let currentLatest: string | null;
             try {
               currentLatest = await this.redisLockService.get(
-                SCHEMA_SYNC_LATEST_KEY,
+                SCHEMA_SYNC_LATEST_KEY
               );
             } catch (redisError) {
               this.logger.error(
                 `❌ Redis get failed for sync ${syncId}:`,
-                redisError.message,
+                redisError instanceof Error
+                  ? redisError.message
+                  : String(redisError)
               );
               return { status: 'error', reason: 'redis_get_failed' };
             }
             if (currentLatest !== syncId) {
               this.logger.debug(
-                `⏩ No longer latest sync, exiting: ${syncId} (current: ${currentLatest})`,
+                `⏩ No longer latest sync, exiting: ${syncId} (current: ${currentLatest})`
               );
               return { status: 'skipped', reason: 'newer_sync_exists' };
             }
@@ -188,13 +190,15 @@ export class MetadataSyncService {
             try {
               await this.redisLockService.release(
                 SCHEMA_SYNC_PROCESSING_LOCK_KEY,
-                syncId,
+                syncId
               );
               this.logger.debug(`🔓 Processing lock released: ${syncId}`);
             } catch (lockReleaseError) {
               this.logger.error(
                 'Failed to release processing lock:',
-                lockReleaseError.message,
+                lockReleaseError instanceof Error
+                  ? lockReleaseError.message
+                  : String(lockReleaseError)
               );
             }
           }
@@ -203,18 +207,20 @@ export class MetadataSyncService {
           let currentLatest: string | null;
           try {
             currentLatest = await this.redisLockService.get(
-              SCHEMA_SYNC_LATEST_KEY,
+              SCHEMA_SYNC_LATEST_KEY
             );
           } catch (redisError) {
             this.logger.error(
               `❌ Redis get failed during retry for sync ${syncId}:`,
-              redisError.message,
+              redisError instanceof Error
+                ? redisError.message
+                : String(redisError)
             );
             return { status: 'error', reason: 'redis_get_failed' };
           }
           if (currentLatest !== syncId) {
             this.logger.debug(
-              `⏩ No longer latest sync, stopping retries: ${syncId} (current: ${currentLatest})`,
+              `⏩ No longer latest sync, stopping retries: ${syncId} (current: ${currentLatest})`
             );
             return { status: 'skipped', reason: 'newer_sync_exists' };
           }
@@ -222,10 +228,10 @@ export class MetadataSyncService {
           // 6. Still latest, wait before retry (unless it's the last attempt)
           if (attempt < SCHEMA_SYNC_MAX_RETRIES) {
             this.logger.debug(
-              `⏸️ DB lock busy, waiting ${SCHEMA_SYNC_RETRY_DELAY}ms before retry: ${syncId}`,
+              `⏸️ DB lock busy, waiting ${SCHEMA_SYNC_RETRY_DELAY}ms before retry: ${syncId}`
             );
-            await new Promise((resolve) =>
-              setTimeout(resolve, SCHEMA_SYNC_RETRY_DELAY),
+            await new Promise(resolve =>
+              setTimeout(resolve, SCHEMA_SYNC_RETRY_DELAY)
             );
           }
         }
@@ -238,7 +244,9 @@ export class MetadataSyncService {
       // Catch any other unexpected errors to prevent crashes
       this.logger.error(
         `💥 Unexpected error in syncAll for sync ${syncId}:`,
-        unexpectedError.message,
+        unexpectedError instanceof Error
+          ? unexpectedError.message
+          : String(unexpectedError)
       );
       return { status: 'error', reason: 'unexpected_error' };
     }
@@ -261,7 +269,7 @@ export class MetadataSyncService {
       ]);
       timings.step1 = Date.now() - step1Start;
       this.logger.debug(
-        `Step 1 (Pull metadata + Clear migrations): ${timings.step1}ms`,
+        `Step 1 (Pull metadata + Clear migrations): ${timings.step1}ms`
       );
 
       // Step 2: Build JS entities (needs pulled metadata)
@@ -281,7 +289,7 @@ export class MetadataSyncService {
         timings.generateMigration = Date.now() - migrationStart;
       } else {
         this.logger.debug(
-          'Skipping migration generation for restore operation',
+          'Skipping migration generation for restore operation'
         );
         timings.generateMigration = 0;
       }
@@ -327,12 +335,12 @@ export class MetadataSyncService {
         'Schema synchronization failed, initiating restore',
         {
           context: 'syncAll',
-          error: err.message,
-          stack: err.stack,
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
           entityName: options?.entityName,
           operationType: options?.type,
           fromRestore: options?.fromRestore,
-        },
+        }
       );
 
       try {
@@ -344,21 +352,24 @@ export class MetadataSyncService {
       } catch (restoreError) {
         this.loggingService.error('Schema restore also failed', {
           context: 'syncAll.restore',
-          error: restoreError.message,
-          stack: restoreError.stack,
-          originalError: err.message,
+          error:
+            restoreError instanceof Error
+              ? restoreError.message
+              : String(restoreError),
+          stack: restoreError instanceof Error ? restoreError.stack : undefined,
+          originalError: err instanceof Error ? err.message : String(err),
         });
       }
 
       // Log warning instead of throwing to prevent app crash in async context
       this.logger.warn(
-        `⚠️ Schema synchronization failed but was restored: ${err.message || 'Please check your table schema'}`,
+        `⚠️ Schema synchronization failed but was restored: ${err instanceof Error ? err.message : 'Please check your table schema'}`,
         {
           entityName: options?.entityName,
           operationType: options?.type,
-          originalError: err.message,
+          originalError: err instanceof Error ? err.message : String(err),
           restored: true,
-        },
+        }
       );
     }
   }

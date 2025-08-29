@@ -6,7 +6,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 export const createDataSource: (entities: any[]) => DataSource = (
-  entities: any[],
+  entities: any[]
 ) => {
   const dbType = process.env.DB_TYPE as 'mysql' | 'mariadb' | 'postgres';
 
@@ -45,7 +45,7 @@ export const createDataSource: (entities: any[]) => DataSource = (
       extra: {
         max: parseInt(process.env.DB_CONNECTION_LIMIT || '100'),
         connectionTimeoutMillis: parseInt(
-          process.env.DB_ACQUIRE_TIMEOUT || '60000',
+          process.env.DB_ACQUIRE_TIMEOUT || '60000'
         ),
         idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
       },

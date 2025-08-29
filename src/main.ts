@@ -56,17 +56,17 @@ async function bootstrap() {
         'Authorization',
         'x-apollo-operation-name',
       ],
-    }),
+    })
   );
   app.use(express.json());
 
-  expressApp.set('query parser', (str) => qs.parse(str, { depth: 10 }));
+  expressApp.set('query parser', (str: string) => qs.parse(str, { depth: 10 }));
 
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
       whitelist: true,
-    }),
+    })
   );
 
   // Initialize app (triggers onApplicationBootstrap)

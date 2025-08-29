@@ -10,7 +10,7 @@ export class SchemaHistoryService {
   constructor(
     @Inject(forwardRef(() => MetadataSyncService))
     private readonly metadataSyncService: MetadataSyncService,
-    private dataSourceService: DataSourceService,
+    private dataSourceService: DataSourceService
   ) {}
 
   async backup() {
@@ -30,29 +30,31 @@ export class SchemaHistoryService {
       order: { createdAt: 'DESC' },
     });
     // Normalize tables by removing timestamps and sorting
-    const normalizedTables = tables.map((table: any) => ({
-      ...table,
-      createdAt: undefined,
-      updatedAt: undefined,
-      columns: table.columns?.map((col: any) => ({
-        ...col,
+    const normalizedTables = tables
+      .map((table: any) => ({
+        ...table,
         createdAt: undefined,
-        updatedAt: undefined
-      })).sort((a: any, b: any) => a.id - b.id),
-      relations: table.relations?.map((rel: any) => ({
-        ...rel,
-        createdAt: undefined,
-        updatedAt: undefined
-      })).sort((a: any, b: any) => a.id - b.id)
-    })).sort((a: any, b: any) => a.id - b.id);
-    
+        updatedAt: undefined,
+        columns: table.columns
+          ?.map((col: any) => ({
+            ...col,
+            createdAt: undefined,
+            updatedAt: undefined,
+          }))
+          .sort((a: any, b: any) => a.id - b.id),
+        relations: table.relations
+          ?.map((rel: any) => ({
+            ...rel,
+            createdAt: undefined,
+            updatedAt: undefined,
+          }))
+          .sort((a: any, b: any) => a.id - b.id),
+      }))
+      .sort((a: any, b: any) => a.id - b.id);
+
     const tableJson = JSON.stringify(normalizedTables);
-    const hash = crypto
-      .createHash('sha256')
-      .update(tableJson)
-      .digest('hex');
-      
-    
+    const hash = crypto.createHash('sha256').update(tableJson).digest('hex');
+
     if (hash === oldestSchema?.hash) {
       this.logger.debug(`Schema unchanged, skipping backup`);
       return oldestSchema.id;
@@ -65,7 +67,9 @@ export class SchemaHistoryService {
       });
       if (oldestRecord) {
         await schemaHistoryRepo.delete(oldestRecord.id);
-        this.logger.debug(`Cleaned up old schema history record: ${oldestRecord.id}`);
+        this.logger.debug(
+          `Cleaned up old schema history record: ${oldestRecord.id}`
+        );
       }
     }
 
@@ -92,12 +96,14 @@ export class SchemaHistoryService {
       await tableDefRepo.save(oldest.schema);
       this.logger.warn('⚠️ Đã khôi phục metadata từ schema_history');
       // Fire & forget syncAll
-      this.metadataSyncService.syncAll({
-        fromRestore: true,
-        type: options?.type,
-      }).catch(error => {
-        this.logger.error('Restore syncAll failed:', error.message);
-      });
+      this.metadataSyncService
+        .syncAll({
+          fromRestore: true,
+          type: options?.type,
+        })
+        .catch(error => {
+          this.logger.error('Restore syncAll failed:', error.message);
+        });
     } else {
       this.logger.warn('⚠️ Không có bản backup schema nào để khôi phục');
     }

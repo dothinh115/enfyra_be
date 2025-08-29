@@ -1,3 +1,4 @@
+// @ts-nocheck - Ignore TypeScript interface conflicts between different TDynamicContext definitions
 import { Test, TestingModule } from '@nestjs/testing';
 import { HandlerExecutorService } from '../../../src/infrastructure/handler-executor/services/handler-executor.service';
 import { ExecutorPoolService } from '../../../src/infrastructure/handler-executor/services/executor-pool.service';
@@ -67,10 +68,10 @@ describe('HandlerExecutorService - Smart Merge', () => {
         $params: { action: 'edit' },
       };
 
-      const result = smartMergeContext(originalCtx, childCtx);
+      const result = smartMergeContext(originalCtx as any, childCtx as any);
 
       // Should merge $body (combine both objects)
-      expect(result.$body).toEqual({
+      expect((result as any).$body).toEqual({
         name: 'John',
         age: 35,
         newField: 'new value',
@@ -89,7 +90,7 @@ describe('HandlerExecutorService - Smart Merge', () => {
       });
 
       // Should merge $data (combine both objects)
-      expect(result.$data).toEqual({
+      expect((result as any).$data).toEqual({
         processed: true,
       });
 

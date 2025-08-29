@@ -61,6 +61,19 @@ export class DynamicRepository {
     });
   }
 
+  async findOne(id: string | number) {
+    const result = await this.find({ where: { id: { _eq: id } } });
+    return result?.data?.[0] || null;
+  }
+
+  async count(opt?: { where?: any }) {
+    const result = await this.queryEngine.count({
+      tableName: this.tableName,
+      filter: opt?.where || this.context.$query?.filter || {},
+    });
+    return result || 0;
+  }
+
   async create(body: any) {
     try {
       await this.systemProtectionService.assertSystemSafe({
@@ -85,7 +98,9 @@ export class DynamicRepository {
     } catch (error) {
       console.error('❌ Error in dynamic repo [create]:', error);
 
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }
 
@@ -106,25 +121,23 @@ export class DynamicRepository {
       if (this.tableName === 'table_definition') {
         const table: any = await this.tableHandlerService.updateTable(
           +id,
-          body,
+          body
         );
         return this.find({ where: { id: { _eq: table.id } } });
       }
 
       body.id = exists.id;
 
-      try {
-        await this.repo.save(body);
-      } catch (dbError) {
-        throw dbError;
-      }
+      await this.repo.save(body);
 
       const result = await this.find({ where: { id: { _eq: id } } });
       await this.reload();
       return result;
     } catch (error) {
       console.error('❌ Error in dynamic repo [update]:', error);
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }
 
@@ -147,17 +160,16 @@ export class DynamicRepository {
         return { message: 'Success', statusCode: 200 };
       }
 
-      try {
-        await this.repo.delete(id);
-      } catch (dbError) {
-        throw dbError;
-      }
+      // Direct database operation - no need for try-catch wrapper
+      await this.repo.delete(id);
 
       await this.reload();
       return { message: 'Delete successfully!', statusCode: 200 };
     } catch (error) {
       console.error('❌ Error in dynamic repo [delete]:', error);
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }
 

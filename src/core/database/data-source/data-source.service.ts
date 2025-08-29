@@ -22,11 +22,12 @@ const entityDir = path.resolve('dist', 'src', 'core', 'database', 'entities');
 export class DataSourceService implements OnModuleInit {
   private dataSource: DataSource;
   private logger = new Logger(DataSourceService.name);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   entityClassMap: Map<string, Function> = new Map();
 
   constructor(
     private commonService: CommonService,
-    private loggingService: LoggingService,
+    private loggingService: LoggingService
   ) {}
 
   async onModuleInit() {
@@ -49,11 +50,12 @@ export class DataSourceService implements OnModuleInit {
 
       // Swap immediately - ZERO downtime!
       this.dataSource = newDataSource;
-      
+
       // Update entity class map
       this.entityClassMap.clear();
-      entities.forEach((entityClass) => {
+      entities.forEach((entityClass: any) => {
         const name = this.getTableNameFromEntity(entityClass);
+
         this.entityClassMap.set(name, entityClass);
       });
 
@@ -93,13 +95,14 @@ export class DataSourceService implements OnModuleInit {
         {
           entityDir: entityDir,
           operation: 'reload-datasource',
-        },
+        }
       );
     }
   }
 
   getRepository<Entity>(
-    identifier: string | Function | EntitySchema<any>,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+    identifier: string | Function | EntitySchema<any>
   ): Repository<Entity> | null {
     if (!this.dataSource?.isInitialized) {
       this.loggingService.error('DataSource not initialized', {
@@ -109,12 +112,12 @@ export class DataSourceService implements OnModuleInit {
       throw new DatabaseException('DataSource is not initialized');
     }
 
-    let metadata;
+    let metadata: any;
 
     if (typeof identifier === 'string') {
       // Find by table name
       metadata = this.dataSource.entityMetadatas.find(
-        (meta) => meta.tableName === identifier,
+        meta => meta.tableName === identifier
       );
     } else {
       try {
@@ -135,13 +138,15 @@ export class DataSourceService implements OnModuleInit {
     return this.dataSource;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   getEntityClassByTableName(tableName: string): Function | undefined {
     const entityMetadata = this.dataSource.entityMetadatas.find(
-      (meta) =>
+      meta =>
         meta.tableName.toLowerCase() === tableName.toLowerCase() ||
-        meta.givenTableName?.toLowerCase() === tableName.toLowerCase(),
+        meta.givenTableName?.toLowerCase() === tableName.toLowerCase()
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
     return entityMetadata?.target as Function | undefined;
   }
 

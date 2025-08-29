@@ -17,7 +17,7 @@ export class RedisPubSubService implements OnModuleInit, OnModuleDestroy {
     private configService: ConfigService,
     private redisService: RedisService,
     @Inject(forwardRef(() => SchemaReloadService))
-    private schemaReloadService: SchemaReloadService,
+    private schemaReloadService: SchemaReloadService
   ) {}
 
   private pub: Redis;
@@ -29,7 +29,7 @@ export class RedisPubSubService implements OnModuleInit, OnModuleDestroy {
 
       if (!this.pub) {
         throw new Error(
-          'Redis connection not available - getOrNil() returned null',
+          'Redis connection not available - getOrNil() returned null'
         );
       }
 
@@ -43,17 +43,19 @@ export class RedisPubSubService implements OnModuleInit, OnModuleDestroy {
       this.sub.on(
         'message',
         async (channel, message) =>
-          await this.schemaReloadService.subscribe(message),
+          await this.schemaReloadService.subscribe(message)
       );
 
       console.log('[RedisPubSub] ✅ Service initialized successfully');
     } catch (error) {
       console.error(
         '[RedisPubSub] ❌ Failed to initialize Redis connections:',
-        error,
+        error
       );
       // ✅ FAIL FAST: Throw error để server không start
-      throw new Error(`RedisPubSub initialization failed: ${error.message}`);
+      throw new Error(
+        `RedisPubSub initialization failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

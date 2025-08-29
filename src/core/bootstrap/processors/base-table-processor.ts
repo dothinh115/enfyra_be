@@ -38,21 +38,27 @@ export abstract class BaseTableProcessor {
   /**
    * Process upsert for all records
    */
-  async process(records: any[], repo: Repository<any>, context?: any): Promise<UpsertResult> {
+  async process(
+    records: any[],
+    repo: Repository<any>,
+    context?: any
+  ): Promise<UpsertResult> {
     if (!records || records.length === 0) {
       return { created: 0, skipped: 0 };
     }
 
     // Transform records if needed
     const transformedRecords = await this.transformRecords(records, context);
-    
+
     let createdCount = 0;
     let skippedCount = 0;
 
     for (const record of transformedRecords) {
       try {
         const uniqueWhere = this.getUniqueIdentifier(record);
-        const whereConditions = Array.isArray(uniqueWhere) ? uniqueWhere : [uniqueWhere];
+        const whereConditions = Array.isArray(uniqueWhere)
+          ? uniqueWhere
+          : [uniqueWhere];
 
         // Try to find existing record
         let existingRecord = null;
@@ -60,12 +66,16 @@ export abstract class BaseTableProcessor {
           // Remove many-to-many fields from where condition to avoid query errors
           const cleanedCondition = { ...whereCondition };
           for (const key in cleanedCondition) {
-            if (Array.isArray(cleanedCondition[key]) && cleanedCondition[key].length > 0 && typeof cleanedCondition[key][0] === 'object') {
+            if (
+              Array.isArray(cleanedCondition[key]) &&
+              cleanedCondition[key].length > 0 &&
+              typeof cleanedCondition[key][0] === 'object'
+            ) {
               // This looks like a many-to-many relation, remove it
               delete cleanedCondition[key];
             }
           }
-          
+
           existingRecord = await repo.findOne({ where: cleanedCondition });
           if (existingRecord) break;
         }
@@ -91,7 +101,9 @@ export abstract class BaseTableProcessor {
           this.logger.log(`   ✅ Created: ${identifier}`);
         }
       } catch (error) {
-        this.logger.error(`❌ Error processing record: ${error.message}`);
+        this.logger.error(
+          `❌ Error processing record: ${error instanceof Error ? error.message : String(error)}`
+        );
         this.logger.debug(`Record: ${JSON.stringify(record)}`);
       }
     }
@@ -118,38 +130,46 @@ export abstract class BaseTableProcessor {
     if (newValue === undefined && existingValue === undefined) return false;
     if (newValue === null || existingValue === null) return true;
     if (newValue === undefined || existingValue === undefined) return true;
-    
+
     if (typeof newValue === 'object' && typeof existingValue === 'object') {
       return JSON.stringify(newValue) !== JSON.stringify(existingValue);
     }
-    
+
     return newValue !== existingValue;
   }
 
-  protected async updateRecord(existingId: any, record: any, repo: Repository<any>): Promise<void> {
+  protected async updateRecord(
+    existingId: any,
+    record: any,
+    repo: Repository<any>
+  ): Promise<void> {
     // Separate many-to-many fields from regular fields
     const regularFields: any = {};
     const manyToManyFields: any = {};
-    
+
     for (const key in record) {
-      if (Array.isArray(record[key]) && record[key].length > 0 && typeof record[key][0] === 'object') {
+      if (
+        Array.isArray(record[key]) &&
+        record[key].length > 0 &&
+        typeof record[key][0] === 'object'
+      ) {
         // This looks like a many-to-many relation
         manyToManyFields[key] = record[key];
       } else {
         regularFields[key] = record[key];
       }
     }
-    
+
     // Update regular fields first
     if (Object.keys(regularFields).length > 0) {
       await repo.update(existingId, regularFields);
     }
-    
+
     // Then handle many-to-many relations using save
     if (Object.keys(manyToManyFields).length > 0) {
       await repo.save({
         id: existingId,
-        ...manyToManyFields
+        ...manyToManyFields,
       });
     }
   }

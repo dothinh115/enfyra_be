@@ -3,7 +3,7 @@ import { TDynamicContext } from '../../../shared/interfaces/dynamic-context.inte
 
 export function smartMergeContext(
   originalCtx: TDynamicContext,
-  childCtx: any,
+  childCtx: any
 ): TDynamicContext {
   const mergedCtx = { ...originalCtx };
 

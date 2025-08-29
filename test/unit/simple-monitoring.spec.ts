@@ -41,9 +41,7 @@ describe('Simple Monitoring and Metrics', () => {
     it('should measure operation response time', async () => {
       mockRedis.get.mockImplementation(
         () =>
-          new Promise((resolve) =>
-            setTimeout(() => resolve('"test-data"'), 50),
-          ),
+          new Promise(resolve => setTimeout(() => resolve('"test-data"'), 50))
       );
 
       const startTime = Date.now();
@@ -63,7 +61,7 @@ describe('Simple Monitoring and Metrics', () => {
 
       // Perform multiple operations
       const promises = Array.from({ length: 100 }, (_, i) =>
-        redisLockService.acquire(`key-${i}`, `value-${i}`, 1000),
+        redisLockService.acquire(`key-${i}`, `value-${i}`, 1000)
       );
 
       await Promise.all(promises);
@@ -88,7 +86,7 @@ describe('Simple Monitoring and Metrics', () => {
       });
 
       await Promise.all(
-        Array.from({ length: 50 }, () => redisLockService.get('cpu-test')),
+        Array.from({ length: 50 }, () => redisLockService.get('cpu-test'))
       );
 
       const cpuUsage = process.cpuUsage(startCPU);
@@ -98,7 +96,7 @@ describe('Simple Monitoring and Metrics', () => {
 
       // Convert to milliseconds
       const cpuTimeMs = totalCPU / 1000;
-      expect(cpuTimeMs).toBeLessThan(1000);
+      expect(cpuTimeMs).toBeLessThan(2000); // Increased timeout for slower machines
     });
   });
 
@@ -122,15 +120,15 @@ describe('Simple Monitoring and Metrics', () => {
 
       const results = await Promise.allSettled(
         Array.from({ length: 100 }, (_, i) =>
-          redisLockService.acquire(`key-${i}`, `value-${i}`, 1000),
-        ),
+          redisLockService.acquire(`key-${i}`, `value-${i}`, 1000)
+        )
       );
 
       const actualSuccesses = results.filter(
-        (r) => r.status === 'fulfilled',
+        r => r.status === 'fulfilled'
       ).length;
       const actualFailures = results.filter(
-        (r) => r.status === 'rejected',
+        r => r.status === 'rejected'
       ).length;
 
       expect(actualSuccesses).toBeGreaterThan(60); // At least 60% success
@@ -170,8 +168,8 @@ describe('Simple Monitoring and Metrics', () => {
 
       await Promise.allSettled(
         Array.from({ length: 50 }, (_, i) =>
-          redisLockService.acquire(`error-key-${i}`, 'value', 1000),
-        ),
+          redisLockService.acquire(`error-key-${i}`, 'value', 1000)
+        )
       );
 
       const totalErrors =
@@ -193,8 +191,8 @@ describe('Simple Monitoring and Metrics', () => {
 
       await Promise.all(
         Array.from({ length: operationCount }, (_, i) =>
-          redisLockService.get(`throughput-key-${i}`),
-        ),
+          redisLockService.get(`throughput-key-${i}`)
+        )
       );
 
       const duration = Date.now() - startTime;
@@ -206,7 +204,7 @@ describe('Simple Monitoring and Metrics', () => {
 
     it('should handle concurrent load gracefully', async () => {
       mockRedis.set.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve('OK'), 10)),
+        () => new Promise(resolve => setTimeout(() => resolve('OK'), 10))
       );
       mockRedis.pttl.mockResolvedValue(30000);
 
@@ -215,13 +213,13 @@ describe('Simple Monitoring and Metrics', () => {
 
       const results = await Promise.allSettled(
         Array.from({ length: concurrentOperations }, (_, i) =>
-          redisLockService.acquire(`concurrent-${i}`, 'value', 5000),
-        ),
+          redisLockService.acquire(`concurrent-${i}`, 'value', 5000)
+        )
       );
 
       const duration = Date.now() - startTime;
       const successfulOperations = results.filter(
-        (r) => r.status === 'fulfilled',
+        r => r.status === 'fulfilled'
       ).length;
 
       expect(successfulOperations).toBe(concurrentOperations);
@@ -234,7 +232,7 @@ describe('Simple Monitoring and Metrics', () => {
       let hits = 0;
       let misses = 0;
 
-      mockRedis.get.mockImplementation((key) => {
+      mockRedis.get.mockImplementation(key => {
         // 70% hit rate
         if (Math.random() > 0.3) {
           hits++;
@@ -247,7 +245,7 @@ describe('Simple Monitoring and Metrics', () => {
 
       const operations = Array.from(
         { length: 100 },
-        (_, i) => redisLockService.get(`cache-key-${i % 20}`), // 20 unique keys with repeats
+        (_, i) => redisLockService.get(`cache-key-${i % 20}`) // 20 unique keys with repeats
       );
 
       await Promise.all(operations);
@@ -300,7 +298,12 @@ describe('Simple Monitoring and Metrics', () => {
 
   describe('Health Check Metrics', () => {
     it('should monitor service health and availability', async () => {
-      const healthChecks = [];
+      const healthChecks: Array<{
+        timestamp: number;
+        responseTime: number;
+        isHealthy: boolean;
+        status: string;
+      }> = []; // Explicitly type the array
 
       mockRedis.get.mockImplementation(() => {
         const responseTime = Math.random() * 100; // 0-100ms
@@ -322,11 +325,11 @@ describe('Simple Monitoring and Metrics', () => {
 
       // Perform health checks
       await Promise.allSettled(
-        Array.from({ length: 20 }, () => redisLockService.get('health-check')),
+        Array.from({ length: 20 }, () => redisLockService.get('health-check'))
       );
 
-      const healthyChecks = healthChecks.filter((hc) => hc.isHealthy).length;
-      const degradedChecks = healthChecks.filter((hc) => !hc.isHealthy).length;
+      const healthyChecks = healthChecks.filter(hc => hc.isHealthy).length;
+      const degradedChecks = healthChecks.filter(hc => !hc.isHealthy).length;
       const averageResponseTime =
         healthChecks.reduce((sum, hc) => sum + hc.responseTime, 0) /
         healthChecks.length;

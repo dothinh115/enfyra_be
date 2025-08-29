@@ -18,6 +18,7 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true,
+    "strict": true
   },
   "include": ["src/**/*", "scripts/init-db.ts"],
   "exclude": ["node_modules", "dist", "build-entities.ts"] // Luôn loại trừ các thư mục này

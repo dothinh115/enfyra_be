@@ -26,7 +26,7 @@ export class FileUploadMiddleware implements NestMiddleware {
     const isFileDefinitionRoute = actualPath.includes('/file_definition');
     const isPostOrPatch = ['POST', 'PATCH'].includes(req.method);
     const isMultipartContent = req.headers['content-type']?.includes(
-      'multipart/form-data',
+      'multipart/form-data'
     );
 
     if (!isFileDefinitionRoute || !isPostOrPatch || !isMultipartContent) {
@@ -94,7 +94,7 @@ export class FileUploadMiddleware implements NestMiddleware {
 
   private detectEncodingCorruption(str: string): boolean {
     const corruptionPatterns = [/áº/, /Ã/, /[^\x00-\x7F]/];
-    return corruptionPatterns.some((pattern) => pattern.test(str));
+    return corruptionPatterns.some(pattern => pattern.test(str));
   }
 
   private isValidVietnameseString(str: string): boolean {
@@ -107,7 +107,7 @@ export class FileUploadMiddleware implements NestMiddleware {
       /[ỳýỷỹỵ]/,
       /[đĐ]/,
     ];
-    return vietnameseRanges.some((range) => range.test(str));
+    return vietnameseRanges.some(range => range.test(str));
   }
 
   private fixCharacterCorruptions(str: string): string {

@@ -156,7 +156,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     exception: unknown,
     request: Request,
     correlationId: string,
-    statusCode: number,
+    statusCode: number
   ): void {
     const logData = {
       correlationId,
@@ -197,7 +197,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   private handleGraphQLError(
     exception: unknown,
     host: ArgumentsHost,
-    correlationId: string,
+    correlationId: string
   ): void {
     // GraphQL errors are handled by the GraphQL context
     // This method can be extended if needed

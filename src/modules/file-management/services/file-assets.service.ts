@@ -9,7 +9,7 @@ import { Response } from 'express';
 import { RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as sharp from 'sharp';
+import sharp from 'sharp';
 
 @Injectable()
 export class FileAssetsService {
@@ -17,7 +17,7 @@ export class FileAssetsService {
 
   constructor(
     private dataSourceService: DataSourceService,
-    private fileManagementService: FileManagementService,
+    private fileManagementService: FileManagementService
   ) {}
 
   async streamFile(req: RequestWithRouteData, res: Response): Promise<void> {
@@ -48,7 +48,7 @@ export class FileAssetsService {
 
     const location = (file as any).location;
     const filePath = this.fileManagementService.getFilePath(
-      path.basename(location),
+      path.basename(location)
     );
 
     if (!(await this.fileExists(filePath))) {
@@ -83,7 +83,7 @@ export class FileAssetsService {
     filePath: string,
     req: RequestWithRouteData,
     res: Response,
-    filename: string,
+    filename: string
   ): Promise<void> {
     try {
       const query = req.routeData?.context?.$query || req.query;
@@ -141,7 +141,7 @@ export class FileAssetsService {
         imageProcessor = this.setImageFormat(
           imageProcessor,
           format.toLowerCase(),
-          quality,
+          quality
         );
       } else if (quality) {
         // Nếu chỉ có quality mà không có format, sử dụng format gốc
@@ -149,7 +149,7 @@ export class FileAssetsService {
         imageProcessor = this.setImageFormat(
           imageProcessor,
           originalFormat,
-          quality,
+          quality
         );
       }
 
@@ -178,7 +178,7 @@ export class FileAssetsService {
   private setImageFormat(
     imageProcessor: sharp.Sharp,
     format: string,
-    quality?: number,
+    quality?: number
   ): sharp.Sharp {
     switch (format) {
       case 'jpeg':
@@ -201,7 +201,7 @@ export class FileAssetsService {
     filePath: string,
     res: Response,
     filename: string,
-    mimetype: string,
+    mimetype: string
   ): Promise<void> {
     const stats = await fs.promises.stat(filePath);
 
@@ -211,7 +211,7 @@ export class FileAssetsService {
 
     const fileStream = fs.createReadStream(filePath);
 
-    fileStream.on('error', (error) => {
+    fileStream.on('error', error => {
       this.logger.error(`Error streaming file:`, error);
       if (!res.headersSent) {
         res.status(500).json({ error: 'Error streaming file' });
@@ -250,7 +250,7 @@ export class FileAssetsService {
 
   private async checkFilePermissions(
     file: any,
-    req: RequestWithRouteData,
+    req: RequestWithRouteData
   ): Promise<void> {
     // 1. Nếu file.isPublished = true -> bypass permission
     if (file.isPublished === true) {
@@ -263,7 +263,7 @@ export class FileAssetsService {
     if (!user?.id) {
       this.logger.log('User not logged in, file not published');
       throw new AuthenticationException(
-        'Authentication required to access this file',
+        'Authentication required to access this file'
       );
     }
 
@@ -280,14 +280,14 @@ export class FileAssetsService {
 
       if (permission.allowedUsers?.id === user.id) {
         this.logger.log(
-          `User ${user.id} found in allowedUsers, granting access`,
+          `User ${user.id} found in allowedUsers, granting access`
         );
         return true;
       }
 
       if (permission.role && user.role?.id === permission.role.id) {
         this.logger.log(
-          `User ${user.id} has role ${permission.role.name}, granting access`,
+          `User ${user.id} has role ${permission.role.name}, granting access`
         );
         return true;
       }

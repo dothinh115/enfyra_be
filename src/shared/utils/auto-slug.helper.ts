@@ -45,10 +45,19 @@ export function autoSlug(
   slug = slug
     .replace(/[^a-zA-Z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
     .replace(/\s+/g, separator) // Replace spaces with separator
-    .replace(new RegExp(`${separator}+`, 'g'), separator); // Replace multiple separators with single
+    .replace(
+      new RegExp(`${separator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}+`, 'g'),
+      separator
+    ); // Replace multiple separators with single
 
   if (trim) {
-    slug = slug.replace(new RegExp(`^${separator}+|${separator}+$`, 'g'), '');
+    slug = slug.replace(
+      new RegExp(
+        `^${separator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}+|${separator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}+$`,
+        'g'
+      ),
+      ''
+    );
   }
 
   // Limit length
@@ -72,19 +81,19 @@ export function generateUniqueSlug(
   existingSlugs: string[] = []
 ): string {
   const baseSlug = autoSlug(input);
-  
+
   if (!existingSlugs.includes(baseSlug)) {
     return baseSlug;
   }
 
   let counter = 1;
   let uniqueSlug = `${baseSlug}-${counter}`;
-  
+
   while (existingSlugs.includes(uniqueSlug)) {
     counter++;
     uniqueSlug = `${baseSlug}-${counter}`;
   }
-  
+
   return uniqueSlug;
 }
 

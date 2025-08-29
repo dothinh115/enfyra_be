@@ -13,7 +13,7 @@ export class ChildProcessManager {
     timeoutMs: number,
     code: string,
     isDone: { value: boolean },
-    reject: (error: any) => void,
+    reject: (error: any) => void
   ): NodeJS.Timeout {
     return setTimeout(async () => {
       if (isDone.value) return;
@@ -36,7 +36,7 @@ export class ChildProcessManager {
     isDone: { value: boolean },
     resolve: (value: any) => void,
     reject: (error: any) => void,
-    code: string,
+    code: string
   ): void {
     child.on('message', async (msg: any) => {
       if (isDone.value) return;
@@ -47,7 +47,7 @@ export class ChildProcessManager {
             msg.path,
             undefined,
             msg.args[0],
-            code,
+            code
           );
           reject(error);
         }
@@ -66,7 +66,7 @@ export class ChildProcessManager {
             type: 'call_result',
             callId: msg.callId,
             error: true,
-            errorResponse: err.response,
+            errorResponse: (err as any).response,
           });
         }
       }
@@ -96,7 +96,7 @@ export class ChildProcessManager {
           {
             statusCode: msg.error.statusCode,
             stack: msg.error.stack,
-          },
+          }
         );
 
         ErrorHandler.handleChildError(
@@ -112,7 +112,7 @@ export class ChildProcessManager {
           {
             statusCode: msg.error.statusCode,
             stack: msg.error.stack,
-          },
+          }
         );
       }
     });
@@ -123,7 +123,7 @@ export class ChildProcessManager {
         undefined,
         `Child process exited with code ${exitCode}, signal ${signal}`,
         code,
-        { exitCode, signal },
+        { exitCode, signal }
       );
 
       ErrorHandler.handleChildError(
@@ -136,7 +136,7 @@ export class ChildProcessManager {
         `Child process exited with code ${exitCode}, signal ${signal}`,
         code,
         reject,
-        { exitCode, signal },
+        { exitCode, signal }
       );
     });
 
@@ -146,7 +146,7 @@ export class ChildProcessManager {
         undefined,
         `Child process error: ${err?.message || err}`,
         code,
-        { originalError: err },
+        { originalError: err }
       );
 
       ErrorHandler.handleChildError(
@@ -159,7 +159,7 @@ export class ChildProcessManager {
         err?.message || err,
         code,
         reject,
-        { originalError: err },
+        { originalError: err }
       );
     });
   }
@@ -167,7 +167,7 @@ export class ChildProcessManager {
   static sendExecuteMessage(
     child: any,
     ctx: TDynamicContext,
-    code: string,
+    code: string
   ): void {
     child.send({
       type: 'execute',

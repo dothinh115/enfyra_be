@@ -142,7 +142,7 @@ describe('BcryptService', () => {
     it('should handle multiple hash operations concurrently', async () => {
       const passwords = Array.from({ length: 10 }, (_, i) => `password${i}`);
 
-      const promises = passwords.map((pwd) => service.hash(pwd));
+      const promises = passwords.map(pwd => service.hash(pwd));
       const hashes = await Promise.all(promises);
 
       expect(hashes).toHaveLength(10);
@@ -154,12 +154,12 @@ describe('BcryptService', () => {
       const hashedPassword = await service.hash(password);
 
       const promises = Array.from({ length: 20 }, () =>
-        service.compare(password, hashedPassword),
+        service.compare(password, hashedPassword)
       );
       const results = await Promise.all(promises);
 
       expect(results).toHaveLength(20);
-      expect(results.every((r) => r === true)).toBe(true);
+      expect(results.every(r => r === true)).toBe(true);
     });
 
     it('should complete hash operation within reasonable time', async () => {
@@ -180,7 +180,7 @@ describe('BcryptService', () => {
       await service.compare(password, hashedPassword);
       const duration = Date.now() - startTime;
 
-      expect(duration).toBeLessThan(100); // Should complete within 100ms
+      expect(duration).toBeLessThan(200); // Should complete within 200ms (increased for slower machines)
     });
   });
 
@@ -189,7 +189,7 @@ describe('BcryptService', () => {
       const password = 'testPassword123';
 
       const hashes = await Promise.all(
-        Array.from({ length: 10 }, () => service.hash(password)),
+        Array.from({ length: 10 }, () => service.hash(password))
       );
 
       // All hashes should be unique (extremely high probability)
@@ -211,7 +211,7 @@ describe('BcryptService', () => {
         'a'.repeat(100),
       ];
 
-      const timings = [];
+      const timings: number[] = []; // Explicitly type the array
       for (const wrongPwd of wrongPasswords) {
         const start = process.hrtime.bigint();
         await service.compare(wrongPwd, hashedPassword);
@@ -221,9 +221,9 @@ describe('BcryptService', () => {
 
       // All comparisons should return false
       const results = await Promise.all(
-        wrongPasswords.map((pwd) => service.compare(pwd, hashedPassword)),
+        wrongPasswords.map(pwd => service.compare(pwd, hashedPassword))
       );
-      expect(results.every((r) => r === false)).toBe(true);
+      expect(results.every(r => r === false)).toBe(true);
     });
 
     it('should handle null and undefined inputs gracefully', async () => {

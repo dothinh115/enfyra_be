@@ -9,11 +9,12 @@ export class MethodDefinitionProcessor extends BaseTableProcessor {
   }
 
   async transformRecords(records: any[]): Promise<any[]> {
-    const settingRepo = this.dataSourceService.getRepository('setting_definition');
+    const settingRepo =
+      this.dataSourceService.getRepository('setting_definition');
     const setting = await settingRepo.findOne({ where: {} });
-    
+
     // Setting is optional for methods
-    return records.map((record) => ({
+    return records.map(record => ({
       ...record,
       setting: setting || null,
       isSystem: true,

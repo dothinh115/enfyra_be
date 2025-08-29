@@ -11,10 +11,12 @@ process.on('unhandledRejection', (reason: any) => {
   process.send({
     type: 'error',
     error: {
-      message: reason.errorResponse?.message ?? reason.message,
-      stack: reason.errorResponse?.stack,
-      name: reason.errorResponse?.name,
-      statusCode: reason.errorResponse?.statusCode,
+      message:
+        reason?.errorResponse?.message ??
+        (reason instanceof Error ? reason.message : String(reason)),
+      stack: reason?.errorResponse?.stack,
+      name: reason?.errorResponse?.name,
+      statusCode: reason?.errorResponse?.statusCode,
     },
   });
 });
@@ -52,7 +54,7 @@ process.on('message', async (msg: any) => {
           return (async () => {
             ${msg.code}
           })();
-        `,
+        `
       );
       const result = await asyncFn(ctx);
 
@@ -62,20 +64,23 @@ process.on('message', async (msg: any) => {
         ctx,
       });
     } catch (error) {
-      console.log(error.message);
+      console.log(error instanceof Error ? error.message : String(error));
+      const errorObj = error as any;
       process.send({
         type: 'error',
         error: {
-          message: error.errorResponse?.message ?? error.message,
-          stack: error.errorResponse?.stack,
-          name: error.errorResponse?.name,
-          statusCode: error.errorResponse?.statusCode,
+          message:
+            errorObj?.errorResponse?.message ??
+            (error instanceof Error ? error.message : String(error)),
+          stack: errorObj?.errorResponse?.stack,
+          name: errorObj?.errorResponse?.name,
+          statusCode: errorObj?.errorResponse?.statusCode,
         },
       });
     }
   }
 });
 
-process.on('error', (err) => {
+process.on('error', err => {
   console.log(err);
 });

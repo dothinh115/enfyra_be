@@ -22,23 +22,23 @@ export class AutoService {
   constructor(
     private commonService: CommonService,
     @Inject(forwardRef(() => DataSourceService))
-    private dataSourceService: DataSourceService,
+    private dataSourceService: DataSourceService
   ) {}
 
   async entityGenerate(
     payload: CreateTableDto,
-    inverseRelationMap?: TInverseRelationMap,
+    inverseRelationMap?: TInverseRelationMap
   ) {
     const capitalize = this.commonService.capitalize.bind(this.commonService);
     const dbTypeToTSType = this.commonService.dbTypeToTSType.bind(
-      this.commonService,
+      this.commonService
     );
 
     const className = capitalize(payload.name);
     const entityDir = path.resolve('src', 'core', 'database', 'entities');
     const entityPath = path.resolve(
       entityDir,
-      `${payload.name.toLowerCase()}.entity.ts`,
+      `${payload.name.toLowerCase()}.entity.ts`
     );
     if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
 
@@ -56,9 +56,9 @@ export class AutoService {
     });
 
     // Extract all valid field names from entity definition (columns + relations)
-    const columnFields = payload.columns.map((col) => col.name);
+    const columnFields = payload.columns.map(col => col.name);
     const relationFields = (payload.relations || []).map(
-      (rel) => rel.propertyName,
+      rel => rel.propertyName
     );
     const validEntityFields = [...columnFields, ...relationFields];
 
@@ -72,10 +72,10 @@ export class AutoService {
     ]);
 
     // Transform uniques/indexes from simple-json array format to expected object format
-    const transformedUniques = (payload.uniques || []).map((uniqueArray) => ({
+    const transformedUniques = (payload.uniques || []).map(uniqueArray => ({
       value: uniqueArray as unknown as string[],
     }));
-    const transformedIndexes = (payload.indexes || []).map((indexArray) => ({
+    const transformedIndexes = (payload.indexes || []).map(indexArray => ({
       value: indexArray as unknown as string[],
     }));
 
@@ -150,7 +150,7 @@ export class AutoService {
     }
 
     for (const [moduleSpecifier, namedImports] of Object.entries(
-      groupedImports,
+      groupedImports
     )) {
       sourceFile.addImportDeclaration({ namedImports, moduleSpecifier });
     }
@@ -200,7 +200,7 @@ export class AutoService {
       this.logger.log('✅ Successfully cleared data in migrations table.');
     } else {
       this.logger.warn(
-        '⚠️ Migrations table does not exist, skipping deletion.',
+        '⚠️ Migrations table does not exist, skipping deletion.'
       );
     }
 

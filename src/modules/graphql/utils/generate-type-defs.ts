@@ -25,7 +25,7 @@ function mapColumnTypeToGraphQL(type: string): string {
 
 export function generateGraphQLTypeDefsFromTables(
   tables: any[],
-  metadatas: EntityMetadata[],
+  metadatas: EntityMetadata[]
 ): string {
   let typeDefs = '';
   let queryDefs = '';
@@ -48,7 +48,7 @@ export function generateGraphQLTypeDefsFromTables(
     typeDefs += `\ntype ${typeName} {\n`;
 
     // Lấy đúng EntityMetadata
-    const entityMeta = metadatas.find((meta) => meta.tableName === table.name);
+    const entityMeta = metadatas.find(meta => meta.tableName === table.name);
     if (!entityMeta) {
       // Nếu có columns từ table thì dùng luôn
       if (table.columns && table.columns.length > 0) {
@@ -85,7 +85,7 @@ export function generateGraphQLTypeDefsFromTables(
       // Nếu không có column nào, bỏ qua
       typeDefs = typeDefs.slice(
         0,
-        typeDefs.lastIndexOf(`type ${typeName} {\n`),
+        typeDefs.lastIndexOf(`type ${typeName} {\n`)
       ); // Xoá phần mở đầu
       continue;
     }
@@ -106,10 +106,10 @@ export function generateGraphQLTypeDefsFromTables(
 
     // Add default timestamp fields if they exist in entity metadata
     const hasCreatedAt = entityMeta.columns.some(
-      (col) => col.propertyName === 'createdAt',
+      col => col.propertyName === 'createdAt'
     );
     const hasUpdatedAt = entityMeta.columns.some(
-      (col) => col.propertyName === 'updatedAt',
+      col => col.propertyName === 'updatedAt'
     );
 
     if (hasCreatedAt) {

@@ -22,7 +22,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
     private tableHandlerService: TableHandlerService,
     private routeCacheService: RouteCacheService,
     private systemProtectionService: SystemProtectionService,
-    private bcryptService: BcryptService,
+    private bcryptService: BcryptService
   ) {}
 
   async use(req: any, res: any, next: (error?: any) => void) {
@@ -71,9 +71,9 @@ export class RouteDetectMiddleware implements NestMiddleware {
         [
           matchedRoute.route.mainTable,
           ...matchedRoute.route.targetTables?.filter(
-            (route) => !systemTables.includes(route.name),
+            route => !systemTables.includes(route.name)
           ),
-        ]?.map(async (table) => {
+        ]?.map(async table => {
           const dynamicRepo = new DynamicRepository({
             context: null, // Will be set later to avoid circular reference
             tableName: table.name,
@@ -88,7 +88,7 @@ export class RouteDetectMiddleware implements NestMiddleware {
           const name = table.alias ?? table.name;
 
           return [`${name}`, dynamicRepo];
-        }),
+        })
       );
 
       // Create repos object and add main alias for mainTable
@@ -123,14 +123,16 @@ export class RouteDetectMiddleware implements NestMiddleware {
       req.routeData = {
         ...route,
         handler:
-          route.handlers.find((handler) => handler.method?.method === method)
+          route.handlers.find(handler => handler.method?.method === method)
             ?.logic ?? null,
         params,
         hooks: filteredHooks,
         isPublished:
-          route.publishedMethods?.some(
-            (pubMethod: any) => pubMethod.method === req.method,
-          ) || false,
+          (route.publishedMethods &&
+            route.publishedMethods.some(
+              (pubMethod: any) => pubMethod.method === req.method
+            )) ||
+          false,
         context,
       };
     }
@@ -139,12 +141,12 @@ export class RouteDetectMiddleware implements NestMiddleware {
 
   private findMatchedRoute(routes: any[], reqPath: string, method: string) {
     const matchers = ['DELETE', 'PATCH'].includes(method)
-      ? [(r) => r.path + '/:id', (r) => r.path]
-      : [(r) => r.path];
+      ? [r => r.path + '/:id', r => r.path]
+      : [r => r.path];
 
     for (const route of routes) {
-      const paths = [route.path, ...matchers.map((fn) => fn(route))].map(
-        (p) => '/' + p.replace(/^\/+/, ''),
+      const paths = [route.path, ...matchers.map(fn => fn(route))].map(
+        p => '/' + p.replace(/^\/+/, '')
       );
 
       for (const routePath of paths) {

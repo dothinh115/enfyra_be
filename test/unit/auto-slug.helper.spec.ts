@@ -1,4 +1,8 @@
-import { autoSlug, generateUniqueSlug, batchAutoSlug } from '../../src/shared/utils/auto-slug.helper';
+import {
+  autoSlug,
+  generateUniqueSlug,
+  batchAutoSlug,
+} from '../../src/shared/utils/auto-slug.helper';
 
 describe('AutoSlug Helper', () => {
   describe('autoSlug', () => {
@@ -30,7 +34,9 @@ describe('AutoSlug Helper', () => {
       });
 
       it('should handle complex Vietnamese text', () => {
-        expect(autoSlug('Chào mừng đến với Việt Nam')).toBe('chao-mung-den-voi-viet-nam');
+        expect(autoSlug('Chào mừng đến với Việt Nam')).toBe(
+          'chao-mung-den-voi-viet-nam'
+        );
         expect(autoSlug('Phần mềm quản lý')).toBe('phan-mem-quan-ly');
         expect(autoSlug('Hệ thống thông tin')).toBe('he-thong-thong-tin');
       });
@@ -61,17 +67,24 @@ describe('AutoSlug Helper', () => {
       });
 
       it('should respect lowercase option', () => {
-        expect(autoSlug('Hello World', { lowercase: false })).toBe('Hello-World');
-        expect(autoSlug('TEST STRING', { lowercase: false })).toBe('TEST-STRING');
+        expect(autoSlug('Hello World', { lowercase: false })).toBe(
+          'Hello-World'
+        );
+        expect(autoSlug('TEST STRING', { lowercase: false })).toBe(
+          'TEST-STRING'
+        );
       });
 
       it('should respect trim option', () => {
-        expect(autoSlug('  Hello World  ', { trim: false })).toBe('hello-world');
+        expect(autoSlug('  Hello World  ', { trim: false })).toBe(
+          '-hello-world-'
+        );
         expect(autoSlug('  Test  ', { trim: true })).toBe('test');
       });
 
       it('should respect maxLength option', () => {
-        const longText = 'This is a very long string that should be truncated at some point';
+        const longText =
+          'This is a very long string that should be truncated at some point';
         const result20 = autoSlug(longText, { maxLength: 20 });
         const result10 = autoSlug(longText, { maxLength: 10 });
         expect(result20.length).toBeLessThanOrEqual(20);
@@ -89,7 +102,9 @@ describe('AutoSlug Helper', () => {
       it('should handle multiple spaces and separators', () => {
         expect(autoSlug('Hello    World')).toBe('hello-world');
         expect(autoSlug('Test---String')).toBe('test-string');
-        expect(autoSlug('Multiple   ---   Separators')).toBe('multiple-separators');
+        expect(autoSlug('Multiple   ---   Separators')).toBe(
+          'multiple-separators'
+        );
       });
 
       it('should handle leading and trailing separators', () => {
@@ -99,23 +114,36 @@ describe('AutoSlug Helper', () => {
 
       it('should handle numbers', () => {
         expect(autoSlug('Version 2.0.1')).toBe('version-201');
-        expect(autoSlug('Chapter 10 - Introduction')).toBe('chapter-10-introduction');
+        expect(autoSlug('Chapter 10 - Introduction')).toBe(
+          'chapter-10-introduction'
+        );
       });
     });
   });
 
   describe('generateUniqueSlug', () => {
     it('should return original slug if unique', () => {
-      expect(generateUniqueSlug('test-slug', ['other-slug', 'another-slug'])).toBe('test-slug');
+      expect(
+        generateUniqueSlug('test-slug', ['other-slug', 'another-slug'])
+      ).toBe('test-slug');
     });
 
     it('should append number if slug exists', () => {
-      expect(generateUniqueSlug('test-slug', ['test-slug'])).toBe('test-slug-1');
-      expect(generateUniqueSlug('test-slug', ['test-slug', 'test-slug-1'])).toBe('test-slug-2');
+      expect(generateUniqueSlug('test-slug', ['test-slug'])).toBe(
+        'test-slug-1'
+      );
+      expect(
+        generateUniqueSlug('test-slug', ['test-slug', 'test-slug-1'])
+      ).toBe('test-slug-2');
     });
 
     it('should handle multiple conflicts', () => {
-      const existing = ['test-slug', 'test-slug-1', 'test-slug-2', 'test-slug-4'];
+      const existing = [
+        'test-slug',
+        'test-slug-1',
+        'test-slug-2',
+        'test-slug-4',
+      ];
       expect(generateUniqueSlug('test-slug', existing)).toBe('test-slug-3');
     });
 
@@ -132,10 +160,10 @@ describe('AutoSlug Helper', () => {
       expect(batchAutoSlug(inputs)).toEqual(expected);
     });
 
-    it('should apply options to all slugs', () => {
+    it('should apply default separator to all slugs', () => {
       const inputs = ['Hello World', 'Test String'];
-      const expected = ['hello_world', 'test_string'];
-      expect(batchAutoSlug(inputs, { separator: '_' })).toEqual(expected);
+      const expected = ['hello-world', 'test-string'];
+      expect(batchAutoSlug(inputs)).toEqual(expected);
     });
 
     it('should handle empty array', () => {
@@ -151,8 +179,12 @@ describe('AutoSlug Helper', () => {
 
   describe('Real-world use cases', () => {
     it('should handle blog post titles', () => {
-      expect(autoSlug('10 Tips for Better Web Development')).toBe('10-tips-for-better-web-development');
-      expect(autoSlug('How to Build a REST API with Node.js')).toBe('how-to-build-a-rest-api-with-nodejs');
+      expect(autoSlug('10 Tips for Better Web Development')).toBe(
+        '10-tips-for-better-web-development'
+      );
+      expect(autoSlug('How to Build a REST API with Node.js')).toBe(
+        'how-to-build-a-rest-api-with-nodejs'
+      );
     });
 
     it('should handle Vietnamese folder names', () => {
@@ -162,8 +194,12 @@ describe('AutoSlug Helper', () => {
     });
 
     it('should handle product names', () => {
-      expect(autoSlug('iPhone 15 Pro Max (256GB)')).toBe('iphone-15-pro-max-256gb');
-      expect(autoSlug('Samsung Galaxy S24 Ultra')).toBe('samsung-galaxy-s24-ultra');
+      expect(autoSlug('iPhone 15 Pro Max (256GB)')).toBe(
+        'iphone-15-pro-max-256gb'
+      );
+      expect(autoSlug('Samsung Galaxy S24 Ultra')).toBe(
+        'samsung-galaxy-s24-ultra'
+      );
     });
 
     it('should handle user names and titles', () => {

@@ -15,11 +15,19 @@ describe('EntityWrapper - Actual Fields Validation', () => {
 
   describe('Actual Entity Fields Validation', () => {
     it('should validate against actual entity fields when provided', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       // Mock scenario: Only field1, field2 exist in actual entity
-      const actualEntityFields = new Set(['field1', 'field2', 'id', 'createdAt', 'updatedAt']);
+      const actualEntityFields = new Set([
+        'field1',
+        'field2',
+        'id',
+        'createdAt',
+        'updatedAt',
+      ]);
 
       const classDeclaration = wrapEntityClass({
         sourceFile,
@@ -46,15 +54,23 @@ describe('EntityWrapper - Actual Fields Validation', () => {
       expect(uniqueDecorators).toHaveLength(3); // field1, field2, field1+field2
       expect(indexDecorators).toHaveLength(1); // Only id
 
-      const uniqueArgs = uniqueDecorators.map(d => d.getArguments()[0].getText()).sort();
-      expect(uniqueArgs).toEqual(["['field1', 'field2']", "['field1']", "['field2']"]);
+      const uniqueArgs = uniqueDecorators
+        .map(d => d.getArguments()[0].getText())
+        .sort();
+      expect(uniqueArgs).toEqual([
+        "['field1', 'field2']",
+        "['field1']",
+        "['field2']",
+      ]);
 
       const indexArgs = indexDecorators.map(d => d.getArguments()[0].getText());
       expect(indexArgs).toEqual(["['id']"]);
     });
 
     it('should work without actualEntityFields (backward compatibility)', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -65,9 +81,7 @@ describe('EntityWrapper - Actual Fields Validation', () => {
           { value: ['field1'] },
           // Can't include nonExistentField - would throw error
         ],
-        indexes: [
-          { value: ['field2'] },
-        ],
+        indexes: [{ value: ['field2'] }],
         usedImports,
         validEntityFields: ['field1', 'field2'], // nonExistentField not in valid fields
         // actualEntityFields not provided - should work as before
@@ -82,7 +96,9 @@ describe('EntityWrapper - Actual Fields Validation', () => {
     });
 
     it('should throw errors for system fields missing from actual entity', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       // Entity has custom fields but missing some system fields (edge case)
@@ -106,7 +122,9 @@ describe('EntityWrapper - Actual Fields Validation', () => {
       // Test missing system field in index constraint
       expect(() => {
         wrapEntityClass({
-          sourceFile: project.createSourceFile('test2.ts', '', { overwrite: true }),
+          sourceFile: project.createSourceFile('test2.ts', '', {
+            overwrite: true,
+          }),
           className: 'TestEntity2',
           tableName: 'test_entity2',
           uniques: [],
@@ -117,10 +135,13 @@ describe('EntityWrapper - Actual Fields Validation', () => {
           validEntityFields: ['customField'],
           actualEntityFields,
         });
-      }).toThrow(ValidationException);    });
+      }).toThrow(ValidationException);
+    });
 
     it('should throw errors for empty actualEntityFields', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const actualEntityFields = new Set<string>(); // Empty set
@@ -143,7 +164,9 @@ describe('EntityWrapper - Actual Fields Validation', () => {
       // Even system fields should fail if not in actual entity
       expect(() => {
         wrapEntityClass({
-          sourceFile: project.createSourceFile('test2.ts', '', { overwrite: true }),
+          sourceFile: project.createSourceFile('test2.ts', '', {
+            overwrite: true,
+          }),
           className: 'TestEntity2',
           tableName: 'test_entity2',
           uniques: [
@@ -154,10 +177,13 @@ describe('EntityWrapper - Actual Fields Validation', () => {
           validEntityFields: [],
           actualEntityFields,
         });
-      }).toThrow(ValidationException);    });
+      }).toThrow(ValidationException);
+    });
 
     it('should throw errors for actual field mismatches', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const actualEntityFields = new Set(['field1']); // Only field1 exists
@@ -180,7 +206,9 @@ describe('EntityWrapper - Actual Fields Validation', () => {
       // Test index constraint with missing actual field
       expect(() => {
         wrapEntityClass({
-          sourceFile: project.createSourceFile('test2.ts', '', { overwrite: true }),
+          sourceFile: project.createSourceFile('test2.ts', '', {
+            overwrite: true,
+          }),
           className: 'TestEntity2',
           tableName: 'test_entity2',
           uniques: [],
@@ -191,13 +219,22 @@ describe('EntityWrapper - Actual Fields Validation', () => {
           validEntityFields: ['field1', 'field2', 'field3'], // Valid in schema
           actualEntityFields,
         });
-      }).toThrow(ValidationException);    });
+      }).toThrow(ValidationException);
+    });
 
     it('should handle valid complex scenarios', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
-      const actualEntityFields = new Set(['validField1', 'validField2', 'id', 'createdAt', 'updatedAt']);
+      const actualEntityFields = new Set([
+        'validField1',
+        'validField2',
+        'id',
+        'createdAt',
+        'updatedAt',
+      ]);
 
       const classDeclaration = wrapEntityClass({
         sourceFile,
@@ -224,18 +261,32 @@ describe('EntityWrapper - Actual Fields Validation', () => {
       expect(uniqueDecorators).toHaveLength(3); // validField1, validField2, validField1+validField2
       expect(indexDecorators).toHaveLength(1); // createdAt
 
-      const uniqueArgs = uniqueDecorators.map(d => d.getArguments()[0].getText()).sort();
-      expect(uniqueArgs).toEqual(["['validField1', 'validField2']", "['validField1']", "['validField2']"]);
+      const uniqueArgs = uniqueDecorators
+        .map(d => d.getArguments()[0].getText())
+        .sort();
+      expect(uniqueArgs).toEqual([
+        "['validField1', 'validField2']",
+        "['validField1']",
+        "['validField2']",
+      ]);
 
       const indexArgs = indexDecorators.map(d => d.getArguments()[0].getText());
       expect(indexArgs).toEqual(["['createdAt']"]);
     });
 
     it('should throw errors for complex invalid scenarios', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
-      const actualEntityFields = new Set(['validField1', 'validField2', 'id', 'createdAt', 'updatedAt']);
+      const actualEntityFields = new Set([
+        'validField1',
+        'validField2',
+        'id',
+        'createdAt',
+        'updatedAt',
+      ]);
 
       // Test field valid in schema but not in actual entity
       expect(() => {
@@ -248,14 +299,20 @@ describe('EntityWrapper - Actual Fields Validation', () => {
           ],
           indexes: [],
           usedImports,
-          validEntityFields: ['validField1', 'validField2', 'validButNotActual'],
+          validEntityFields: [
+            'validField1',
+            'validField2',
+            'validButNotActual',
+          ],
           actualEntityFields,
         });
       }).toThrow(ValidationException);
       // Test mixed valid/invalid actual fields
       expect(() => {
         wrapEntityClass({
-          sourceFile: project.createSourceFile('test2.ts', '', { overwrite: true }),
+          sourceFile: project.createSourceFile('test2.ts', '', {
+            overwrite: true,
+          }),
           className: 'TestEntity2',
           tableName: 'test_entity2',
           uniques: [
@@ -263,9 +320,14 @@ describe('EntityWrapper - Actual Fields Validation', () => {
           ],
           indexes: [],
           usedImports: new Set(),
-          validEntityFields: ['validField1', 'validField2', 'validButNotActual'],
+          validEntityFields: [
+            'validField1',
+            'validField2',
+            'validButNotActual',
+          ],
           actualEntityFields,
         });
-      }).toThrow(ValidationException);    });
+      }).toThrow(ValidationException);
+    });
   });
 });

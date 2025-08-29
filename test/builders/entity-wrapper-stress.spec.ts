@@ -15,7 +15,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
 
   describe('🔥 BRUTAL CONFLICT TESTS', () => {
     it('Case 1: Same constraint with different field orders', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -27,10 +29,7 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
           { value: ['c', 'a', 'b'] },
           { value: ['b', 'c', 'a'] },
         ],
-        indexes: [
-          { value: ['a', 'b', 'c'] },
-          { value: ['c', 'b', 'a'] },
-        ],
+        indexes: [{ value: ['a', 'b', 'c'] }, { value: ['c', 'b', 'a'] }],
         usedImports,
         validEntityFields: ['a', 'b', 'c'],
       });
@@ -41,11 +40,15 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
 
       expect(uniqueDecorators).toHaveLength(1);
       expect(indexDecorators).toHaveLength(0); // Blocked by unique
-      expect(uniqueDecorators[0].getArguments()[0].getText()).toBe("['a', 'b', 'c']");
+      expect(uniqueDecorators[0].getArguments()[0].getText()).toBe(
+        "['a', 'b', 'c']"
+      );
     });
 
     it('Case 2: Mixed valid/invalid fields with overlaps', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       // Should throw error for mixed valid/invalid fields
@@ -61,20 +64,20 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
           usedImports,
           validEntityFields: ['valid1', 'valid2', 'valid3'],
         });
-      }).toThrow(ValidationException);    });
+      }).toThrow(ValidationException);
+    });
 
     it('Case 3: System fields vs custom fields conflicts', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
         sourceFile,
         className: 'TestEntity',
         tableName: 'test_entity',
-        uniques: [
-          { value: ['id'] },
-          { value: ['createdAt', 'customField'] },
-        ],
+        uniques: [{ value: ['id'] }, { value: ['createdAt', 'customField'] }],
         indexes: [
           { value: ['id'] }, // Should be blocked
           { value: ['updatedAt'] },
@@ -90,11 +93,15 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
 
       expect(uniqueDecorators).toHaveLength(2);
       expect(indexDecorators).toHaveLength(1);
-      expect(indexDecorators[0].getArguments()[0].getText()).toBe("['updatedAt']");
+      expect(indexDecorators[0].getArguments()[0].getText()).toBe(
+        "['updatedAt']"
+      );
     });
 
     it('Case 4: Empty and null chaos', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -127,11 +134,15 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
       expect(uniqueDecorators).toHaveLength(1);
       expect(indexDecorators).toHaveLength(1);
       expect(uniqueDecorators[0].getArguments()[0].getText()).toBe("['valid']");
-      expect(indexDecorators[0].getArguments()[0].getText()).toBe("['another']");
+      expect(indexDecorators[0].getArguments()[0].getText()).toBe(
+        "['another']"
+      );
     });
 
     it('Case 5: Unicode and special characters', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -147,7 +158,13 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
           { value: ['field_with_♠️'] },
         ],
         usedImports,
-        validEntityFields: ['用户名', 'ユーザー名', '😀_field', '🚀_field', 'field_with_♠️'],
+        validEntityFields: [
+          '用户名',
+          'ユーザー名',
+          '😀_field',
+          '🚀_field',
+          'field_with_♠️',
+        ],
       });
 
       const decorators = classDeclaration.getDecorators();
@@ -161,12 +178,14 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
 
   describe('🌪️ MASSIVE SCALE TESTS', () => {
     it('Case 6: 1000 duplicate constraints (performance test)', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const massiveUniques = [];
       const massiveIndexes = [];
-      
+
       // Create 1000 permutations of same constraint
       for (let i = 0; i < 500; i++) {
         massiveUniques.push({ value: ['field1', 'field2'] });
@@ -176,7 +195,7 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
       }
 
       const startTime = Date.now();
-      
+
       const classDeclaration = wrapEntityClass({
         sourceFile,
         className: 'TestEntity',
@@ -201,7 +220,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 7: 100 different valid constraints', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const fields = Array.from({ length: 20 }, (_, i) => `field${i}`);
@@ -233,7 +254,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 8: Very long field names (1000+ chars)', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const veryLongField = 'a'.repeat(1000) + '_field';
@@ -243,12 +266,8 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
         sourceFile,
         className: 'TestEntity',
         tableName: 'test_entity',
-        uniques: [
-          { value: [veryLongField] },
-        ],
-        indexes: [
-          { value: [anotherLongField] },
-        ],
+        uniques: [{ value: [veryLongField] }],
+        indexes: [{ value: [anotherLongField] }],
         usedImports,
         validEntityFields: [veryLongField, anotherLongField],
       });
@@ -264,14 +283,16 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
 
   describe('💥 MALICIOUS INPUTS', () => {
     it('Case 9: SQL injection attempts in field names', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const evilFields = [
         "'; DROP TABLE users; --",
-        "UNION SELECT * FROM passwords",
-        "1=1; DELETE FROM users;",
-        "valid_field",
+        'UNION SELECT * FROM passwords',
+        '1=1; DELETE FROM users;',
+        'valid_field',
       ];
 
       // Clean for TS syntax
@@ -281,13 +302,8 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
         sourceFile,
         className: 'TestEntity',
         tableName: 'test_entity',
-        uniques: [
-          { value: [cleanFields[0], cleanFields[1]] },
-        ],
-        indexes: [
-          { value: [cleanFields[2]] },
-          { value: [cleanFields[3]] },
-        ],
+        uniques: [{ value: [cleanFields[0], cleanFields[1]] }],
+        indexes: [{ value: [cleanFields[2]] }, { value: [cleanFields[3]] }],
         usedImports,
         validEntityFields: cleanFields,
       });
@@ -296,7 +312,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 10: Circular reference attempts', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const circularObj: any = { value: ['field1'] };
@@ -316,7 +334,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 11: Prototype pollution attempts', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const evilUniques = [
@@ -342,12 +362,14 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 12: Memory exhaustion attempt (deep nesting)', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       // Create deeply nested constraint (should be flattened)
       const deepConstraint = { value: ['field1'] };
-      
+
       const classDeclaration = wrapEntityClass({
         sourceFile,
         className: 'TestEntity',
@@ -364,7 +386,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
 
   describe('🎭 MIXED TYPE CHAOS', () => {
     it('Case 13: Mixed data types in constraints', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const mixedConstraints = [
@@ -393,7 +417,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 14: Case sensitivity edge cases', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -424,7 +450,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 15: Whitespace and formatting chaos', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -452,7 +480,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
 
   describe('🏗️ COMPLEX COMBINATIONS', () => {
     it('Case 16: Overlapping multi-field constraints', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -484,17 +514,16 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 17: Single field vs multi-field conflicts', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
         sourceFile,
         className: 'TestEntity',
         tableName: 'test_entity',
-        uniques: [
-          { value: ['field1'] },
-          { value: ['field1', 'field2'] },
-        ],
+        uniques: [{ value: ['field1'] }, { value: ['field1', 'field2'] }],
         indexes: [
           { value: ['field1'] }, // Should be blocked
           { value: ['field1', 'field2'] }, // Should be blocked
@@ -514,7 +543,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 18: System fields in complex combinations', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -527,7 +558,7 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
         ],
         indexes: [
           { value: ['id', 'createdAt'] }, // Should be blocked (exact match)
-          { value: ['updatedAt', 'customField'] }, // Should be blocked (exact match)  
+          { value: ['updatedAt', 'customField'] }, // Should be blocked (exact match)
           { value: ['id'] }, // Should be allowed (not exact match with unique)
           { value: ['anotherField'] }, // Should be allowed
         ],
@@ -547,7 +578,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
 
   describe('🎪 EDGE CASE BONANZA', () => {
     it('Case 19: All empty validEntityFields with system fields only', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       // Should throw error for non-existent field
@@ -566,7 +599,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
       }).toThrow(ValidationException);
       // Test valid case with only system fields
       const classDeclaration = wrapEntityClass({
-        sourceFile: project.createSourceFile('test2.ts', '', { overwrite: true }),
+        sourceFile: project.createSourceFile('test2.ts', '', {
+          overwrite: true,
+        }),
         className: 'TestEntity2',
         tableName: 'test_entity2',
         uniques: [
@@ -590,7 +625,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 20: Undefined and null arrays mixed', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -613,7 +650,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 21: Extremely nested field combinations', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const fields = ['a', 'b', 'c', 'd', 'e'];
@@ -646,7 +685,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 22: Duplicate field names within same constraint', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const classDeclaration = wrapEntityClass({
@@ -657,9 +698,7 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
           { value: ['field1', 'field1'] }, // Duplicate in same constraint
           { value: ['field2', 'field2', 'field2'] }, // Triple duplicate
         ],
-        indexes: [
-          { value: ['field3', 'field3'] },
-        ],
+        indexes: [{ value: ['field3', 'field3'] }],
         usedImports,
         validEntityFields: ['field1', 'field2', 'field3'],
       });
@@ -674,7 +713,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 23: Malformed constraint objects', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const malformedConstraints = [
@@ -704,7 +745,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
 
   describe('🚀 PERFORMANCE KILLERS', () => {
     it('Case 24: Massive field combinations (factorial explosion)', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const fields = Array.from({ length: 10 }, (_, i) => `field${i}`);
@@ -719,7 +762,7 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
       }
 
       const startTime = Date.now();
-      
+
       const classDeclaration = wrapEntityClass({
         sourceFile,
         className: 'TestEntity',
@@ -743,7 +786,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 25: String processing stress test', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const massiveString = 'a'.repeat(10000);
@@ -771,7 +816,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
 
   describe('🎯 FINAL BOSS BATTLES', () => {
     it('Case 26: Everything at once chaos', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       // Should throw error for invalid fields
@@ -790,7 +837,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
       }).toThrow(ValidationException);
       // Test valid chaos case
       const classDeclaration = wrapEntityClass({
-        sourceFile: project.createSourceFile('test2.ts', '', { overwrite: true }),
+        sourceFile: project.createSourceFile('test2.ts', '', {
+          overwrite: true,
+        }),
         className: 'TestEntity2',
         tableName: 'test_entity2',
         uniques: [
@@ -824,13 +873,17 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 27: Memory leak detection', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       // Run many operations to check for memory leaks
       for (let i = 0; i < 100; i++) {
         wrapEntityClass({
-          sourceFile: project.createSourceFile(`test${i}.ts`, '', { overwrite: true }),
+          sourceFile: project.createSourceFile(`test${i}.ts`, '', {
+            overwrite: true,
+          }),
           className: `TestEntity${i}`,
           tableName: `test_entity_${i}`,
           uniques: [{ value: [`field${i}`] }],
@@ -844,7 +897,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 28: TypeScript syntax breaking attempts', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const evilFields = [
@@ -857,7 +912,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
       ];
 
       // Clean to valid TS identifiers
-      const cleanFields = evilFields.map(f => f.replace(/[^a-zA-Z0-9_$]/g, '_'));
+      const cleanFields = evilFields.map(f =>
+        f.replace(/[^a-zA-Z0-9_$]/g, '_')
+      );
 
       const classDeclaration = wrapEntityClass({
         sourceFile,
@@ -875,7 +932,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 29: Infinite recursion attempts', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       const recursiveConstraint: any = { value: ['field1'] };
@@ -895,7 +954,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
     });
 
     it('Case 30: Ultimate stress test - everything combined', () => {
-      const sourceFile = project.createSourceFile('test.ts', '', { overwrite: true });
+      const sourceFile = project.createSourceFile('test.ts', '', {
+        overwrite: true,
+      });
       const usedImports = new Set<string>();
 
       // Should throw error for invalid fields
@@ -909,7 +970,17 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
           ],
           indexes: [],
           usedImports,
-          validEntityFields: ['field1', 'field2', 'field3', 'field4', 'field5', 'field6', '用户名', '😀_field', 'a'.repeat(1000)],
+          validEntityFields: [
+            'field1',
+            'field2',
+            'field3',
+            'field4',
+            'field5',
+            'field6',
+            '用户名',
+            '😀_field',
+            'a'.repeat(1000),
+          ],
         });
       }).toThrow(ValidationException);
       // Test ultimate valid stress case
@@ -917,12 +988,12 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
         // Normal cases
         { value: ['field1'] },
         { value: ['field1', 'field2'] },
-        
+
         // Duplicates with different orders
         { value: ['field2', 'field1'] },
         { value: ['field1', 'field2', 'field3'] },
         { value: ['field3', 'field1', 'field2'] },
-        
+
         // Edge cases
         null,
         undefined,
@@ -930,17 +1001,17 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
         { value: [] },
         { value: [''] },
         { value: ['   '] },
-        
+
         // Mixed types
         { value: [123 as any, 'field4'] },
         { value: [true as any, false as any] },
-        
+
         // Unicode and special chars
         { value: ['用户名', '😀_field'] },
-        
+
         // System fields
         { value: ['id', 'createdAt'] },
-        
+
         // Very long strings
         { value: ['a'.repeat(1000)] },
       ];
@@ -949,7 +1020,7 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
         // Should be blocked by uniques
         { value: ['field1'] },
         { value: ['field1', 'field2'] },
-        
+
         // Should be allowed
         { value: ['field5'] },
         { value: ['updatedAt'] },
@@ -958,13 +1029,25 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
       const startTime = Date.now();
 
       const classDeclaration = wrapEntityClass({
-        sourceFile: project.createSourceFile('test3.ts', '', { overwrite: true }),
+        sourceFile: project.createSourceFile('test3.ts', '', {
+          overwrite: true,
+        }),
         className: 'TestEntity3',
         tableName: 'test_entity3',
         uniques: ultimateUniques,
         indexes: ultimateIndexes,
         usedImports: new Set(),
-        validEntityFields: ['field1', 'field2', 'field3', 'field4', 'field5', 'field6', '用户名', '😀_field', 'a'.repeat(1000)],
+        validEntityFields: [
+          'field1',
+          'field2',
+          'field3',
+          'field4',
+          'field5',
+          'field6',
+          '用户名',
+          '😀_field',
+          'a'.repeat(1000),
+        ],
       });
 
       const endTime = Date.now();
@@ -979,7 +1062,9 @@ describe('EntityWrapper - Stress Test & Edge Cases', () => {
       expect(uniqueDecorators.length).toBeGreaterThan(0);
       expect(indexDecorators.length).toBeGreaterThan(0);
       expect(processingTime).toBeLessThan(2000);
-      expect(() => classDeclaration.getSourceFile().getFullText()).not.toThrow();
+      expect(() =>
+        classDeclaration.getSourceFile().getFullText()
+      ).not.toThrow();
     });
   });
 });

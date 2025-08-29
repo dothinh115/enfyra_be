@@ -21,7 +21,7 @@ export function validateUniquePropertyNames(columns: any[], relations: any[]) {
   for (const name of allNames) {
     if (seen.has(name)) {
       throw new Error(
-        `Duplicate field name detected: "${name}". Column "name" and relation "propertyName" must be unique across the entity.`,
+        `Duplicate field name detected: "${name}". Column "name" and relation "propertyName" must be unique across the entity.`
       );
     }
     seen.add(name);

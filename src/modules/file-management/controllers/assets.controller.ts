@@ -14,7 +14,7 @@ export class AssetsController {
   @Get(':id')
   async getAsset(
     @Req() req: RequestWithRouteData,
-    @Res() res: Response,
+    @Res() res: Response
   ): Promise<void> {
     try {
       return await this.fileAssetsService.streamFile(req, res);

@@ -12,7 +12,7 @@ import {
   RateLimitExceededException,
 } from '../../src/core/exceptions/custom-exceptions';
 
-describe.skip('Script Context Exceptions Integration', () => {
+describe('Script Context Exceptions Integration', () => {
   let handlerExecutor: HandlerExecutorService;
   let executorPool: jest.Mocked<ExecutorPoolService>;
 
@@ -41,7 +41,7 @@ describe.skip('Script Context Exceptions Integration', () => {
     }).compile();
 
     handlerExecutor = module.get<HandlerExecutorService>(
-      HandlerExecutorService,
+      HandlerExecutorService
     );
     executorPool = module.get(ExecutorPoolService);
   });
@@ -69,7 +69,7 @@ describe.skip('Script Context Exceptions Integration', () => {
       };
 
       await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
-        BusinessLogicException,
+        BusinessLogicException
       );
     });
 
@@ -102,7 +102,7 @@ describe.skip('Script Context Exceptions Integration', () => {
         fail('Should have thrown ValidationException');
       } catch (error) {
         expect(error).toBeInstanceOf(ValidationException);
-        expect(error.details).toEqual({
+        expect((error as any).details).toEqual({
           errors: [
             { field: 'email', message: 'Email is required' },
             { field: 'password', message: 'Password is required' },
@@ -129,7 +129,7 @@ describe.skip('Script Context Exceptions Integration', () => {
       };
 
       await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
-        ResourceNotFoundException,
+        ResourceNotFoundException
       );
     });
   });
@@ -151,7 +151,7 @@ describe.skip('Script Context Exceptions Integration', () => {
       };
 
       await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
-        AuthenticationException,
+        AuthenticationException
       );
     });
 
@@ -175,7 +175,9 @@ describe.skip('Script Context Exceptions Integration', () => {
         fail('Should have thrown AuthorizationException');
       } catch (error) {
         expect(error).toBeInstanceOf(AuthorizationException);
-        expect(error.message).toBe('Only admins can perform this action');
+        expect((error as any).message).toBe(
+          'Only admins can perform this action'
+        );
       }
     });
   });
@@ -232,8 +234,8 @@ describe.skip('Script Context Exceptions Integration', () => {
         fail('Should have thrown ValidationException');
       } catch (error) {
         expect(error).toBeInstanceOf(ValidationException);
-        expect(error.details.errors).toHaveLength(3);
-        expect(error.details.submitted).toEqual(context.$body);
+        expect((error as any).details.errors).toHaveLength(3);
+        expect((error as any).details.submitted).toEqual(context.$body);
       }
     });
 
@@ -262,7 +264,7 @@ describe.skip('Script Context Exceptions Integration', () => {
         fail('Should have thrown RateLimitExceededException');
       } catch (error) {
         expect(error).toBeInstanceOf(RateLimitExceededException);
-        expect(error.message).toContain('100 requests per 1 hour');
+        expect((error as any).message).toContain('100 requests per 1 hour');
       }
     });
 
@@ -295,7 +297,7 @@ describe.skip('Script Context Exceptions Integration', () => {
         fail('Should have thrown DatabaseException');
       } catch (error) {
         expect(error).toBeInstanceOf(DatabaseException);
-        expect(error.details).toEqual({
+        expect((error as any).details).toEqual({
           operation: 'insert',
           table: 'users',
           error: 'Connection timeout',
@@ -321,7 +323,7 @@ describe.skip('Script Context Exceptions Integration', () => {
       };
 
       await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
-        BusinessLogicException,
+        BusinessLogicException
       );
     });
 
@@ -341,7 +343,7 @@ describe.skip('Script Context Exceptions Integration', () => {
       };
 
       await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
-        AuthenticationException,
+        AuthenticationException
       );
     });
 
@@ -362,7 +364,7 @@ describe.skip('Script Context Exceptions Integration', () => {
       };
 
       await expect(handlerExecutor.run(script, context as any)).rejects.toThrow(
-        ResourceNotFoundException,
+        ResourceNotFoundException
       );
     });
   });
@@ -383,7 +385,7 @@ describe.skip('Script Context Exceptions Integration', () => {
 
       // Run with 100ms timeout
       await expect(
-        handlerExecutor.run(script, context as any, 100),
+        handlerExecutor.run(script, context as any, 100)
       ).rejects.toThrow('Script execution timed out');
     });
   });

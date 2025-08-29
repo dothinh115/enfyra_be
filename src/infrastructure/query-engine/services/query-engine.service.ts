@@ -24,7 +24,7 @@ export class QueryEngine {
 
   constructor(
     private dataSourceService: DataSourceService,
-    private loggingService: LoggingService,
+    private loggingService: LoggingService
   ) {}
 
   async find(options: {
@@ -60,7 +60,7 @@ export class QueryEngine {
         meta: metaData,
         fields,
         filter,
-        sort: parsedSort.map((parsed) => parsed.field),
+        sort: parsedSort.map(parsed => parsed.field),
         rootAlias: tableName,
         dataSource,
       });
@@ -76,7 +76,7 @@ export class QueryEngine {
       for (const join of joinArr) {
         qb.leftJoinAndSelect(
           `${join.parentAlias}.${join.propertyPath}`,
-          join.alias,
+          join.alias
         );
       }
 
@@ -84,7 +84,7 @@ export class QueryEngine {
 
       if (parts.length > 0) {
         qb.where(
-          new Brackets((qb2) => {
+          new Brackets(qb2 => {
             for (const p of parts) {
               if (p.operator === 'AND') {
                 qb2.andWhere(p.sql, p.params);
@@ -92,20 +92,20 @@ export class QueryEngine {
                 qb2.orWhere(p.sql, p.params);
               }
             }
-          }),
+          })
         );
       }
 
       for (const sort of sortArr) {
         qb.addOrderBy(
           `${sort.alias}.${sort.field}`,
-          parsedSort.find((parsed) => parsed.field === sort.field)?.direction ??
-            'ASC',
+          parsedSort.find(parsed => parsed.field === sort.field)?.direction ??
+            'ASC'
         );
       }
 
       // === Total Meta ===
-      const metaParts = (meta || '').split(',').map((x) => x.trim());
+      const metaParts = (meta || '').split(',').map(x => x.trim());
       let totalCount = 0;
       let filterCount = 0;
 
@@ -119,19 +119,19 @@ export class QueryEngine {
       if (metaParts.includes('filterCount') || metaParts.includes('*')) {
         const filterQb = dataSource.createQueryBuilder(
           metaData.target,
-          tableName,
+          tableName
         );
 
         if (parts.length > 0) {
           for (const join of joinArr) {
             filterQb.leftJoin(
               `${join.parentAlias}.${join.propertyPath}`,
-              join.alias,
+              join.alias
             );
           }
 
           filterQb.where(
-            new Brackets((qb2) => {
+            new Brackets(qb2 => {
               for (const p of parts) {
                 if (p.operator === 'AND') {
                   qb2.andWhere(p.sql, p.params);
@@ -139,7 +139,7 @@ export class QueryEngine {
                   qb2.orWhere(p.sql, p.params);
                 }
               }
-            }),
+            })
           );
         }
 
@@ -174,8 +174,8 @@ export class QueryEngine {
     } catch (error) {
       this.loggingService.error('Query execution failed', {
         context: 'find',
-        error: error.message,
-        stack: error.stack,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
         tableName: options.tableName,
         fields: options.fields,
         filterPresent: !!options.filter,
@@ -186,35 +186,79 @@ export class QueryEngine {
       });
 
       // Handle specific database errors
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       if (
-        error.message?.includes('relation') &&
-        error.message?.includes('does not exist')
+        errorMessage?.includes('relation') &&
+        errorMessage?.includes('does not exist')
       ) {
         throw new ResourceNotFoundException(
           'Table or Relation',
-          options.tableName,
+          options.tableName
         );
       }
 
       if (
-        error.message?.includes('column') &&
-        error.message?.includes('does not exist')
+        errorMessage?.includes('column') &&
+        errorMessage?.includes('does not exist')
       ) {
         throw new DatabaseQueryException(
-          `Invalid column in query: ${error.message}`,
+          `Invalid column in query: ${errorMessage}`,
           {
             tableName: options.tableName,
             fields: options.fields,
             operation: 'query',
-          },
+          }
         );
       }
 
-      throw new DatabaseQueryException(`Query failed: ${error.message}`, {
+      throw new DatabaseQueryException(`Query failed: ${errorMessage}`, {
         tableName: options.tableName,
         operation: 'find',
-        originalError: error.message,
+        originalError: errorMessage,
       });
+    }
+  }
+
+  async count(options: { tableName: string; filter?: any }): Promise<number> {
+    try {
+      const { tableName, filter } = options;
+
+      const dataSource = this.dataSourceService.getDataSource();
+      const metaData = dataSource.getMetadata(tableName);
+
+      const { parts } = walkFilter({
+        filter: filter || {},
+        currentMeta: metaData,
+        currentAlias: tableName,
+      });
+
+      const qb = dataSource.createQueryBuilder(metaData.target, tableName);
+
+      if (parts.length > 0) {
+        qb.where(
+          new Brackets(qb2 => {
+            for (const p of parts) {
+              if (p.operator === 'AND') {
+                qb2.andWhere(p.sql, p.params);
+              } else {
+                qb2.orWhere(p.sql, p.params);
+              }
+            }
+          })
+        );
+      }
+
+      const result = await qb.getCount();
+      return result;
+    } catch (error) {
+      this.loggingService.error('QueryEngine.count', {
+        options,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw new DatabaseQueryException(
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }
 }

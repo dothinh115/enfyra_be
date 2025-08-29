@@ -67,16 +67,16 @@ export function addColumnToClass({
         opts.push(
           typeof col.defaultValue === 'string'
             ? `default: "${col.defaultValue}"`
-            : `default: ${col.defaultValue}`,
+            : `default: ${col.defaultValue}`
         );
       }
     }
 
     // Skip field-level unique/index - only use class-level constraints
     // if (col.isUnique) opts.push('unique: true');
-    
+
     if (col.type === 'enum' && col.options) {
-      opts.push(`enum: [${col.options.map((v) => `'${v}'`).join(', ')}]`);
+      opts.push(`enum: [${col.options.map(v => `'${v}'`).join(', ')}]`);
     }
     if (col.isUpdatable === false) {
       opts.push(`update: false`);
@@ -99,14 +99,14 @@ export function addColumnToClass({
 
   const tsType =
     col.type === 'enum'
-      ? col.options.map((v) => `'${v}'`).join(' | ')
+      ? col.options.map(v => `'${v}'`).join(' | ')
       : col.type === 'array-select'
         ? 'any[]'
-      : col.type === 'date'
-        ? 'Date'
-        : col.type === 'richtext' || col.type === 'code'
-          ? 'string'
-          : helpers.dbTypeToTSType(col.type);
+        : col.type === 'date'
+          ? 'Date'
+          : col.type === 'richtext' || col.type === 'code'
+            ? 'string'
+            : helpers.dbTypeToTSType(col.type);
 
   classDeclaration.addProperty({
     name: col.name,

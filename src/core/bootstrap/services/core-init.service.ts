@@ -10,7 +10,7 @@ export class CoreInitService {
 
   async waitForDatabaseConnection(
     maxRetries = 10,
-    delayMs = 1000,
+    delayMs = 1000
   ): Promise<void> {
     const dataSource = this.dataSourceService.getDataSource();
 
@@ -21,9 +21,9 @@ export class CoreInitService {
         return;
       } catch (error) {
         this.logger.warn(
-          `Unable to connect to DB, retrying after ${delayMs}ms...`,
+          `Unable to connect to DB, retrying after ${delayMs}ms...`
         );
-        await new Promise((res) => setTimeout(res, delayMs));
+        await new Promise(res => setTimeout(res, delayMs));
       }
     }
 
@@ -50,22 +50,24 @@ export class CoreInitService {
           tableDefRepo.target,
           {
             where: { name: def.name },
-          },
+          }
         );
 
         if (exist) {
           tableNameToId[name] = exist.id;
-          
+
           // Check for table-level changes (uniques, indexes, etc.)
           const { columns, relations, ...rest } = def;
           const hasTableChanges = this.detectTableChanges(rest, exist);
-          
+
           if (hasTableChanges) {
             await queryRunner.manager.save(tableDefRepo.target, {
               ...rest,
               id: exist.id,
             });
-            this.logger.log(`🔄 Updated table ${name} due to table-level changes`);
+            this.logger.log(
+              `🔄 Updated table ${name} due to table-level changes`
+            );
           } else {
             this.logger.log(`⏩ Skip ${name}, no table-level changes`);
           }
@@ -73,7 +75,7 @@ export class CoreInitService {
           const { columns, relations, ...rest } = def;
           const created = await queryRunner.manager.save(
             tableDefRepo.target,
-            rest,
+            rest
           );
           tableNameToId[name] = created.id;
           this.logger.log(`✅ Created empty table: ${name}`);
@@ -108,7 +110,7 @@ export class CoreInitService {
           .getRawMany();
 
         const existingColumnsMap = new Map(
-          existingColumns.map((col) => [col.name, col]),
+          existingColumns.map(col => [col.name, col])
         );
 
         // Process each column from snapshot
@@ -123,13 +125,13 @@ export class CoreInitService {
             };
             await queryRunner.manager.save(columnEntity, toInsert);
             this.logger.log(
-              `📌 Added new column ${snapshotCol.name} for ${name}`,
+              `📌 Added new column ${snapshotCol.name} for ${name}`
             );
           } else {
             // Existing column - check for changes and update if needed
             const hasChanges = this.detectColumnChanges(
               snapshotCol,
-              existingCol,
+              existingCol
             );
             if (hasChanges) {
               const updateData = {
@@ -139,19 +141,27 @@ export class CoreInitService {
               };
               await queryRunner.manager.save(columnEntity, updateData);
               this.logger.log(
-                `🔄 Updated column ${snapshotCol.name} for ${name} due to changes`,
+                `🔄 Updated column ${snapshotCol.name} for ${name} due to changes`
               );
             }
           }
         }
 
         // Phase 2.5: Remove columns that no longer exist in snapshot
-        const snapshotColumnNames = new Set((def.columns || []).map(col => col.name));
-        const columnsToRemove = existingColumns.filter(col => !snapshotColumnNames.has(col.name));
-        
+        const snapshotColumnNames = new Set(
+          (def.columns || []).map(col => col.name)
+        );
+        const columnsToRemove = existingColumns.filter(
+          col => !snapshotColumnNames.has(col.name)
+        );
+
         for (const colToRemove of columnsToRemove) {
-          await queryRunner.manager.delete(columnEntity, { id: colToRemove.id });
-          this.logger.log(`🗑️ Removed column ${colToRemove.name} from ${name} (no longer in snapshot)`);
+          await queryRunner.manager.delete(columnEntity, {
+            id: colToRemove.id,
+          });
+          this.logger.log(
+            `🗑️ Removed column ${colToRemove.name} from ${name} (no longer in snapshot)`
+          );
         }
       }
 
@@ -162,7 +172,7 @@ export class CoreInitService {
         if (!tableId) continue;
 
         const relationEntity = this.dataSourceService.entityClassMap.get(
-          'relation_definition',
+          'relation_definition'
         );
 
         const existingRelations = await queryRunner.manager
@@ -171,25 +181,25 @@ export class CoreInitService {
           .leftJoin('r.sourceTable', 'source')
           .leftJoin('r.targetTable', 'target')
           .select([
-            'r.id AS id',  // Need ID for update
+            'r.id AS id', // Need ID for update
             'r.propertyName AS propertyName',
             'source.id AS sourceId',
             'target.id AS targetId',
             'r.type AS relationType',
-            'r.isNullable AS isNullable',  // Get current value
+            'r.isNullable AS isNullable', // Get current value
           ])
           .where('source.id = :tableId', { tableId })
           .getRawMany();
 
         const existingKeys = new Set(
-          existingRelations.map((r) =>
+          existingRelations.map(r =>
             JSON.stringify({
               sourceTable: r.sourceId,
               targetTable: r.targetId,
               propertyName: r.propertyName,
               relationType: r.relationType,
-            }),
-          ),
+            })
+          )
         );
 
         const newRelations = [];
@@ -208,58 +218,77 @@ export class CoreInitService {
 
           if (existingKeys.has(key)) {
             // Update existing relation with snapshot values (especially isNullable)
-            const existingRel = existingRelations.find(r => 
-              r.sourceId === tableId && 
-              r.targetId === targetId && 
-              r.propertyName === rel.propertyName &&
-              r.relationType === rel.type
+            const existingRel = existingRelations.find(
+              r =>
+                r.sourceId === tableId &&
+                r.targetId === targetId &&
+                r.propertyName === rel.propertyName &&
+                r.relationType === rel.type
             );
-            
+
             if (existingRel && existingRel.id) {
               // Debug log
-              this.logger.debug(`🔍 Checking relation ${rel.propertyName} for ${name}:`, {
-                snapshotIsNullable: rel.isNullable,
-                dbIsNullable: existingRel.isNullable,
-                relId: existingRel.id,
-                targetTable: rel.targetTable
-              });
-              
+              this.logger.debug(
+                `🔍 Checking relation ${rel.propertyName} for ${name}:`,
+                {
+                  snapshotIsNullable: rel.isNullable,
+                  dbIsNullable: existingRel.isNullable,
+                  relId: existingRel.id,
+                  targetTable: rel.targetTable,
+                }
+              );
+
               // Check if values need updating
-              const needsUpdate = 
-                (rel.isNullable !== undefined && rel.isNullable !== existingRel.isNullable) ||
-                (rel.inversePropertyName !== undefined && rel.inversePropertyName !== existingRel.inversePropertyName);
-                
+              const needsUpdate =
+                (rel.isNullable !== undefined &&
+                  rel.isNullable !== existingRel.isNullable) ||
+                (rel.inversePropertyName !== undefined &&
+                  rel.inversePropertyName !== existingRel.inversePropertyName);
+
               if (needsUpdate) {
                 const updateData: any = {};
-                if (rel.isNullable !== undefined) updateData.isNullable = rel.isNullable;
-                if (rel.inversePropertyName !== undefined) updateData.inversePropertyName = rel.inversePropertyName;
-                if (rel.isSystem !== undefined) updateData.isSystem = rel.isSystem;
-                
-                this.logger.log(`📝 UPDATING relation ${rel.propertyName} (ID: ${existingRel.id}) for ${name}:`, {
-                  updateData,
-                  oldIsNullable: existingRel.isNullable,
-                  newIsNullable: rel.isNullable
-                });
-                
+                if (rel.isNullable !== undefined)
+                  updateData.isNullable = rel.isNullable;
+                if (rel.inversePropertyName !== undefined)
+                  updateData.inversePropertyName = rel.inversePropertyName;
+                if (rel.isSystem !== undefined)
+                  updateData.isSystem = rel.isSystem;
+
+                this.logger.log(
+                  `📝 UPDATING relation ${rel.propertyName} (ID: ${existingRel.id}) for ${name}:`,
+                  {
+                    updateData,
+                    oldIsNullable: existingRel.isNullable,
+                    newIsNullable: rel.isNullable,
+                  }
+                );
+
                 await queryRunner.manager
                   .getRepository(relationEntity)
                   .update(existingRel.id, updateData);
-                  
+
                 // Verify update
                 const verifyUpdated = await queryRunner.manager
                   .getRepository(relationEntity)
-                  .findOne({ where: { id: existingRel.id }});
-                  
-                this.logger.log(`✅ Updated relation ${rel.propertyName} for ${name}:`, {
-                  updateData,
-                  verifyIsNullable: verifyUpdated?.isNullable,
-                  success: verifyUpdated?.isNullable === rel.isNullable
-                });
+                  .findOne({ where: { id: existingRel.id } });
+
+                this.logger.log(
+                  `✅ Updated relation ${rel.propertyName} for ${name}:`,
+                  {
+                    updateData,
+                    verifyIsNullable: verifyUpdated?.isNullable,
+                    success: verifyUpdated?.isNullable === rel.isNullable,
+                  }
+                );
               } else {
-                this.logger.debug(`⏩ No update needed for relation ${rel.propertyName} of ${name}`);
+                this.logger.debug(
+                  `⏩ No update needed for relation ${rel.propertyName} of ${name}`
+                );
               }
             } else {
-              this.logger.warn(`⚠️ Could not find existing relation ${rel.propertyName} for update`);
+              this.logger.warn(
+                `⚠️ Could not find existing relation ${rel.propertyName} for update`
+              );
             }
             continue;
           }
@@ -274,7 +303,7 @@ export class CoreInitService {
         if (newRelations.length) {
           await queryRunner.manager.save(relationEntity, newRelations);
           this.logger.log(
-            `📌 Added ${newRelations.length} new relations for ${name}`,
+            `📌 Added ${newRelations.length} new relations for ${name}`
           );
         } else {
           this.logger.log(`⏩ No relations to add for ${name}`);
@@ -282,16 +311,18 @@ export class CoreInitService {
 
         // Phase 3.5: Remove relations that no longer exist in snapshot
         const snapshotRelationKeys = new Set(
-          (def.relations || []).map(rel => {
-            const targetId = tableNameToId[rel.targetTable];
-            if (!targetId) return null;
-            return JSON.stringify({
-              sourceTable: tableId,
-              targetTable: targetId,
-              propertyName: rel.propertyName,
-              relationType: rel.type,
-            });
-          }).filter(Boolean)
+          (def.relations || [])
+            .map(rel => {
+              const targetId = tableNameToId[rel.targetTable];
+              if (!targetId) return null;
+              return JSON.stringify({
+                sourceTable: tableId,
+                targetTable: targetId,
+                propertyName: rel.propertyName,
+                relationType: rel.type,
+              });
+            })
+            .filter(Boolean)
         );
 
         const relationsToRemove = existingRelations.filter(rel => {
@@ -309,13 +340,23 @@ export class CoreInitService {
             .getRepository(relationEntity)
             .createQueryBuilder()
             .delete()
-            .where('sourceTable = :sourceId', { sourceId: relToRemove.sourceId })
-            .andWhere('targetTable = :targetId', { targetId: relToRemove.targetId })
-            .andWhere('propertyName = :propertyName', { propertyName: relToRemove.propertyName })
-            .andWhere('type = :relationType', { relationType: relToRemove.relationType })
+            .where('sourceTable = :sourceId', {
+              sourceId: relToRemove.sourceId,
+            })
+            .andWhere('targetTable = :targetId', {
+              targetId: relToRemove.targetId,
+            })
+            .andWhere('propertyName = :propertyName', {
+              propertyName: relToRemove.propertyName,
+            })
+            .andWhere('type = :relationType', {
+              relationType: relToRemove.relationType,
+            })
             .execute();
-          
-          this.logger.log(`🗑️ Removed relation ${relToRemove.propertyName} from ${name} (no longer in snapshot)`);
+
+          this.logger.log(
+            `🗑️ Removed relation ${relToRemove.propertyName} from ${name} (no longer in snapshot)`
+          );
         }
       }
 
@@ -336,8 +377,10 @@ export class CoreInitService {
       snapshotTable.isSystem !== existingTable.isSystem ||
       snapshotTable.alias !== existingTable.alias ||
       snapshotTable.description !== existingTable.description ||
-      JSON.stringify(snapshotTable.uniques) !== JSON.stringify(existingTable.uniques) ||
-      JSON.stringify(snapshotTable.indexes) !== JSON.stringify(existingTable.indexes);
+      JSON.stringify(snapshotTable.uniques) !==
+        JSON.stringify(existingTable.uniques) ||
+      JSON.stringify(snapshotTable.indexes) !==
+        JSON.stringify(existingTable.indexes);
 
     return hasChanges;
   }

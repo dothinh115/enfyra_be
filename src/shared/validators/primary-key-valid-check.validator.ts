@@ -14,7 +14,7 @@ export function PrimaryKeyValidCheck(validationOptions?: ValidationOptions) {
       options: validationOptions,
       validator: {
         validate(columns: CreateColumnDto[], args: ValidationArguments) {
-          const primaryCount = columns.filter((c) => c.isPrimary).length;
+          const primaryCount = columns.filter(c => c.isPrimary).length;
           return primaryCount <= 1;
         },
         defaultMessage(args: ValidationArguments) {

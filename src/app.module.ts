@@ -56,24 +56,27 @@ import { FileManagementModule } from './modules/file-management/file-management.
     }),
     RedisModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        config: {
-          url: configService.get('REDIS_URI'),
-          ttl: configService.get<number>('DEFAULT_TTL'),
-          // ✅ Connection pooling optimization
-          maxRetriesPerRequest: 3,
-          retryDelayOnFailover: 100,
-          enableReadyCheck: false,
-          maxLoadingTimeout: 10000,
-          lazyConnect: true,
-          // ✅ Connection limits
-          maxConnections: 100, // ← Limit total connections
-          minConnections: 10,
-          // ✅ Health checks
-          healthCheck: true,
-          healthCheckInterval: 30000,
-        },
-      }),
+      useFactory: async (...args: unknown[]) => {
+        const configService = args[0] as ConfigService;
+        return {
+          config: {
+            url: configService.get('REDIS_URI'),
+            ttl: configService.get<number>('DEFAULT_TTL'),
+            // ✅ Connection pooling optimization
+            maxRetriesPerRequest: 3,
+            retryDelayOnFailover: 100,
+            enableReadyCheck: false,
+            maxLoadingTimeout: 10000,
+            lazyConnect: true,
+            // ✅ Connection limits
+            maxConnections: 100, // ← Limit total connections
+            minConnections: 10,
+            // ✅ Health checks
+            healthCheck: true,
+            healthCheckInterval: 30000,
+          },
+        };
+      },
     }),
     QueryEngineModule,
     AuthModule,

@@ -7,7 +7,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const metadata = JSON.parse(
-  fs.readFileSync(path.resolve(process.cwd(), 'data/snapshot.json'), 'utf8'),
+  fs.readFileSync(path.resolve(process.cwd(), 'data/snapshot.json'), 'utf8')
 );
 
 function capitalize(str: string): string {
@@ -92,7 +92,7 @@ async function ensureDatabaseExists() {
     `);
     if (checkDb.length === 0) {
       await tempDataSource.query(
-        `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\``,
+        `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\``
       );
       console.log(`✅ MySQL: Created database ${DB_NAME}`);
     } else {
@@ -104,7 +104,7 @@ async function ensureDatabaseExists() {
     `);
     if (checkDb.length === 0) {
       await tempDataSource.query(
-        `CREATE DATABASE "${DB_NAME}" WITH ENCODING 'UTF8'`,
+        `CREATE DATABASE "${DB_NAME}" WITH ENCODING 'UTF8'`
       );
       console.log(`✅ Postgres: Created database ${DB_NAME}`);
     } else {
@@ -130,7 +130,7 @@ async function writeEntitiesFromSnapshot() {
   const entitiesDir = path.resolve(process.cwd(), 'src/core/database/entities');
   const distEntitiesDir = path.resolve(
     process.cwd(),
-    'dist/src/core/database/entities',
+    'dist/src/core/database/entities'
   );
 
   if (!fs.existsSync(entitiesDir))
@@ -143,7 +143,7 @@ async function writeEntitiesFromSnapshot() {
     const sourceFile = project.createSourceFile(
       path.join(entitiesDir, `${tableName}.entity.ts`),
       '',
-      { overwrite: true },
+      { overwrite: true }
     );
 
     const usedImports = new Set([
@@ -254,7 +254,7 @@ async function writeEntitiesFromSnapshot() {
 
           if (invalidDefault) {
             console.warn(
-              `⚠️ Bỏ qua defaultValue không hợp lệ cho cột "${col.name}"`,
+              `⚠️ Bỏ qua defaultValue không hợp lệ cho cột "${col.name}"`
             );
           } else if (
             typeof defaultVal === 'string' &&
@@ -270,7 +270,7 @@ async function writeEntitiesFromSnapshot() {
 
         if (col.type === 'enum' && Array.isArray(col.options)) {
           opts.push(
-            `enum: [${col.options.map((v: string) => `'${v}'`).join(', ')}]`,
+            `enum: [${col.options.map((v: string) => `'${v}'`).join(', ')}]`
           );
         }
 
@@ -323,7 +323,7 @@ async function writeEntitiesFromSnapshot() {
       if (rel.type === 'many-to-many') {
         relationOpts.push(
           `onDelete: "${rel.onDelete || 'CASCADE'}"`,
-          `onUpdate: "${rel.onUpdate || 'CASCADE'}"`,
+          `onUpdate: "${rel.onUpdate || 'CASCADE'}"`
         );
       } else if (
         rel.type === 'many-to-one' ||
@@ -336,13 +336,13 @@ async function writeEntitiesFromSnapshot() {
           rel.isNullable === false ? 'RESTRICT' : 'SET NULL';
         relationOpts.push(
           `onDelete: "${rel.onDelete || defaultDelete}"`,
-          `onUpdate: "${rel.onUpdate || 'CASCADE'}"`,
+          `onUpdate: "${rel.onUpdate || 'CASCADE'}"`
         );
       }
       // Note: one-to-many doesn't need onDelete/onUpdate as it doesn't have foreign key
 
       relationOpts.push(
-        `nullable: ${rel.isNullable === false ? 'false' : 'true'}`,
+        `nullable: ${rel.isNullable === false ? 'false' : 'true'}`
       );
 
       // Thêm cascade cho ManyToMany và OneToMany
@@ -418,7 +418,7 @@ async function writeEntitiesFromSnapshot() {
   }
 
   // Save TypeScript files
-  await Promise.all(project.getSourceFiles().map((file) => file.save()));
+  await Promise.all(project.getSourceFiles().map(file => file.save()));
   console.log('✅ Entity generation completed.');
 
   // Compile to JavaScript using ts-morph
@@ -438,7 +438,7 @@ async function compileEntitiesToJS(project: Project, outputDir: string) {
       experimentalDecorators: true,
       skipLibCheck: true,
       declaration: false,
-      outDir: outputDir,
+      outDir: '.', // Use relative path to avoid duplication
     },
     useInMemoryFileSystem: true,
   });
@@ -449,7 +449,7 @@ async function compileEntitiesToJS(project: Project, outputDir: string) {
     const content = sourceFile.getFullText();
     const relativePath = path.relative(
       path.resolve(process.cwd(), 'src/core/database/entities'),
-      filePath,
+      filePath
     );
     compileProject.createSourceFile(relativePath, content);
   }
@@ -459,7 +459,9 @@ async function compileEntitiesToJS(project: Project, outputDir: string) {
 
   // Write JS files to disk
   for (const outputFile of emitResult.getFiles()) {
-    const jsFilePath = path.join(outputDir, outputFile.filePath);
+    // Fix path duplication issue
+    const relativePath = outputFile.filePath.replace(/^src\//, '');
+    const jsFilePath = path.join(outputDir, relativePath);
     const jsDir = path.dirname(jsFilePath);
 
     if (!fs.existsSync(jsDir)) {
@@ -494,7 +496,7 @@ export async function initializeDatabase() {
   const queryRunner = checkDS.createQueryRunner();
   try {
     const [result] = await queryRunner.query(
-      `SELECT isInit FROM setting_definition LIMIT 1`,
+      `SELECT isInit FROM setting_definition LIMIT 1`
     );
 
     if (result?.isInit === true || result?.isInit === 1) {
@@ -506,7 +508,7 @@ export async function initializeDatabase() {
   } catch (err) {
     // Nếu bảng chưa tồn tại thì cứ tiếp tục init
     console.log(
-      '🔄 Bảng setting_definition chưa tồn tại hoặc chưa có dữ liệu.',
+      '🔄 Bảng setting_definition chưa tồn tại hoặc chưa có dữ liệu.'
     );
   }
 
@@ -527,7 +529,7 @@ export async function initializeDatabase() {
     entities: [
       path.resolve(
         process.cwd(),
-        'dist/src/core/database/entities/*.entity.js',
+        'dist/src/core/database/entities/*.entity.js'
       ),
     ],
     synchronize: true,
@@ -541,7 +543,7 @@ export async function initializeDatabase() {
 
 // For direct execution
 if (require.main === module) {
-  initializeDatabase().catch((e) => {
+  initializeDatabase().catch(e => {
     console.error(e);
     process.exit(1);
   });

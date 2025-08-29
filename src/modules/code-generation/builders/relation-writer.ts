@@ -29,7 +29,7 @@ export function addRelationToClass({
   usedImports.add(relationType);
 
   const target = helpers.capitalize(
-    rel.targetTable?.name || rel.targetClass || '',
+    rel.targetTable?.name || rel.targetClass || ''
   );
   if (target && target !== classDeclaration.getName()) {
     usedEntityImports.add(target);

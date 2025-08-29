@@ -220,10 +220,10 @@ function processQueries(upQueries: any[], dbType: string) {
       const nextQueryStr = nextQuery.query;
 
       const dropMatch = queryStr.match(
-        /ALTER TABLE [`"]?([^`"\s]+)[`"]?\s+DROP COLUMN [`"]?([^`"\s]+)[`"]?/i,
+        /ALTER TABLE [`"]?([^`"\s]+)[`"]?\s+DROP COLUMN [`"]?([^`"\s]+)[`"]?/i
       );
       const addMatch = nextQueryStr.match(
-        /ALTER TABLE [`"]?([^`"\s]+)[`"]?\s+ADD [`"]?([^`"\s]+)[`"]?\s+(.+)/i,
+        /ALTER TABLE [`"]?([^`"\s]+)[`"]?\s+ADD [`"]?([^`"\s]+)[`"]?\s+(.+)/i
       );
 
       if (dropMatch && addMatch && dropMatch[1] === addMatch[1]) {

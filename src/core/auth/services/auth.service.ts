@@ -21,7 +21,7 @@ export class AuthService {
     private bcryptService: BcryptService,
     private configService: ConfigService,
     private jwtService: JwtService,
-    private dataSourceService: DataSourceService,
+    private dataSourceService: DataSourceService
   ) {}
 
   async login(body: LoginAuthDto) {
@@ -53,7 +53,7 @@ export class AuthService {
       },
       {
         expiresIn: this.configService.get<string>('ACCESS_TOKEN_EXP'),
-      },
+      }
     );
     const refreshToken = this.jwtService.sign(
       {
@@ -63,7 +63,7 @@ export class AuthService {
         expiresIn: body.remember
           ? this.configService.get<string>('REFRESH_TOKEN_REMEMBER_EXP')
           : this.configService.get<string>('REFRESH_TOKEN_NO_REMEMBER_EXP'),
-      },
+      }
     );
     const decoded: any = this.jwtService.decode(accessToken);
     return {
@@ -120,16 +120,16 @@ export class AuthService {
       },
       {
         expiresIn: this.configService.get<string>('ACCESS_TOKEN_EXP'),
-      },
+      }
     );
     const refreshToken = session.remember
       ? this.jwtService.sign(
           { sessionId: session.id },
           {
             expiresIn: this.configService.get<string>(
-              'REFRESH_TOKEN_REMEMBER_EXP',
+              'REFRESH_TOKEN_REMEMBER_EXP'
             ),
-          },
+          }
         )
       : body.refreshToken;
     const accessTokenDecoded = await this.jwtService.decode(accessToken);

@@ -18,7 +18,7 @@ export class DynamicController {
         context: TDynamicContext;
       };
       user: any;
-    },
+    }
   ) {
     return this.dynamicService.runHandler(req);
   }

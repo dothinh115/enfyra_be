@@ -13,7 +13,7 @@ export type TDynamicContext = {
   $req: Request & {
     [key: string]: any;
   };
-  $errors: {};
+  $errors: Record<string, never>;
   $result?: any;
   $data?: any;
   $statusCode?: number;

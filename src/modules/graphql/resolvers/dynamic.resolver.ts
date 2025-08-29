@@ -30,7 +30,7 @@ export class DynamicResolver {
     private dataSourceService: DataSourceService,
     private handlerExecutorService: HandlerExecutorService,
     private routeCacheService: RouteCacheService,
-    private systemProtectionService: SystemProtectionService,
+    private systemProtectionService: SystemProtectionService
   ) {}
 
   async dynamicResolver(
@@ -44,22 +44,22 @@ export class DynamicResolver {
       aggregate: any;
     },
     context: any,
-    info: any,
+    info: any
   ) {
     const { mainTable, targetTables, user } = await this.middleware(
       tableName,
       context,
-      info,
+      info
     );
 
     const selections = info.fieldNodes?.[0]?.selectionSet?.selections || [];
     const fullFieldPicker = convertFieldNodesToFieldPicker(selections);
     const fieldPicker = fullFieldPicker
-      .filter((f) => f.startsWith('data.'))
-      .map((f) => f.replace(/^data\./, ''));
+      .filter(f => f.startsWith('data.'))
+      .map(f => f.replace(/^data\./, ''));
     const metaPicker = fullFieldPicker
-      .filter((f) => f.startsWith('meta.'))
-      .map((f) => f.replace(/^meta\./, ''));
+      .filter(f => f.startsWith('meta.'))
+      .map(f => f.replace(/^meta\./, ''));
 
     // Create context compatible with DynamicRepository
     const handlerCtx: any = {
@@ -97,7 +97,7 @@ export class DynamicResolver {
 
     // Create dynamic repositories with context
     const dynamicFindEntries = await Promise.all(
-      [mainTable, ...targetTables].map(async (table) => {
+      [mainTable, ...targetTables].map(async table => {
         const dynamicRepo = new DynamicRepository({
           context: handlerCtx,
           tableName: table.name,
@@ -115,7 +115,7 @@ export class DynamicResolver {
           table.name === mainTable.name ? 'main' : (table.alias ?? table.name);
 
         return [name, dynamicRepo];
-      }),
+      })
     );
 
     // Populate repos in context
@@ -126,12 +126,14 @@ export class DynamicResolver {
       const result = await this.handlerExecutorService.run(
         defaultHandler,
         handlerCtx,
-        5000,
+        5000
       );
 
       return result;
     } catch (error) {
-      throw new BadRequestException(`Script error: ${error.message}`);
+      throw new BadRequestException(
+        `Script error: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -145,7 +147,7 @@ export class DynamicResolver {
       (await this.routeCacheService.loadAndCacheRoutes());
 
     const currentRoute = routes.find(
-      (route) => route.path === '/' + mainTableName,
+      route => route.path === '/' + mainTableName
     );
 
     const accessToken =
@@ -167,7 +169,7 @@ export class DynamicResolver {
     }
 
     const isPublished = currentRoute.publishedMethods.some(
-      (item: any) => item.method === 'GQL_QUERY',
+      (item: any) => item.method === 'GQL_QUERY'
     );
 
     if (isPublished) {
@@ -196,7 +198,7 @@ export class DynamicResolver {
       currentRoute.routePermissions?.some(
         (permission: any) =>
           permission.role?.id === user.role?.id &&
-          permission.methods?.includes('GQL_QUERY'),
+          permission.methods?.includes('GQL_QUERY')
       );
 
     if (!canPass) {

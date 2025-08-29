@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { BcryptService } from '../../../src/core/auth/services/bcrypt.service';
 import { DataSourceService } from '../../../src/core/database/data-source/data-source.service';
 import { UnauthorizedException } from '@nestjs/common';
-describe.skip('AuthService', () => {
+describe('AuthService', () => {
   let service: AuthService;
   let jwtService: jest.Mocked<JwtService>;
   let bcryptService: jest.Mocked<BcryptService>;
@@ -62,7 +62,7 @@ describe.skip('AuthService', () => {
   describe('login', () => {
     it('should login user with valid credentials', async () => {
       const mockRepo = dataSourceService.getRepository(
-        'user_definition',
+        'user_definition'
       ) as any;
       mockRepo.findOne.mockResolvedValue(mockUser);
       bcryptService.compare.mockResolvedValue(true);
@@ -94,7 +94,7 @@ describe.skip('AuthService', () => {
           email: 'invalid@example.com',
           password: 'password123',
           remember: false,
-        }),
+        })
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -108,7 +108,7 @@ describe.skip('AuthService', () => {
           email: 'test@example.com',
           password: 'wrongpassword',
           remember: false,
-        }),
+        })
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -131,7 +131,7 @@ describe.skip('AuthService', () => {
     });
   });
 
-  describe.skip('register', () => {
+  describe('register', () => {
     it('should register new user successfully', async () => {
       const mockRepo = dataSourceService.getRepository('user_definition');
       const newUser = { ...mockUser, id: '2', email: 'new@example.com' };
@@ -157,7 +157,7 @@ describe.skip('AuthService', () => {
       mockRepo.findOne.mockResolvedValue(mockUser);
 
       await expect(
-        service.register('test@example.com', 'password123'),
+        service.register('test@example.com', 'password123')
       ).rejects.toThrow('Email already exists');
     });
 
@@ -174,12 +174,12 @@ describe.skip('AuthService', () => {
       expect(mockRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           password: 'hashedPassword',
-        }),
+        })
       );
     });
   });
 
-  describe.skip('validateUser', () => {
+  describe('validateUser', () => {
     it('should validate and return user for valid JWT', async () => {
       const payload = { sub: '1', email: 'test@example.com' };
       const mockRepo = dataSourceService.getRepository('user_definition');
@@ -226,12 +226,12 @@ describe.skip('AuthService', () => {
       });
 
       await expect(
-        service.refreshToken({ refreshToken: 'invalid-token' }),
+        service.refreshToken({ refreshToken: 'invalid-token' })
       ).rejects.toThrow('Invalid refresh token');
     });
   });
 
-  describe.skip('changePassword', () => {
+  describe('changePassword', () => {
     it('should change password successfully', async () => {
       const mockRepo = dataSourceService.getRepository('user_definition');
       mockRepo.findOne.mockResolvedValue(mockUser);
@@ -245,7 +245,7 @@ describe.skip('AuthService', () => {
       const result = await service.changePassword(
         '1',
         'oldPassword',
-        'newPassword',
+        'newPassword'
       );
 
       expect(result).toEqual({ message: 'Password changed successfully' });
@@ -258,7 +258,7 @@ describe.skip('AuthService', () => {
       bcryptService.compare.mockResolvedValue(false);
 
       await expect(
-        service.changePassword('1', 'wrongPassword', 'newPassword'),
+        service.changePassword('1', 'wrongPassword', 'newPassword')
       ).rejects.toThrow('Current password is incorrect');
     });
   });
@@ -275,13 +275,13 @@ describe.skip('AuthService', () => {
           email: 'test@example.com',
           password: 'password123',
           remember: false,
-        }),
+        })
       );
 
       const results = await Promise.all(promises);
 
       expect(results).toHaveLength(50);
-      expect(results.every((r) => r.accessToken === 'jwt-token')).toBe(true);
+      expect(results.every(r => r.accessToken === 'jwt-token')).toBe(true);
     });
   });
 
@@ -312,7 +312,7 @@ describe.skip('AuthService', () => {
           email: maliciousEmail,
           password: 'password',
           remember: false,
-        }),
+        })
       ).rejects.toThrow(UnauthorizedException);
     });
   });

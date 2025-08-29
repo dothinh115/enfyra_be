@@ -31,11 +31,11 @@ export class SchemaReloadService {
     private metadataSyncService: MetadataSyncService,
     private redisLockService: RedisLockService,
     @Inject(forwardRef(() => GraphqlService))
-    private graphqlService: GraphqlService,
+    private graphqlService: GraphqlService
   ) {
     this.sourceInstanceId = uuidv4();
     this.logger.log(
-      `Initialized with sourceInstanceId: ${this.sourceInstanceId}`,
+      `Initialized with sourceInstanceId: ${this.sourceInstanceId}`
     );
   }
 
@@ -65,7 +65,7 @@ export class SchemaReloadService {
 
     const localVersion = this.schemaStateService.getVersion();
     this.logger.log(
-      `Received version: ${data.version}, Latest schema: ${newestSchema['id']}, Current version: ${localVersion}`,
+      `Received version: ${data.version}, Latest schema: ${newestSchema['id']}, Current version: ${localVersion}`
     );
 
     if (
@@ -83,7 +83,7 @@ export class SchemaReloadService {
       await this.graphqlService.reloadSchema();
       this.schemaStateService.setVersion(newestSchema['id']);
       this.logger.log(
-        `DataSource reload complete, set version = ${newestSchema['id']}`,
+        `DataSource reload complete, set version = ${newestSchema['id']}`
       );
       return;
     }
@@ -92,20 +92,20 @@ export class SchemaReloadService {
     const acquired = await this.redisLockService.acquire(
       `${SCHEMA_PULLING_EVENT_KEY}:${this.configService.get('NODE_NAME')}`,
       this.sourceInstanceId,
-      10000,
+      10000
     );
-    
+
     if (acquired) {
       this.logger.log('Lock acquired, proceeding to pull schema changes...');
       // Fire & forget syncAll
       this.metadataSyncService.syncAll();
       this.schemaStateService.setVersion(newestSchema['id']);
       this.logger.log(
-        `Schema sync initiated, set version = ${newestSchema['id']}`,
+        `Schema sync initiated, set version = ${newestSchema['id']}`
       );
       await this.redisLockService.release(
         `${SCHEMA_PULLING_EVENT_KEY}:${this.configService.get('NODE_NAME')}`,
-        this.sourceInstanceId,
+        this.sourceInstanceId
       );
       this.logger.log('Schema sync lock released');
       return;
@@ -115,19 +115,20 @@ export class SchemaReloadService {
     this.logger.log('Another instance is syncing, waiting then reload...');
     while (
       await this.redisLockService.get(
-        `${SCHEMA_PULLING_EVENT_KEY}:${this.configService.get('NODE_NAME')}`,
+        `${SCHEMA_PULLING_EVENT_KEY}:${this.configService.get('NODE_NAME')}`
       )
     ) {
       await this.commonService.delay(Math.random() * 300 + 300);
     }
 
-    this.logger.log('Sync completed by other instance, reloading DataSource...');
+    this.logger.log(
+      'Sync completed by other instance, reloading DataSource...'
+    );
     await this.dataSourceService.reloadDataSource();
     await this.graphqlService.reloadSchema();
     this.schemaStateService.setVersion(newestSchema['id']);
     this.logger.log(`DataSource reloaded, set version = ${newestSchema['id']}`);
   }
-
 
   async publishSchemaUpdated(version: number) {
     const reloadSchemaMsg: TReloadSchema = {
@@ -138,13 +139,12 @@ export class SchemaReloadService {
     };
     this.schemaStateService.setVersion(version);
     this.logger.log(
-      `Broadcasting schema updated event with version: ${version}`,
+      `Broadcasting schema updated event with version: ${version}`
     );
     await this.redisPubSubService.publish(
       SCHEMA_UPDATED_EVENT_KEY,
-      JSON.stringify(reloadSchemaMsg),
+      JSON.stringify(reloadSchemaMsg)
     );
     this.logger.log('Schema updated event broadcast complete');
   }
-
 }

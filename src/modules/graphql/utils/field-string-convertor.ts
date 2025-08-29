@@ -1,6 +1,6 @@
 export function convertFieldNodesToFieldPicker(
   selections: any[],
-  parentPath: string[] = [],
+  parentPath: string[] = []
 ): string[] {
   const fields: string[] = [];
 
@@ -14,7 +14,7 @@ export function convertFieldNodesToFieldPicker(
       if (selection.selectionSet?.selections?.length > 0) {
         const subFields = convertFieldNodesToFieldPicker(
           selection.selectionSet.selections,
-          currentPath,
+          currentPath
         );
         fields.push(...subFields);
       } else {
@@ -25,7 +25,7 @@ export function convertFieldNodesToFieldPicker(
     if (selection.kind === 'InlineFragment') {
       const subFields = convertFieldNodesToFieldPicker(
         selection.selectionSet?.selections || [],
-        parentPath,
+        parentPath
       );
       fields.push(...subFields);
     }

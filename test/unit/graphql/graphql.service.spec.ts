@@ -130,7 +130,7 @@ describe('GraphqlService', () => {
 
     it('should throw error if yoga instance not initialized', () => {
       expect(() => service.getYogaInstance()).toThrow(
-        'GraphQL Yoga instance not initialized. Call reloadSchema() first.',
+        'GraphQL Yoga instance not initialized. Call reloadSchema() first.'
       );
     });
   });
@@ -146,11 +146,11 @@ describe('GraphqlService', () => {
       expect(tableRepo.createQueryBuilder).toHaveBeenCalledWith('table');
       expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
         'table.columns',
-        'columns',
+        'columns'
       );
       expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
         'table.relations',
-        'relations',
+        'relations'
       );
     });
 
@@ -390,7 +390,7 @@ describe('GraphqlService', () => {
         'test_table',
         args,
         ctx,
-        info,
+        info
       );
     });
   });

@@ -74,8 +74,7 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
     it('should warn when Redis is slow but still return cached data', async () => {
       // Arrange: Simulate slow Redis
       redisLockService.get.mockImplementation(
-        () =>
-          new Promise((resolve) => setTimeout(() => resolve(mockRoutes), 20)),
+        () => new Promise(resolve => setTimeout(() => resolve(mockRoutes), 20))
       );
 
       const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
@@ -86,7 +85,7 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       // Assert
       expect(result).toEqual(mockRoutes);
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('⚠️ Cache hit but Redis slow:'),
+        expect.stringContaining('⚠️ Cache hit but Redis slow:')
       );
     });
   });
@@ -110,7 +109,7 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       expect(redisLockService.acquire).toHaveBeenCalledWith(
         'revalidating:routes',
         'true',
-        30000,
+        30000
       );
     });
 
@@ -133,7 +132,7 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       // Arrange
       redisLockService.get
         .mockResolvedValueOnce(null) // Cache miss
-        .mockImplementation(async (key) => {
+        .mockImplementation(async key => {
           if (key === 'stale:routes') return mockRoutes;
           if (key === 'revalidating:routes') return false;
           return null;
@@ -168,12 +167,12 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       expect(redisLockService.acquire).toHaveBeenCalledWith(
         'global-routes',
         mockRoutes,
-        60000,
+        60000
       );
       expect(redisLockService.set).toHaveBeenCalledWith(
         'stale:routes',
         mockRoutes,
-        0,
+        0
       );
     });
 
@@ -186,7 +185,7 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
 
       // Act & Assert
       await expect(service.getRoutesWithSWR()).rejects.toThrow(
-        'Database connection failed',
+        'Database connection failed'
       );
     });
   });
@@ -205,18 +204,18 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       const result = await service.getRoutesWithSWR();
 
       // Wait for background task to potentially complete
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Assert
       expect(result).toEqual(mockRoutes);
       expect(redisLockService.acquire).toHaveBeenCalledWith(
         'revalidating:routes',
         'true',
-        30000,
+        30000
       );
       expect(redisLockService.release).toHaveBeenCalledWith(
         'revalidating:routes',
-        'true',
+        'true'
       );
     });
 
@@ -231,7 +230,7 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
 
       // Act
       const result = await service.getRoutesWithSWR();
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Assert
       expect(result).toEqual(mockRoutes);
@@ -256,13 +255,13 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
 
       // Act
       const result = await service.getRoutesWithSWR();
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Assert
       expect(result).toEqual(mockRoutes); // Still serve stale data
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('❌ Failed to reload route cache:'),
-        expect.any(String),
+        expect.any(String)
       );
       expect(redisLockService.release).toHaveBeenCalled();
     });
@@ -278,12 +277,12 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       expect(redisLockService.set).toHaveBeenCalledWith(
         'global-routes',
         mockRoutes,
-        60000,
+        60000
       );
       expect(redisLockService.set).toHaveBeenCalledWith(
         'stale:routes',
         mockRoutes,
-        0,
+        0
       );
     });
 
@@ -303,7 +302,7 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       // Assert
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('❌ Failed to reload route cache:'),
-        expect.any(String),
+        expect.any(String)
       );
     });
   });
@@ -314,8 +313,8 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       redisLockService.get.mockImplementation(
         () =>
           new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Redis timeout')), 100),
-          ),
+            setTimeout(() => reject(new Error('Redis timeout')), 100)
+          )
       );
 
       // Act & Assert
@@ -330,7 +329,7 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
 
       // Act & Assert
       await expect(service.getRoutesWithSWR()).rejects.toThrow(
-        'Redis connection lost',
+        'Redis connection lost'
       );
     });
   });
@@ -357,14 +356,14 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       // Act
       const startTime = Date.now();
       const promises = Array.from({ length: 10 }, () =>
-        service.getRoutesWithSWR(),
+        service.getRoutesWithSWR()
       );
       const results = await Promise.all(promises);
       const duration = Date.now() - startTime;
 
       // Assert
       expect(results).toHaveLength(10);
-      expect(results.every((result) => result === mockRoutes)).toBe(true);
+      expect(results.every(result => result === mockRoutes)).toBe(true);
       expect(duration).toBeLessThan(50); // Should be fast due to caching
     });
 
@@ -377,7 +376,7 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
 
       // Simulate multiple concurrent requests during cache expiry
       const promises = Array.from({ length: 5 }, () =>
-        service.getRoutesWithSWR(),
+        service.getRoutesWithSWR()
       );
 
       // Act
@@ -414,7 +413,7 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       expect(redisLockService.set).toHaveBeenCalledWith(
         'stale:routes',
         emptyRoutes,
-        0,
+        0
       );
     });
 
@@ -448,7 +447,7 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       expect(redisLockService.acquire).toHaveBeenCalledWith(
         'revalidating:routes',
         'true',
-        30000, // 30 second lock TTL
+        30000 // 30 second lock TTL
       );
     });
   });

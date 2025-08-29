@@ -40,7 +40,11 @@ export function walkFilter({
 }): {
   parts: { operator: 'AND' | 'OR'; sql: string; params: Record<string, any> }[];
 } {
-  const parts: { operator: 'AND' | 'OR'; sql: string; params: Record<string, any> }[] = [];
+  const parts: {
+    operator: 'AND' | 'OR';
+    sql: string;
+    params: Record<string, any>;
+  }[] = [];
   let paramIndex = 1;
 
   const operatorMap: Record<string, string> = {
@@ -57,7 +61,7 @@ export function walkFilter({
     path: string[],
     currentMeta: EntityMetadata,
     currentAlias: string,
-    operator: 'AND' | 'OR',
+    operator: 'AND' | 'OR'
   ) => {
     if (!f || typeof f !== 'object') return;
     if (Array.isArray(f)) {
@@ -75,7 +79,7 @@ export function walkFilter({
           path,
           currentMeta,
           currentAlias,
-          key === '_and' ? 'AND' : 'OR',
+          key === '_and' ? 'AND' : 'OR'
         );
         continue;
       }
@@ -88,7 +92,7 @@ export function walkFilter({
           operator: 'AND',
           path,
         });
-        subParts.parts.forEach((p) => {
+        subParts.parts.forEach(p => {
           parts.push({ operator, sql: `NOT (${p.sql})`, params: p.params });
           log.push?.(`[${operator}] NOT (${p.sql})`);
         });
@@ -107,11 +111,11 @@ export function walkFilter({
 
           const isAggregate =
             typeof val === 'object' &&
-            Object.keys(val).some((k) => AGG_KEYS.includes(k));
+            Object.keys(val).some(k => AGG_KEYS.includes(k));
 
           if (isAggregate) {
             const inverse = nextMeta.relations.find(
-              (r) => r.inverseEntityMetadata.name === currentMeta.name,
+              r => r.inverseEntityMetadata.name === currentMeta.name
             );
             const foreignKey = inverse?.joinColumns?.[0]?.databaseName;
             if (!foreignKey) {
@@ -132,7 +136,7 @@ export function walkFilter({
                   const opSymbol = operatorMap[op];
                   if (!opSymbol) {
                     console.log(
-                      `[Aggregate] ❌ Unsupported _count operator: ${op}`,
+                      `[Aggregate] ❌ Unsupported _count operator: ${op}`
                     );
                     continue;
                   }
@@ -143,7 +147,7 @@ export function walkFilter({
                   } catch {
                     console.log(
                       `[Aggregate] ❌ Invalid value for _count.${op}:`,
-                      aggVal[op],
+                      aggVal[op]
                     );
                     continue;
                   }
@@ -162,18 +166,18 @@ export function walkFilter({
                   const ops = aggVal[field];
                   if (typeof ops !== 'object') {
                     console.log(
-                      `[Aggregate] ❌ Invalid block: ${aggKey}.${field}`,
+                      `[Aggregate] ❌ Invalid block: ${aggKey}.${field}`
                     );
                     continue;
                   }
 
                   const fieldMeta = nextMeta.columns.find(
-                    (c) => c.propertyName === field,
+                    c => c.propertyName === field
                   );
                   if (!fieldMeta) {
                     console.log(
                       `[Aggregate] ❌ Unknown field in ${nextMeta.name}:`,
-                      field,
+                      field
                     );
                     continue;
                   }
@@ -188,7 +192,7 @@ export function walkFilter({
                     const opSymbol = operatorMap[op];
                     if (!opSymbol) {
                       console.log(
-                        `[Aggregate] ❌ Unsupported operator: ${aggKey}.${field}.${op}`,
+                        `[Aggregate] ❌ Unsupported operator: ${aggKey}.${field}.${op}`
                       );
                       continue;
                     }
@@ -199,7 +203,7 @@ export function walkFilter({
                     } catch {
                       console.log(
                         `[Aggregate] ❌ Cannot parse value for ${aggKey}.${field}.${op}:`,
-                        ops[op],
+                        ops[op]
                       );
                       continue;
                     }
@@ -209,7 +213,7 @@ export function walkFilter({
                       (typeof parsedValue === 'number' && isNaN(parsedValue))
                     ) {
                       console.log(
-                        `[Aggregate] ❌ Invalid parsed value for ${aggKey}.${field}.${op}`,
+                        `[Aggregate] ❌ Invalid parsed value for ${aggKey}.${field}.${op}`
                       );
                       continue;
                     }
@@ -252,22 +256,26 @@ export function walkFilter({
           if (typeof val === 'object' && (val._in || val._not_in)) {
             const isIn = val._in !== undefined;
             let values = isIn ? val._in : val._not_in;
-            
+
             // Parse string to array if needed: "[1,2]" -> [1, 2]
             if (typeof values === 'string') {
               try {
                 values = JSON.parse(values);
               } catch (error) {
-                console.log(`[Relation] ❌ Failed to parse ${isIn ? '_in' : '_not_in'} value: ${values}`);
+                console.log(
+                  `[Relation] ❌ Failed to parse ${isIn ? '_in' : '_not_in'} value: ${values}`
+                );
                 continue;
               }
             }
-            
+
             if (!Array.isArray(values)) {
-              console.log(`[Relation] ❌ ${isIn ? '_in' : '_not_in'} requires an array, got: ${typeof values}`);
+              console.log(
+                `[Relation] ❌ ${isIn ? '_in' : '_not_in'} requires an array, got: ${typeof values}`
+              );
               continue;
             }
-            
+
             if (values.length === 0) {
               const sql = isIn ? '1 = 0' : '1 = 1'; // Always false/true for empty array
               parts.push({ operator, sql, params: {} });
@@ -275,7 +283,9 @@ export function walkFilter({
             }
 
             // Get relation metadata
-            const relation = currentMeta.relations.find(r => r.propertyName === key);
+            const relation = currentMeta.relations.find(
+              r => r.propertyName === key
+            );
             if (!relation) {
               console.log(`[Relation] ❌ Relation ${key} not found`);
               continue;
@@ -283,39 +293,57 @@ export function walkFilter({
 
             // Get target entity primary key type for type casting
             const targetPkColumn = nextMeta.columns.find(c => c.isPrimary);
-            const targetPkType = targetPkColumn ? (
-              typeof targetPkColumn.type === 'string' 
-                ? targetPkColumn.type 
+            const targetPkType = targetPkColumn
+              ? typeof targetPkColumn.type === 'string'
+                ? targetPkColumn.type
                 : targetPkColumn.type.name?.toLowerCase()
-            ) : 'number';
+              : 'number';
 
             let subquery = '';
             const relationParam = {};
-            const inParams = values.map((v) => {
-              const paramKey = `p${paramIndex++}`;
-              
-              // Cast value to correct type based on target PK type
-              let castedValue = v;
-              if (targetPkType && ['int', 'integer', 'number', 'bigint', 'smallint'].includes(targetPkType.toLowerCase())) {
-                castedValue = parseInt(v, 10);
-                if (isNaN(castedValue)) {
-                  console.log(`[Relation] ❌ Cannot cast value "${v}" to number for ${key}`);
-                  return null;
+            const inParams = values
+              .map(v => {
+                const paramKey = `p${paramIndex++}`;
+
+                // Cast value to correct type based on target PK type
+                let castedValue = v;
+                if (
+                  targetPkType &&
+                  ['int', 'integer', 'number', 'bigint', 'smallint'].includes(
+                    targetPkType.toLowerCase()
+                  )
+                ) {
+                  castedValue = parseInt(v, 10);
+                  if (isNaN(castedValue)) {
+                    console.log(
+                      `[Relation] ❌ Cannot cast value "${v}" to number for ${key}`
+                    );
+                    return null;
+                  }
+                } else if (
+                  targetPkType &&
+                  ['float', 'double', 'decimal', 'numeric'].includes(
+                    targetPkType.toLowerCase()
+                  )
+                ) {
+                  castedValue = parseFloat(v);
+                  if (isNaN(castedValue)) {
+                    console.log(
+                      `[Relation] ❌ Cannot cast value "${v}" to float for ${key}`
+                    );
+                    return null;
+                  }
                 }
-              } else if (targetPkType && ['float', 'double', 'decimal', 'numeric'].includes(targetPkType.toLowerCase())) {
-                castedValue = parseFloat(v);
-                if (isNaN(castedValue)) {
-                  console.log(`[Relation] ❌ Cannot cast value "${v}" to float for ${key}`);
-                  return null;
-                }
-              }
-              
-              relationParam[paramKey] = castedValue;
-              return `:${paramKey}`;
-            }).filter(Boolean); // Remove null entries
-            
+
+                relationParam[paramKey] = castedValue;
+                return `:${paramKey}`;
+              })
+              .filter(Boolean); // Remove null entries
+
             if (inParams.length === 0) {
-              console.log(`[Relation] ❌ No valid values after type casting for ${key}`);
+              console.log(
+                `[Relation] ❌ No valid values after type casting for ${key}`
+              );
               continue;
             }
 
@@ -323,8 +351,9 @@ export function walkFilter({
               // Many-to-many: use join table
               const joinTable = relation.joinTableName;
               const joinColumn = relation.joinColumns[0].databaseName; // current entity column
-              const inverseJoinColumn = relation.inverseJoinColumns[0].databaseName; // target entity column
-              
+              const inverseJoinColumn =
+                relation.inverseJoinColumns[0].databaseName; // target entity column
+
               subquery = `(SELECT ${joinColumn} FROM ${joinTable} WHERE ${inverseJoinColumn} IN (${inParams.join(', ')}))`;
             } else {
               // One-to-many/Many-to-one: use direct relation
@@ -334,7 +363,7 @@ export function walkFilter({
 
             const inOrNotIn = isIn ? 'IN' : 'NOT IN';
             const sql = `${currentAlias}.id ${inOrNotIn} ${subquery}`;
-            
+
             parts.push({ operator, sql, params: relationParam });
             log.push?.(`[${operator}] ${sql}`);
             continue;
@@ -342,7 +371,7 @@ export function walkFilter({
 
           if (
             typeof val === 'object' &&
-            !Object.keys(val).some((k) => OPERATORS.includes(k))
+            !Object.keys(val).some(k => OPERATORS.includes(k))
           ) {
             walk(val, newPath, nextMeta, nextAlias, operator);
           } else {
@@ -402,7 +431,7 @@ export function walkFilter({
             break;
           case '_in': {
             let values = val;
-            
+
             // Handle string input: "1,2,3" or "[1,2,3]"
             if (typeof values === 'string') {
               try {
@@ -410,18 +439,23 @@ export function walkFilter({
                 values = JSON.parse(values);
               } catch {
                 // If JSON parse fails, split by comma for "1,2,3" format
-                values = values.split(',').map(v => v.trim()).filter(v => v);
+                values = values
+                  .split(',')
+                  .map(v => v.trim())
+                  .filter(v => v);
               }
             }
-            
+
             if (!Array.isArray(values)) {
-              throw new Error(`_in operator requires an array, got: ${typeof val}`);
+              throw new Error(
+                `_in operator requires an array, got: ${typeof val}`
+              );
             }
             if (values.length === 0) {
               sql = '1 = 0'; // Always false for empty array
               break;
             }
-            
+
             // Standard IN operation for regular fields
             const inParams = values.map((v, i) => {
               const inParamKey = `${paramKey}_${i}`;
@@ -433,7 +467,7 @@ export function walkFilter({
           }
           case '_not_in': {
             let values = val;
-            
+
             // Handle string input: "1,2,3" or "[1,2,3]"
             if (typeof values === 'string') {
               try {
@@ -441,18 +475,23 @@ export function walkFilter({
                 values = JSON.parse(values);
               } catch {
                 // If JSON parse fails, split by comma for "1,2,3" format
-                values = values.split(',').map(v => v.trim()).filter(v => v);
+                values = values
+                  .split(',')
+                  .map(v => v.trim())
+                  .filter(v => v);
               }
             }
-            
+
             if (!Array.isArray(values)) {
-              throw new Error(`_not_in operator requires an array, got: ${typeof val}`);
+              throw new Error(
+                `_not_in operator requires an array, got: ${typeof val}`
+              );
             }
             if (values.length === 0) {
               sql = '1 = 1'; // Always true for empty array
               break;
             }
-            
+
             // Standard NOT IN operation for regular fields
             const notInParams = values.map((v, i) => {
               const notInParamKey = `${paramKey}_${i}`;
@@ -474,7 +513,7 @@ export function walkFilter({
               const parts = val.split(',');
               if (parts.length !== 2) {
                 throw new Error(
-                  `_between operator requires exactly 2 comma-separated values, got: "${val}"`,
+                  `_between operator requires exactly 2 comma-separated values, got: "${val}"`
                 );
               }
               val1 = parseValue(fieldType, parts[0].trim());
@@ -482,14 +521,14 @@ export function walkFilter({
             } else if (Array.isArray(val)) {
               if (val.length !== 2) {
                 throw new Error(
-                  `_between operator requires exactly 2 values, got array with ${val.length} values`,
+                  `_between operator requires exactly 2 values, got array with ${val.length} values`
                 );
               }
               val1 = parseValue(fieldType, val[0]);
               val2 = parseValue(fieldType, val[1]);
             } else {
               throw new Error(
-                `_between operator requires either a comma-separated string or array of 2 values, got: ${typeof val}`,
+                `_between operator requires either a comma-separated string or array of 2 values, got: ${typeof val}`
               );
             }
 
@@ -509,7 +548,7 @@ export function walkFilter({
             ) {
               if (isNaN(val1) || isNaN(val2)) {
                 throw new Error(
-                  `_between operator requires valid numeric values for field type ${fieldType}`,
+                  `_between operator requires valid numeric values for field type ${fieldType}`
                 );
               }
             }

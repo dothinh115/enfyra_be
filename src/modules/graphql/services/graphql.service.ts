@@ -18,7 +18,7 @@ import { generateGraphQLTypeDefsFromTables } from '../utils/generate-type-defs';
 export class GraphqlService implements OnApplicationBootstrap {
   constructor(
     private dataSourceService: DataSourceService,
-    private dynamicResolver: DynamicResolver,
+    private dynamicResolver: DynamicResolver
   ) {}
   async onApplicationBootstrap() {
     await this.reloadSchema();
@@ -41,7 +41,7 @@ export class GraphqlService implements OnApplicationBootstrap {
     function walkEntityMetadata(
       meta: EntityMetadata,
       path: string[],
-      alias: string,
+      alias: string
     ) {
       const tableId = meta.tableName;
       if (visited.has(tableId as any)) return;
@@ -83,11 +83,11 @@ export class GraphqlService implements OnApplicationBootstrap {
                 propName,
                 args,
                 ctx,
-                info,
+                info
               );
             };
           },
-        },
+        }
       ),
     };
 
@@ -98,23 +98,20 @@ export class GraphqlService implements OnApplicationBootstrap {
   }
 
   async reloadSchema() {
-    try {
-      const schema = await this.schemaGenerator();
+    // Direct schema generation - no need for try-catch wrapper
+    const schema = await this.schemaGenerator();
 
-      this.yogaApp = createYoga({
-        schema,
-        graphqlEndpoint: '/graphql',
-        graphiql: true,
-      });
-    } catch (error) {
-      throw error;
-    }
+    this.yogaApp = createYoga({
+      schema,
+      graphqlEndpoint: '/graphql',
+      graphiql: true,
+    });
   }
 
   getYogaInstance() {
     if (!this.yogaApp) {
       throw new Error(
-        'GraphQL Yoga instance not initialized. Call reloadSchema() first.',
+        'GraphQL Yoga instance not initialized. Call reloadSchema() first.'
       );
     }
     return this.yogaApp;

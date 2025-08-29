@@ -49,7 +49,7 @@ describe('RedisLockService', () => {
         'test-value',
         'PX',
         30000,
-        'NX',
+        'NX'
       );
     });
 
@@ -79,7 +79,7 @@ describe('RedisLockService', () => {
         JSON.stringify(complexValue),
         'PX',
         30000,
-        'NX',
+        'NX'
       );
     });
   });
@@ -158,7 +158,7 @@ describe('RedisLockService', () => {
         'test-key',
         '{"data":"test"}',
         'PX',
-        30000,
+        30000
       );
     });
 
@@ -223,7 +223,7 @@ describe('RedisLockService', () => {
       mockRedis.set.mockRejectedValue(new Error('Redis connection failed'));
 
       await expect(service.acquire('test-key', 'value', 30000)).rejects.toThrow(
-        'Redis connection failed',
+        'Redis connection failed'
       );
     });
 
@@ -242,12 +242,12 @@ describe('RedisLockService', () => {
       mockRedis.pttl.mockResolvedValue(30000);
 
       const promises = Array.from({ length: 100 }, (_, i) =>
-        service.acquire(`key-${i}`, `value-${i}`, 30000),
+        service.acquire(`key-${i}`, `value-${i}`, 30000)
       );
 
       const results = await Promise.all(promises);
 
-      expect(results.every((r) => r === true)).toBe(true);
+      expect(results.every(r => r === true)).toBe(true);
       expect(mockRedis.set).toHaveBeenCalledTimes(100);
     });
   });

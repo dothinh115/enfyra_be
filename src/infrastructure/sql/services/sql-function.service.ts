@@ -30,7 +30,7 @@ export class SqlFunctionService implements OnApplicationBootstrap {
 
     const result = await dataSource.query(
       `SELECT ROUTINE_NAME FROM information_schema.ROUTINES WHERE ROUTINE_TYPE='FUNCTION' AND ROUTINE_SCHEMA=DATABASE() AND ROUTINE_NAME = ?`,
-      [name],
+      [name]
     );
     return result.length > 0;
   }

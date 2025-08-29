@@ -183,7 +183,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
     it('should handle SWR cache errors gracefully', async () => {
       // Arrange
       routeCacheService.getRoutesWithSWR.mockRejectedValue(
-        new Error('Cache service error'),
+        new Error('Cache service error')
       );
       const mockReq: MockRequest = {
         method: 'GET',
@@ -197,7 +197,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
 
       // Act & Assert
       await expect(middleware.use(mockReq, mockRes, mockNext)).rejects.toThrow(
-        'Cache service error',
+        'Cache service error'
       );
     });
   });
@@ -226,7 +226,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       expect(mockReq.routeData.isPublished).toBe(true);
     });
 
-    it.skip('should match POST requests with hooks', async () => {
+    it('should match POST requests with hooks', async () => {
       // Arrange
       routeCacheService.getRoutesWithSWR.mockResolvedValue(mockRoutes);
       commonService.isRouteMatched
@@ -356,10 +356,10 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       // System tables should be filtered out
       expect(mockReq.routeData.context.$repos.table_definition).toBeUndefined();
       expect(
-        mockReq.routeData.context.$repos.column_definition,
+        mockReq.routeData.context.$repos.column_definition
       ).toBeUndefined();
       expect(
-        mockReq.routeData.context.$repos.relation_definition,
+        mockReq.routeData.context.$repos.relation_definition
       ).toBeUndefined();
     });
   });
@@ -424,10 +424,10 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       // Assert
       const filteredHooks = mockReq.routeData.hooks;
       expect(filteredHooks).toHaveLength(3); // global all + global GET + local all
-      expect(filteredHooks.some((h) => h.id === 1)).toBe(true); // Global all methods
-      expect(filteredHooks.some((h) => h.id === 2)).toBe(true); // Global GET
-      expect(filteredHooks.some((h) => h.id === 3)).toBe(true); // Local all methods
-      expect(filteredHooks.some((h) => h.id === 4)).toBe(false); // Local POST should be excluded
+      expect(filteredHooks.some(h => h.id === 1)).toBe(true); // Global all methods
+      expect(filteredHooks.some(h => h.id === 2)).toBe(true); // Global GET
+      expect(filteredHooks.some(h => h.id === 3)).toBe(true); // Local all methods
+      expect(filteredHooks.some(h => h.id === 4)).toBe(false); // Local POST should be excluded
     });
 
     it('should include method-specific hooks only', async () => {
@@ -455,10 +455,10 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       // Assert
       const filteredHooks = mockReq.routeData.hooks;
       expect(filteredHooks).toHaveLength(3); // global all + local all + local POST
-      expect(filteredHooks.some((h) => h.id === 1)).toBe(true); // Global all methods
-      expect(filteredHooks.some((h) => h.id === 2)).toBe(false); // Global GET should be excluded
-      expect(filteredHooks.some((h) => h.id === 3)).toBe(true); // Local all methods
-      expect(filteredHooks.some((h) => h.id === 4)).toBe(true); // Local POST
+      expect(filteredHooks.some(h => h.id === 1)).toBe(true); // Global all methods
+      expect(filteredHooks.some(h => h.id === 2)).toBe(false); // Global GET should be excluded
+      expect(filteredHooks.some(h => h.id === 3)).toBe(true); // Local all methods
+      expect(filteredHooks.some(h => h.id === 4)).toBe(true); // Local POST
     });
   });
 
@@ -570,15 +570,15 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
       const startTime = Date.now();
       await Promise.all(
         requests.map((req, i) =>
-          middleware.use(req, responses[i], nextFunctions[i]),
-        ),
+          middleware.use(req, responses[i], nextFunctions[i])
+        )
       );
       const duration = Date.now() - startTime;
 
       // Assert
       expect(duration).toBeLessThan(200); // Concurrent requests should be fast
       expect(routeCacheService.getRoutesWithSWR).toHaveBeenCalledTimes(10);
-      nextFunctions.forEach((next) => expect(next).toHaveBeenCalled());
+      nextFunctions.forEach(next => expect(next).toHaveBeenCalled());
     });
   });
 
@@ -604,7 +604,7 @@ describe('RouteDetectMiddleware - Integration with SWR Cache', () => {
 
       // Act & Assert
       await expect(
-        middleware.use(mockReq, mockRes, mockNext),
+        middleware.use(mockReq, mockRes, mockNext)
       ).rejects.toThrow();
     });
 

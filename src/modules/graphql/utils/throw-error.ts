@@ -3,7 +3,7 @@ import { GraphQLError } from 'graphql';
 export function throwGqlError(
   code: string,
   message: string,
-  detail?: any,
+  detail?: any
 ): never {
   throw new GraphQLError(message, {
     extensions: {

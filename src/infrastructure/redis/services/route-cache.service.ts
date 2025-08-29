@@ -13,7 +13,7 @@ export class RouteCacheService {
 
   constructor(
     private readonly dataSourceService: DataSourceService,
-    private readonly redisLockService: RedisLockService,
+    private readonly redisLockService: RedisLockService
   ) {}
 
   private async loadRoutes(): Promise<any[]> {
@@ -36,7 +36,7 @@ export class RouteCacheService {
           'route.hooks',
           'hooks',
           'hooks.isEnabled = :enabled',
-          { enabled: true },
+          { enabled: true }
         )
         .leftJoinAndSelect('hooks.methods', 'hooks_method')
         .leftJoinAndSelect('hooks.route', 'hooks_route')
@@ -46,7 +46,7 @@ export class RouteCacheService {
           'route.routePermissions',
           'routePermissions',
           'routePermissions.isEnabled = :enabled',
-          { enabled: true },
+          { enabled: true }
         )
         .leftJoinAndSelect('routePermissions.role', 'role')
         .leftJoinAndSelect('routePermissions.allowedUsers', 'allowedUsers')
@@ -61,7 +61,7 @@ export class RouteCacheService {
       route.hooks = [
         ...(globalHooks || []),
         ...(route.hooks ?? []).sort(
-          (a, b) => (a.priority ?? 0) - (b.priority ?? 0),
+          (a, b) => (a.priority ?? 0) - (b.priority ?? 0)
         ),
       ];
     }
@@ -76,7 +76,7 @@ export class RouteCacheService {
     this.logger.log(`[LOAD:${loadId}] 📊 Loading routes from database...`);
     const routes = await this.loadRoutes();
     this.logger.log(
-      `[LOAD:${loadId}] 📊 Loaded ${routes.length} routes in ${Date.now() - loadStart}ms`,
+      `[LOAD:${loadId}] 📊 Loaded ${routes.length} routes in ${Date.now() - loadStart}ms`
     );
 
     const cacheStart = Date.now();
@@ -86,7 +86,7 @@ export class RouteCacheService {
       this.redisLockService.set(STALE_ROUTES_KEY, routes, 0),
     ]);
     this.logger.log(
-      `[LOAD:${loadId}] 💾 Cached routes in ${Date.now() - cacheStart}ms`,
+      `[LOAD:${loadId}] 💾 Cached routes in ${Date.now() - cacheStart}ms`
     );
 
     return routes;
@@ -97,13 +97,13 @@ export class RouteCacheService {
 
     try {
       this.logger.log(
-        `[RELOAD:${reloadId}] 🔄 Manual route cache reload requested...`,
+        `[RELOAD:${reloadId}] 🔄 Manual route cache reload requested...`
       );
       const reloadStart = Date.now();
 
       const routes = await this.loadRoutes();
       this.logger.log(
-        `[RELOAD:${reloadId}] 📊 Loaded ${routes.length} routes in ${Date.now() - reloadStart}ms`,
+        `[RELOAD:${reloadId}] 📊 Loaded ${routes.length} routes in ${Date.now() - reloadStart}ms`
       );
 
       const cacheStart = Date.now();
@@ -112,16 +112,16 @@ export class RouteCacheService {
         this.redisLockService.set(STALE_ROUTES_KEY, routes, 0),
       ]);
       this.logger.log(
-        `[RELOAD:${reloadId}] 💾 Updated cache in ${Date.now() - cacheStart}ms`,
+        `[RELOAD:${reloadId}] 💾 Updated cache in ${Date.now() - cacheStart}ms`
       );
 
       this.logger.log(
-        `[RELOAD:${reloadId}] ✅ Reloaded route cache with ${routes.length} routes in ${Date.now() - reloadStart}ms total`,
+        `[RELOAD:${reloadId}] ✅ Reloaded route cache with ${routes.length} routes in ${Date.now() - reloadStart}ms total`
       );
     } catch (error) {
       this.logger.error(
         `[RELOAD:${reloadId}] ❌ Failed to reload route cache:`,
-        error.stack || error.message,
+        error instanceof Error ? error.stack || error.message : String(error)
       );
     }
   }
@@ -139,7 +139,7 @@ export class RouteCacheService {
       if (cacheTime > 10) {
         const requestId = Math.random().toString(36).substring(7);
         this.logger.warn(
-          `[SWR:${requestId}] ⚠️ Cache hit but Redis slow: ${cacheTime}ms`,
+          `[SWR:${requestId}] ⚠️ Cache hit but Redis slow: ${cacheTime}ms`
         );
       }
       return cachedRoutes;
@@ -149,7 +149,7 @@ export class RouteCacheService {
     const requestId = Math.random().toString(36).substring(7);
 
     this.logger.log(
-      `[SWR:${requestId}] ❌ Cache EXPIRED (Redis: ${cacheTime}ms) - checking stale data...`,
+      `[SWR:${requestId}] ❌ Cache EXPIRED (Redis: ${cacheTime}ms) - checking stale data...`
     );
 
     // Cache miss - check if we have stale data in Redis to return immediately
@@ -161,42 +161,42 @@ export class RouteCacheService {
     const staleTime = Date.now() - staleStart;
 
     this.logger.log(
-      `[SWR:${requestId}] Stale check (${staleTime}ms): ${staleRoutes ? `${staleRoutes.length} routes` : 'NONE'}, Revalidating: ${!!isRevalidating}`,
+      `[SWR:${requestId}] Stale check (${staleTime}ms): ${staleRoutes ? `${staleRoutes.length} routes` : 'NONE'}, Revalidating: ${!!isRevalidating}`
     );
 
     if (staleRoutes) {
       if (!isRevalidating) {
         this.logger.log(
-          `[SWR:${requestId}] 🔄 Starting background revalidation...`,
+          `[SWR:${requestId}] 🔄 Starting background revalidation...`
         );
         // Start background revalidation (non-blocking)
-        this.backgroundRevalidate().catch((err) =>
+        this.backgroundRevalidate().catch(err =>
           this.logger.error(
             `[SWR:${requestId}] Background revalidation error:`,
-            err,
-          ),
+            err
+          )
         );
       } else {
         this.logger.log(
-          `[SWR:${requestId}] ⏳ Already revalidating, skip background task`,
+          `[SWR:${requestId}] ⏳ Already revalidating, skip background task`
         );
       }
 
       const totalTime = Date.now() - overallStart;
       this.logger.log(
-        `[SWR:${requestId}] ⚡ Serving STALE data - returned ${staleRoutes.length} routes in ${totalTime}ms (cache:${cacheTime}ms + stale:${staleTime}ms)`,
+        `[SWR:${requestId}] ⚡ Serving STALE data - returned ${staleRoutes.length} routes in ${totalTime}ms (cache:${cacheTime}ms + stale:${staleTime}ms)`
       );
       return staleRoutes;
     }
 
     // No stale data available - fetch synchronously
     this.logger.warn(
-      `[SWR:${requestId}] 🐌 SLOW PATH - No cache, no stale data - fetching from DB...`,
+      `[SWR:${requestId}] 🐌 SLOW PATH - No cache, no stale data - fetching from DB...`
     );
     const routes = await this.loadAndCacheRoutes();
     const totalTime = Date.now() - overallStart;
     this.logger.warn(
-      `[SWR:${requestId}] 🐌 DB fetch completed - ${routes.length} routes in ${totalTime}ms`,
+      `[SWR:${requestId}] 🐌 DB fetch completed - ${routes.length} routes in ${totalTime}ms`
     );
     return routes;
   }
@@ -208,12 +208,12 @@ export class RouteCacheService {
     const acquired = await this.redisLockService.acquire(
       REVALIDATING_KEY,
       'true',
-      30000, // 30s TTL for revalidation lock
+      30000 // 30s TTL for revalidation lock
     );
 
     if (!acquired) {
       this.logger.log(
-        `[BG:${bgId}] ⏸️ Another instance is already revalidating - skipping`,
+        `[BG:${bgId}] ⏸️ Another instance is already revalidating - skipping`
       );
       return; // Another instance is already revalidating
     }
@@ -224,21 +224,21 @@ export class RouteCacheService {
     try {
       await this.reloadRouteCache();
       this.logger.log(
-        `[BG:${bgId}] ✅ Background revalidation completed in ${Date.now() - bgStart}ms`,
+        `[BG:${bgId}] ✅ Background revalidation completed in ${Date.now() - bgStart}ms`
       );
     } catch (error) {
       this.logger.error(
         `[BG:${bgId}] ❌ Background revalidation failed:`,
-        error,
+        error
       );
     } finally {
       // Clear revalidating flag
       const released = await this.redisLockService.release(
         REVALIDATING_KEY,
-        'true',
+        'true'
       );
       this.logger.log(
-        `[BG:${bgId}] 🔓 Released revalidation lock: ${released}`,
+        `[BG:${bgId}] 🔓 Released revalidation lock: ${released}`
       );
     }
   }

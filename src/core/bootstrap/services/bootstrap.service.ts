@@ -20,12 +20,12 @@ export class BootstrapService implements OnApplicationBootstrap {
     private readonly coreInitService: CoreInitService,
     private dataSourceService: DataSourceService,
     private schemaReloadService: SchemaReloadService,
-    private redisLockService: RedisLockService,
+    private redisLockService: RedisLockService
   ) {}
 
   private async waitForDatabaseConnection(
     maxRetries = 10,
-    delayMs = 1000,
+    delayMs = 1000
   ): Promise<void> {
     let settingRepo =
       this.dataSourceService.getRepository('setting_definition');
@@ -37,7 +37,7 @@ export class BootstrapService implements OnApplicationBootstrap {
         return;
       } catch (error) {
         this.logger.warn(
-          `Unable to connect to DB, retrying after ${delayMs}ms...`,
+          `Unable to connect to DB, retrying after ${delayMs}ms...`
         );
         await this.commonService.delay(delayMs);
         await this.dataSourceService.reloadDataSource();
@@ -62,14 +62,14 @@ export class BootstrapService implements OnApplicationBootstrap {
 
     if (!settingRepo || !schemaHistoryRepo) {
       this.logger.error(
-        '❌ Failed to get repositories. Database may not be initialized properly.',
+        '❌ Failed to get repositories. Database may not be initialized properly.'
       );
       return;
     }
 
-    let setting: any = await settingRepo.findOne({ 
+    let setting: any = await settingRepo.findOne({
       where: {},
-      order: { id: 'ASC' }  // Get first setting record
+      order: { id: 'ASC' }, // Get first setting record
     });
 
     if (!setting || !setting.isInit) {
@@ -77,19 +77,24 @@ export class BootstrapService implements OnApplicationBootstrap {
 
       await this.defaultDataService.insertAllDefaultRecords();
       const syncResult = await this.metadataSyncService.syncAll();
-      this.logger.debug(`Bootstrap sync result: ${syncResult.status}`, syncResult);
+      this.logger.debug(
+        `Bootstrap sync result: ${syncResult.status}`,
+        syncResult
+      );
 
       settingRepo = this.dataSourceService.getRepository('setting_definition');
-      setting = await settingRepo.findOne({ 
+      setting = await settingRepo.findOne({
         where: {},
-        order: { id: 'ASC' }  // Get first setting record
+        order: { id: 'ASC' }, // Get first setting record
       });
-      
+
       if (!setting) {
         this.logger.error('❌ Setting record not found after initialization');
-        throw new Error('Setting record not found after initialization. DefaultDataService may have failed.');
+        throw new Error(
+          'Setting record not found after initialization. DefaultDataService may have failed.'
+        );
       }
-      
+
       await settingRepo.update(setting.id, { isInit: true });
       schemaHistoryRepo =
         this.dataSourceService.getRepository('schema_history');
@@ -112,11 +117,14 @@ export class BootstrapService implements OnApplicationBootstrap {
       const acquired = await this.redisLockService.acquire(
         'global:boot',
         this.schemaReloadService.sourceInstanceId,
-        15000,
+        15000
       );
       if (acquired) {
         const syncResult = await this.metadataSyncService.syncAll();
-      this.logger.debug(`Bootstrap sync result: ${syncResult.status}`, syncResult);
+        this.logger.debug(
+          `Bootstrap sync result: ${syncResult.status}`,
+          syncResult
+        );
         this.logger.warn('Lock acquired successfully', acquired);
         schemaHistoryRepo =
           this.dataSourceService.getRepository('schema_history');

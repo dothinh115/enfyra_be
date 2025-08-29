@@ -19,8 +19,8 @@ import { GenericTableProcessor } from '../processors/generic-table.processor';
 const initJson = JSON.parse(
   fs.readFileSync(
     path.join(process.cwd(), 'src/core/bootstrap/data/init.json'),
-    'utf8',
-  ),
+    'utf8'
+  )
 );
 
 @Injectable()
@@ -39,7 +39,7 @@ export class DefaultDataService {
     private readonly hookProcessor: HookDefinitionProcessor,
     private readonly settingProcessor: SettingDefinitionProcessor,
     private readonly extensionProcessor: ExtensionDefinitionProcessor,
-    private readonly folderProcessor: FolderDefinitionProcessor,
+    private readonly folderProcessor: FolderDefinitionProcessor
   ) {
     this.initializeProcessors();
   }
@@ -54,11 +54,11 @@ export class DefaultDataService {
     this.processors.set('setting_definition', this.settingProcessor);
     this.processors.set('extension_definition', this.extensionProcessor);
     this.processors.set('folder_definition', this.folderProcessor);
-    
+
     // Dynamic processors for remaining tables - auto-detect from initJson
     const allTables = Object.keys(initJson);
     const registeredTables = Array.from(this.processors.keys());
-    
+
     for (const tableName of allTables) {
       if (!registeredTables.includes(tableName)) {
         this.processors.set(tableName, new GenericTableProcessor(tableName));
@@ -67,20 +67,29 @@ export class DefaultDataService {
   }
 
   async insertAllDefaultRecords(): Promise<void> {
-    this.logger.log('🚀 Starting default data upsert with refactored processors...');
-    
+    this.logger.log(
+      '🚀 Starting default data upsert with refactored processors...'
+    );
+
     let totalCreated = 0;
     let totalSkipped = 0;
 
     for (const [tableName, rawRecords] of Object.entries(initJson)) {
       const processor = this.processors.get(tableName);
       if (!processor) {
-        this.logger.warn(`⚠️ No processor found for table '${tableName}', skipping.`);
+        this.logger.warn(
+          `⚠️ No processor found for table '${tableName}', skipping.`
+        );
         continue;
       }
 
-      if (!rawRecords || (Array.isArray(rawRecords) && rawRecords.length === 0)) {
-        this.logger.debug(`❎ Table '${tableName}' has no default data, skipping.`);
+      if (
+        !rawRecords ||
+        (Array.isArray(rawRecords) && rawRecords.length === 0)
+      ) {
+        this.logger.debug(
+          `❎ Table '${tableName}' has no default data, skipping.`
+        );
         continue;
       }
 
@@ -89,24 +98,26 @@ export class DefaultDataService {
       try {
         const repo = this.dataSourceService.getRepository(tableName);
         const records = Array.isArray(rawRecords) ? rawRecords : [rawRecords];
-        
+
         // Dynamic context based on processor needs
         let context: any = undefined;
         if (tableName === 'menu_definition') {
           context = { repo };
         }
         // Add more context rules as needed for other processors
-        
+
         const result = await processor.process(records, repo, context);
-        
+
         totalCreated += result.created;
         totalSkipped += result.skipped;
-        
+
         this.logger.log(
           `✅ Completed '${tableName}': ${result.created} created, ${result.skipped} skipped`
         );
       } catch (error) {
-        this.logger.error(`❌ Error processing table '${tableName}': ${error.message}`);
+        this.logger.error(
+          `❌ Error processing table '${tableName}': ${error instanceof Error ? error.message : String(error)}`
+        );
         this.logger.debug(`Error details:`, error);
       }
     }

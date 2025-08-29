@@ -14,7 +14,7 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
       this.dataSourceService.getRepository('method_definition');
 
     const transformedRecords = await Promise.all(
-      records.map(async (hook) => {
+      records.map(async hook => {
         const transformedHook = { ...hook };
 
         // Map route reference
@@ -24,16 +24,16 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
             new Set([
               rawPath,
               rawPath.startsWith('/') ? rawPath.slice(1) : '/' + rawPath,
-            ]),
+            ])
           );
 
           const route = await routeRepo.findOne({
-            where: pathsToTry.map((p) => ({ path: p })),
+            where: pathsToTry.map(p => ({ path: p })),
           });
 
           if (!route) {
             this.logger.warn(
-              `⚠️ Route '${hook.route}' not found for hook ${hook.name}, skipping.`,
+              `⚠️ Route '${hook.route}' not found for hook ${hook.name}, skipping.`
             );
             return null;
           }
@@ -52,14 +52,14 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
               methodEntities.push(method);
             } else {
               this.logger.warn(
-                `⚠️ Method '${methodName}' not found for hook ${hook.name}`,
+                `⚠️ Method '${methodName}' not found for hook ${hook.name}`
               );
             }
           }
 
           if (methodEntities.length === 0) {
             this.logger.warn(
-              `⚠️ No valid methods found for hook ${hook.name}, skipping.`,
+              `⚠️ No valid methods found for hook ${hook.name}, skipping.`
             );
             return null;
           }
@@ -68,7 +68,7 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
         }
 
         return transformedHook;
-      }),
+      })
     );
 
     // Filter out null records
@@ -103,7 +103,7 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
     let methodsStr = '';
     if (methods && Array.isArray(methods)) {
       methodsStr = methods
-        .map((m) => (typeof m === 'string' ? m : m.method))
+        .map(m => (typeof m === 'string' ? m : m.method))
         .join(', ');
     }
 

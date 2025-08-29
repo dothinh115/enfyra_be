@@ -11,10 +11,10 @@ export class UserDefinitionProcessor extends BaseTableProcessor {
   async transformRecords(records: any[]): Promise<any[]> {
     // Hash passwords before upsert
     return Promise.all(
-      records.map(async (record) => ({
+      records.map(async record => ({
         ...record,
         password: await this.bcryptService.hash(record.password),
-      })),
+      }))
     );
   }
 

@@ -1,7 +1,7 @@
 export function wrapCtx(
   obj: any,
   path: string[] = [],
-  seen = new WeakSet(),
+  seen = new WeakSet()
 ): any {
   if (obj === null || typeof obj !== 'object') {
     if (typeof obj === 'function') {
@@ -21,7 +21,7 @@ export function wrapCtx(
 
   if (Array.isArray(obj)) {
     return obj.map((item, index) =>
-      wrapCtx(item, [...path, String(index)], seen),
+      wrapCtx(item, [...path, String(index)], seen)
     );
   }
 
@@ -93,7 +93,7 @@ function toPlainSafe(obj: any, seen = new WeakSet()): any {
   if (obj instanceof Date) return obj;
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => toPlainSafe(item, seen));
+    return obj.map(item => toPlainSafe(item, seen));
   }
 
   const plain: Record<string, any> = {};

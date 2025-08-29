@@ -16,8 +16,8 @@ import { FolderDefinitionProcessor } from './processors/folder-definition.proces
 @Global()
 @Module({
   providers: [
-    BootstrapService, 
-    CoreInitService, 
+    BootstrapService,
+    CoreInitService,
     DefaultDataService,
     // Register processors
     UserDefinitionProcessor,

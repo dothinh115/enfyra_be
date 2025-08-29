@@ -68,7 +68,7 @@ export class FileManagementService {
     const fileType = this.getFileType(fileData.mimetype);
 
     this.logger.log(
-      `Processing file upload: ${fileData.filename} → ${uniqueFilename}`,
+      `Processing file upload: ${fileData.filename} → ${uniqueFilename}`
     );
 
     try {
@@ -93,10 +93,10 @@ export class FileManagementService {
     } catch (error) {
       this.logger.error(
         `Failed to process file upload: ${fileData.filename}`,
-        error,
+        error
       );
       throw new BadRequestException(
-        `Failed to process file upload: ${error.message}`,
+        `Failed to process file upload: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -118,12 +118,12 @@ export class FileManagementService {
         process.cwd(),
         'public',
         'uploads',
-        path.basename(location),
+        path.basename(location)
       );
       if (await this.fileExists(altPath)) {
         await fs.promises.unlink(altPath);
         this.logger.log(
-          `Physical file deleted from alternative path: ${altPath}`,
+          `Physical file deleted from alternative path: ${altPath}`
         );
         return;
       }
@@ -132,7 +132,7 @@ export class FileManagementService {
     } catch (error) {
       this.logger.error(`Failed to delete physical file: ${location}`, error);
       throw new BadRequestException(
-        `Failed to delete physical file: ${error.message}`,
+        `Failed to delete physical file: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -178,13 +178,15 @@ export class FileManagementService {
       throw new Error(`Source file not found: ${absolutePath}`);
     } catch (error) {
       this.logger.error(`Failed to backup file: ${absolutePath}`, error);
-      throw new BadRequestException(`Failed to backup file: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to backup file: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
   async replacePhysicalFile(
     oldLocation: string,
-    newLocation: string,
+    newLocation: string
   ): Promise<void> {
     const oldAbsolutePath = this.convertToAbsolutePath(oldLocation);
     const newAbsolutePath = this.convertToAbsolutePath(newLocation);
@@ -205,11 +207,13 @@ export class FileManagementService {
       await fs.promises.copyFile(newAbsolutePath, oldAbsolutePath);
 
       this.logger.log(
-        `File replaced successfully: ${oldAbsolutePath} ← ${newAbsolutePath}`,
+        `File replaced successfully: ${oldAbsolutePath} ← ${newAbsolutePath}`
       );
     } catch (error) {
       this.logger.error(`Failed to replace file: ${oldLocation}`, error);
-      throw new BadRequestException(`Failed to replace file: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to replace file: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -227,7 +231,7 @@ export class FileManagementService {
 
   async restoreFromBackup(
     originalLocation: string,
-    backupPath: string,
+    backupPath: string
   ): Promise<void> {
     const originalAbsolutePath = this.convertToAbsolutePath(originalLocation);
 
@@ -235,7 +239,7 @@ export class FileManagementService {
       if (await this.fileExists(backupPath)) {
         await fs.promises.copyFile(backupPath, originalAbsolutePath);
         this.logger.log(
-          `File restored from backup: ${backupPath} → ${originalAbsolutePath}`,
+          `File restored from backup: ${backupPath} → ${originalAbsolutePath}`
         );
 
         // Xóa backup sau khi restore thành công
@@ -246,9 +250,11 @@ export class FileManagementService {
     } catch (error) {
       this.logger.error(
         `Failed to restore file from backup: ${backupPath}`,
-        error,
+        error
       );
-      throw new BadRequestException(`Failed to restore file: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to restore file: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 }

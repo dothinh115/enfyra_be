@@ -32,30 +32,30 @@ describe('ScriptErrorFactory', () => {
   describe('Business Logic Errors', () => {
     it('should throw BusinessLogicException with businessLogic method', () => {
       expect(() => errorHandlers.businessLogic('Invalid operation')).toThrow(
-        BusinessLogicException,
+        BusinessLogicException
       );
 
       expect(() =>
-        errorHandlers.businessLogic('Invalid operation', { field: 'test' }),
+        errorHandlers.businessLogic('Invalid operation', { field: 'test' })
       ).toThrow('Invalid operation');
     });
 
     it('should throw ValidationException with validation method', () => {
       expect(() => errorHandlers.validation('Invalid email')).toThrow(
-        ValidationException,
+        ValidationException
       );
 
       try {
         errorHandlers.validation('Invalid email', { field: 'email' });
       } catch (error) {
         expect(error).toBeInstanceOf(ValidationException);
-        expect(error.details).toEqual({ field: 'email' });
+        expect((error as any).details).toEqual({ field: 'email' });
       }
     });
 
     it('should throw ResourceNotFoundException with notFound method', () => {
       expect(() => errorHandlers.notFound('User', '123')).toThrow(
-        ResourceNotFoundException,
+        ResourceNotFoundException
       );
 
       expect(() => errorHandlers.notFound('User')).toThrow('User not found');
@@ -63,11 +63,11 @@ describe('ScriptErrorFactory', () => {
 
     it('should throw DuplicateResourceException with duplicate method', () => {
       expect(() =>
-        errorHandlers.duplicate('User', 'email', 'test@example.com'),
+        errorHandlers.duplicate('User', 'email', 'test@example.com')
       ).toThrow(DuplicateResourceException);
 
       expect(() =>
-        errorHandlers.duplicate('User', 'email', 'test@example.com'),
+        errorHandlers.duplicate('User', 'email', 'test@example.com')
       ).toThrow("User with email 'test@example.com' already exists");
     });
   });
@@ -75,11 +75,11 @@ describe('ScriptErrorFactory', () => {
   describe('Authentication & Authorization Errors', () => {
     it('should throw AuthenticationException with unauthorized method', () => {
       expect(() => errorHandlers.unauthorized()).toThrow(
-        AuthenticationException,
+        AuthenticationException
       );
 
       expect(() => errorHandlers.unauthorized('Custom auth message')).toThrow(
-        'Custom auth message',
+        'Custom auth message'
       );
     });
 
@@ -99,7 +99,7 @@ describe('ScriptErrorFactory', () => {
       expect(() => errorHandlers.invalidToken()).toThrow(InvalidTokenException);
 
       expect(() => errorHandlers.invalidToken()).toThrow(
-        'Invalid token provided',
+        'Invalid token provided'
       );
     });
   });
@@ -107,24 +107,24 @@ describe('ScriptErrorFactory', () => {
   describe('Database Errors', () => {
     it('should throw DatabaseException with database method', () => {
       expect(() => errorHandlers.database('Connection failed')).toThrow(
-        DatabaseException,
+        DatabaseException
       );
 
       try {
         errorHandlers.database('Transaction failed', { table: 'users' });
       } catch (error) {
         expect(error).toBeInstanceOf(DatabaseException);
-        expect(error.details).toEqual({ table: 'users' });
+        expect((error as any).details).toEqual({ table: 'users' });
       }
     });
 
     it('should throw DatabaseQueryException with dbQuery method', () => {
       expect(() => errorHandlers.dbQuery('Invalid SQL')).toThrow(
-        DatabaseQueryException,
+        DatabaseQueryException
       );
 
       expect(() =>
-        errorHandlers.dbQuery('Syntax error', { query: 'SELECT *' }),
+        errorHandlers.dbQuery('Syntax error', { query: 'SELECT *' })
       ).toThrow('Syntax error');
     });
   });
@@ -132,21 +132,21 @@ describe('ScriptErrorFactory', () => {
   describe('External Service Errors', () => {
     it('should throw ExternalServiceException with externalService method', () => {
       expect(() =>
-        errorHandlers.externalService('PaymentAPI', 'Connection timeout'),
+        errorHandlers.externalService('PaymentAPI', 'Connection timeout')
       ).toThrow(ExternalServiceException);
 
       expect(() =>
-        errorHandlers.externalService('PaymentAPI', 'Failed'),
+        errorHandlers.externalService('PaymentAPI', 'Failed')
       ).toThrow("External service 'PaymentAPI' error: Failed");
     });
 
     it('should throw ServiceUnavailableException with serviceUnavailable method', () => {
       expect(() => errorHandlers.serviceUnavailable('EmailService')).toThrow(
-        ServiceUnavailableException,
+        ServiceUnavailableException
       );
 
       expect(() => errorHandlers.serviceUnavailable('EmailService')).toThrow(
-        "Service 'EmailService' is currently unavailable",
+        "Service 'EmailService' is currently unavailable"
       );
     });
   });
@@ -154,11 +154,11 @@ describe('ScriptErrorFactory', () => {
   describe('Rate Limiting Errors', () => {
     it('should throw RateLimitExceededException with rateLimit method', () => {
       expect(() => errorHandlers.rateLimit(100, '1 hour')).toThrow(
-        RateLimitExceededException,
+        RateLimitExceededException
       );
 
       expect(() => errorHandlers.rateLimit(100, '1 hour')).toThrow(
-        'Rate limit exceeded. Maximum 100 requests per 1 hour',
+        'Rate limit exceeded. Maximum 100 requests per 1 hour'
       );
     });
   });
@@ -166,7 +166,7 @@ describe('ScriptErrorFactory', () => {
   describe('Script Execution Errors', () => {
     it('should throw ScriptExecutionException with scriptError method', () => {
       expect(() => errorHandlers.scriptError('Runtime error')).toThrow(
-        ScriptExecutionException,
+        ScriptExecutionException
       );
 
       try {
@@ -175,17 +175,17 @@ describe('ScriptErrorFactory', () => {
         });
       } catch (error) {
         expect(error).toBeInstanceOf(ScriptExecutionException);
-        expect(error.message).toContain('Variable undefined');
+        expect((error as any).message).toContain('Variable undefined');
       }
     });
 
     it('should throw ScriptTimeoutException with scriptTimeout method', () => {
       expect(() => errorHandlers.scriptTimeout(5000)).toThrow(
-        ScriptTimeoutException,
+        ScriptTimeoutException
       );
 
       expect(() => errorHandlers.scriptTimeout(5000, 'script_123')).toThrow(
-        'Script execution timed out after 5000ms',
+        'Script execution timed out after 5000ms'
       );
     });
   });
@@ -193,21 +193,21 @@ describe('ScriptErrorFactory', () => {
   describe('Schema & Configuration Errors', () => {
     it('should throw SchemaException with schema method', () => {
       expect(() => errorHandlers.schema('Invalid table')).toThrow(
-        SchemaException,
+        SchemaException
       );
 
       expect(() =>
-        errorHandlers.schema('Missing column', { table: 'users' }),
+        errorHandlers.schema('Missing column', { table: 'users' })
       ).toThrow('Missing column');
     });
 
     it('should throw ConfigurationException with config method', () => {
       expect(() => errorHandlers.config('Missing key')).toThrow(
-        ConfigurationException,
+        ConfigurationException
       );
 
       expect(() => errorHandlers.config('Invalid value', 'API_KEY')).toThrow(
-        'Configuration error: Invalid value',
+        'Configuration error: Invalid value'
       );
     });
   });
@@ -215,34 +215,34 @@ describe('ScriptErrorFactory', () => {
   describe('File Errors', () => {
     it('should throw FileUploadException with fileUpload method', () => {
       expect(() => errorHandlers.fileUpload('Invalid type')).toThrow(
-        FileUploadException,
+        FileUploadException
       );
 
       try {
         errorHandlers.fileUpload('Wrong format', { allowed: ['.jpg', '.png'] });
       } catch (error) {
         expect(error).toBeInstanceOf(FileUploadException);
-        expect(error.details).toEqual({ allowed: ['.jpg', '.png'] });
+        expect((error as any).details).toEqual({ allowed: ['.jpg', '.png'] });
       }
     });
 
     it('should throw FileNotFoundException with fileNotFound method', () => {
       expect(() => errorHandlers.fileNotFound('/path/to/file.txt')).toThrow(
-        FileNotFoundException,
+        FileNotFoundException
       );
 
       expect(() => errorHandlers.fileNotFound('/path/to/file.txt')).toThrow(
-        'File not found: /path/to/file.txt',
+        'File not found: /path/to/file.txt'
       );
     });
 
     it('should throw FileSizeExceededException with fileSizeExceeded method', () => {
       expect(() => errorHandlers.fileSizeExceeded('10MB', '15MB')).toThrow(
-        FileSizeExceededException,
+        FileSizeExceededException
       );
 
       expect(() => errorHandlers.fileSizeExceeded('10MB', '15MB')).toThrow(
-        'File size exceeded. Maximum: 10MB, Actual: 15MB',
+        'File size exceeded. Maximum: 10MB, Actual: 15MB'
       );
     });
   });
@@ -250,7 +250,7 @@ describe('ScriptErrorFactory', () => {
   describe('Legacy HTTP Status Methods', () => {
     it('should throw appropriate exceptions for legacy throw methods', () => {
       expect(() => errorHandlers.throw400('Bad request')).toThrow(
-        BusinessLogicException,
+        BusinessLogicException
       );
 
       expect(() => errorHandlers.throw401()).toThrow(AuthenticationException);
@@ -258,27 +258,27 @@ describe('ScriptErrorFactory', () => {
       expect(() => errorHandlers.throw403()).toThrow(AuthorizationException);
 
       expect(() => errorHandlers.throw404('User', '123')).toThrow(
-        ResourceNotFoundException,
+        ResourceNotFoundException
       );
 
       expect(() =>
-        errorHandlers.throw409('User', 'email', 'test@example.com'),
+        errorHandlers.throw409('User', 'email', 'test@example.com')
       ).toThrow(DuplicateResourceException);
 
       expect(() => errorHandlers.throw422('Invalid data')).toThrow(
-        ValidationException,
+        ValidationException
       );
 
       expect(() => errorHandlers.throw429(100, '1 hour')).toThrow(
-        RateLimitExceededException,
+        RateLimitExceededException
       );
 
       expect(() => errorHandlers.throw500('Server error')).toThrow(
-        DatabaseException,
+        DatabaseException
       );
 
       expect(() => errorHandlers.throw503('PaymentService')).toThrow(
-        ServiceUnavailableException,
+        ServiceUnavailableException
       );
     });
 
@@ -302,7 +302,7 @@ describe('ScriptErrorFactory', () => {
       const error = errorBuilders.build(
         'CUSTOM_ERROR',
         'Something went wrong',
-        { id: 123 },
+        { id: 123 }
       );
 
       expect(error).toEqual({
@@ -358,7 +358,7 @@ describe('ScriptErrorFactory', () => {
         'throw503',
       ];
 
-      expectedMethods.forEach((method) => {
+      expectedMethods.forEach(method => {
         expect(errorHandlers[method]).toBeDefined();
         expect(typeof errorHandlers[method]).toBe('function');
       });
