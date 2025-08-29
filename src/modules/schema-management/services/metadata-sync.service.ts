@@ -111,68 +111,136 @@ export class MetadataSyncService {
   }): Promise<{ status: string; result?: any; reason?: string }> {
     const syncId = `sync_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     const instanceId = this.schemaReloadService.sourceInstanceId;
+    const dataSource = this.dataSourceService.getDataSource();
 
-    this.logger.debug(`🔄 Initiating sync: ${syncId} (instance: ${instanceId})`);
-
-    // 1. Set as latest sync in Redis with TTL
-    await this.redisLockService.set(SCHEMA_SYNC_LATEST_KEY, syncId, SCHEMA_SYNC_LATEST_TTL * 1000);
-    
-    // 2. Try to acquire database lock with retry mechanism
-    for (let attempt = 1; attempt <= SCHEMA_SYNC_MAX_RETRIES; attempt++) {
-      this.logger.debug(`🔒 Attempting to acquire DB lock (attempt ${attempt}/${SCHEMA_SYNC_MAX_RETRIES}): ${syncId}`);
-      
-      const dataSource = this.dataSourceService.getDataSource();
-      const lockResult = await dataSource.query(
-        'SELECT GET_LOCK(?, ?) as lock_acquired',
-        [SCHEMA_SYNC_LOCK_NAME, SCHEMA_SYNC_LOCK_TIMEOUT]
+    try {
+      this.logger.debug(
+        `🔄 Initiating sync: ${syncId} (instance: ${instanceId})`,
       );
 
-      if (lockResult[0]?.lock_acquired) {
-        this.logger.debug(`✅ DB lock acquired: ${syncId}`);
-        
+      // 1. Set as latest sync in Redis with TTL
+      try {
+        await this.redisLockService.set(
+          SCHEMA_SYNC_LATEST_KEY,
+          syncId,
+          SCHEMA_SYNC_LATEST_TTL * 1000,
+        );
+      } catch (redisError) {
+        this.logger.error(
+          `❌ Redis set failed for sync ${syncId}:`,
+          redisError.message,
+        );
+        return { status: 'error', reason: 'redis_set_failed' };
+      }
+
+      // 2. Try to acquire database lock with retry mechanism
+      for (let attempt = 1; attempt <= SCHEMA_SYNC_MAX_RETRIES; attempt++) {
+        this.logger.debug(
+          `🔒 Attempting to acquire DB lock (attempt ${attempt}/${SCHEMA_SYNC_MAX_RETRIES}): ${syncId}`,
+        );
+
+        let lockResult: any;
         try {
-          // 3. Double-check we're still the latest sync
-          const currentLatest = await this.redisLockService.get(SCHEMA_SYNC_LATEST_KEY);
+          lockResult = await dataSource.query(
+            'SELECT GET_LOCK(?, ?) as lock_acquired',
+            [SCHEMA_SYNC_LOCK_NAME, SCHEMA_SYNC_LOCK_TIMEOUT],
+          );
+        } catch (dbError) {
+          this.logger.error(
+            `❌ Database lock query failed for sync ${syncId}:`,
+            dbError.message,
+          );
+          return { status: 'error', reason: 'database_lock_failed' };
+        }
+
+        if (lockResult[0]?.lock_acquired) {
+          this.logger.debug(`✅ DB lock acquired: ${syncId}`);
+
+          try {
+            // 3. Double-check we're still the latest sync
+            let currentLatest: string | null;
+            try {
+              currentLatest = await this.redisLockService.get(
+                SCHEMA_SYNC_LATEST_KEY,
+              );
+            } catch (redisError) {
+              this.logger.error(
+                `❌ Redis get failed for sync ${syncId}:`,
+                redisError.message,
+              );
+              return { status: 'error', reason: 'redis_get_failed' };
+            }
+            if (currentLatest !== syncId) {
+              this.logger.debug(
+                `⏩ No longer latest sync, exiting: ${syncId} (current: ${currentLatest})`,
+              );
+              return { status: 'skipped', reason: 'newer_sync_exists' };
+            }
+
+            // 4. Execute the actual sync
+            this.logger.debug(`🚀 Executing sync: ${syncId}`);
+            const result = await this.syncAllInternal(options);
+
+            this.logger.log(`✅ Sync completed: ${syncId}`);
+            return { status: 'completed', result };
+          } finally {
+            // Always release the database lock
+            try {
+              await dataSource.query('SELECT RELEASE_LOCK(?)', [
+                SCHEMA_SYNC_LOCK_NAME,
+              ]);
+              this.logger.debug(`🔓 DB lock released: ${syncId}`);
+            } catch (lockReleaseError) {
+              this.logger.error(
+                'Failed to release DB lock:',
+                lockReleaseError.message,
+              );
+            }
+          }
+        } else {
+          // 5. Lock acquisition failed, check if we're still latest before retry
+          let currentLatest: string | null;
+          try {
+            currentLatest = await this.redisLockService.get(
+              SCHEMA_SYNC_LATEST_KEY,
+            );
+          } catch (redisError) {
+            this.logger.error(
+              `❌ Redis get failed during retry for sync ${syncId}:`,
+              redisError.message,
+            );
+            return { status: 'error', reason: 'redis_get_failed' };
+          }
           if (currentLatest !== syncId) {
-            this.logger.debug(`⏩ No longer latest sync, exiting: ${syncId} (current: ${currentLatest})`);
+            this.logger.debug(
+              `⏩ No longer latest sync, stopping retries: ${syncId} (current: ${currentLatest})`,
+            );
             return { status: 'skipped', reason: 'newer_sync_exists' };
           }
 
-          // 4. Execute the actual sync
-          this.logger.debug(`🚀 Executing sync: ${syncId}`);
-          const result = await this.syncAllInternal(options);
-          
-          this.logger.log(`✅ Sync completed: ${syncId}`);
-          return { status: 'completed', result };
-          
-        } finally {
-          // Always release the database lock
-          try {
-            await dataSource.query('SELECT RELEASE_LOCK(?)', [SCHEMA_SYNC_LOCK_NAME]);
-            this.logger.debug(`🔓 DB lock released: ${syncId}`);
-          } catch (lockReleaseError) {
-            this.logger.error('Failed to release DB lock:', lockReleaseError.message);
+          // 6. Still latest, wait before retry (unless it's the last attempt)
+          if (attempt < SCHEMA_SYNC_MAX_RETRIES) {
+            this.logger.debug(
+              `⏸️ DB lock busy, waiting ${SCHEMA_SYNC_RETRY_DELAY}ms before retry: ${syncId}`,
+            );
+            await new Promise((resolve) =>
+              setTimeout(resolve, SCHEMA_SYNC_RETRY_DELAY),
+            );
           }
         }
-      } else {
-        // 5. Lock acquisition failed, check if we're still latest before retry
-        const currentLatest = await this.redisLockService.get(SCHEMA_SYNC_LATEST_KEY);
-        if (currentLatest !== syncId) {
-          this.logger.debug(`⏩ No longer latest sync, stopping retries: ${syncId} (current: ${currentLatest})`);
-          return { status: 'skipped', reason: 'newer_sync_exists' };
-        }
-        
-        // 6. Still latest, wait before retry (unless it's the last attempt)
-        if (attempt < SCHEMA_SYNC_MAX_RETRIES) {
-          this.logger.debug(`⏸️ DB lock busy, waiting ${SCHEMA_SYNC_RETRY_DELAY}ms before retry: ${syncId}`);
-          await new Promise(resolve => setTimeout(resolve, SCHEMA_SYNC_RETRY_DELAY));
-        }
       }
-    }
 
-    // Max retries exceeded
-    this.logger.warn(`⏰ Max retries exceeded for sync: ${syncId}`);
-    return { status: 'timeout', reason: 'max_retries_exceeded' };
+      // Max retries exceeded
+      this.logger.warn(`⏰ Max retries exceeded for sync: ${syncId}`);
+      return { status: 'timeout', reason: 'max_retries_exceeded' };
+    } catch (unexpectedError) {
+      // Catch any other unexpected errors to prevent crashes
+      this.logger.error(
+        `💥 Unexpected error in syncAll for sync ${syncId}:`,
+        unexpectedError.message,
+      );
+      return { status: 'error', reason: 'unexpected_error' };
+    }
   }
 
   private async syncAllInternal(options?: {
