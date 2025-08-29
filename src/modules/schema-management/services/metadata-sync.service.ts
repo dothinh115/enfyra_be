@@ -17,11 +17,11 @@ import { SchemaReloadService } from './schema-reload.service';
 import { RedisLockService } from '../../../infrastructure/redis/services/redis-lock.service';
 import {
   SCHEMA_SYNC_LATEST_KEY,
-  SCHEMA_SYNC_LOCK_NAME,
+  SCHEMA_SYNC_PROCESSING_LOCK_KEY,
   SCHEMA_SYNC_MAX_RETRIES,
   SCHEMA_SYNC_RETRY_DELAY,
   SCHEMA_SYNC_LATEST_TTL,
-  SCHEMA_SYNC_LOCK_TIMEOUT,
+  SCHEMA_SYNC_LOCK_TTL,
 } from '../../../shared/utils/constant';
 
 @Injectable()
@@ -111,7 +111,6 @@ export class MetadataSyncService {
   }): Promise<{ status: string; result?: any; reason?: string }> {
     const syncId = `sync_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     const instanceId = this.schemaReloadService.sourceInstanceId;
-    const dataSource = this.dataSourceService.getDataSource();
 
     try {
       this.logger.debug(
@@ -133,28 +132,29 @@ export class MetadataSyncService {
         return { status: 'error', reason: 'redis_set_failed' };
       }
 
-      // 2. Try to acquire database lock with retry mechanism
+      // 2. Try to acquire Redis processing lock with retry mechanism
       for (let attempt = 1; attempt <= SCHEMA_SYNC_MAX_RETRIES; attempt++) {
         this.logger.debug(
-          `🔒 Attempting to acquire DB lock (attempt ${attempt}/${SCHEMA_SYNC_MAX_RETRIES}): ${syncId}`,
+          `🔒 Attempting to acquire processing lock (attempt ${attempt}/${SCHEMA_SYNC_MAX_RETRIES}): ${syncId}`,
         );
 
-        let lockResult: any;
+        let lockAcquired: boolean;
         try {
-          lockResult = await dataSource.query(
-            'SELECT GET_LOCK(?, ?) as lock_acquired',
-            [SCHEMA_SYNC_LOCK_NAME, SCHEMA_SYNC_LOCK_TIMEOUT],
+          lockAcquired = await this.redisLockService.acquire(
+            SCHEMA_SYNC_PROCESSING_LOCK_KEY,
+            syncId,
+            SCHEMA_SYNC_LOCK_TTL,
           );
-        } catch (dbError) {
+        } catch (lockError) {
           this.logger.error(
-            `❌ Database lock query failed for sync ${syncId}:`,
-            dbError.message,
+            `❌ Redis lock acquisition failed for sync ${syncId}:`,
+            lockError.message,
           );
-          return { status: 'error', reason: 'database_lock_failed' };
+          return { status: 'error', reason: 'redis_lock_failed' };
         }
 
-        if (lockResult[0]?.lock_acquired) {
-          this.logger.debug(`✅ DB lock acquired: ${syncId}`);
+        if (lockAcquired) {
+          this.logger.debug(`✅ Processing lock acquired: ${syncId}`);
 
           try {
             // 3. Double-check we're still the latest sync
@@ -184,15 +184,16 @@ export class MetadataSyncService {
             this.logger.log(`✅ Sync completed: ${syncId}`);
             return { status: 'completed', result };
           } finally {
-            // Always release the database lock
+            // Always release the Redis processing lock
             try {
-              await dataSource.query('SELECT RELEASE_LOCK(?)', [
-                SCHEMA_SYNC_LOCK_NAME,
-              ]);
-              this.logger.debug(`🔓 DB lock released: ${syncId}`);
+              await this.redisLockService.release(
+                SCHEMA_SYNC_PROCESSING_LOCK_KEY,
+                syncId,
+              );
+              this.logger.debug(`🔓 Processing lock released: ${syncId}`);
             } catch (lockReleaseError) {
               this.logger.error(
-                'Failed to release DB lock:',
+                'Failed to release processing lock:',
                 lockReleaseError.message,
               );
             }
