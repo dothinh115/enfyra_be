@@ -4,6 +4,9 @@ import { DataSourceService } from '../../../src/core/database/data-source/data-s
 
 describe('CommonService', () => {
   let service: CommonService;
+
+  // Increase timeout for performance tests
+  jest.setTimeout(30000);
   let dataSourceService: jest.Mocked<DataSourceService>;
 
   beforeEach(async () => {

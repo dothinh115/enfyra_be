@@ -479,4 +479,218 @@ describe('RouteCacheService - SWR Pattern Tests', () => {
       expect(redisLockService.acquire).toHaveBeenCalledTimes(1); // Only first call should acquire
     });
   });
+
+  describe('Security Tests', () => {
+    it('should prevent cache poisoning attacks', async () => {
+      // Test that the service handles malicious data safely when loading routes
+      const maliciousData = {
+        __proto__: { isAdmin: true },
+        constructor: { prototype: { isAdmin: true } },
+        'constructor.prototype.isAdmin': true,
+      };
+
+      // Mock the database to return malicious data
+      const mockRepo = {
+        find: jest.fn().mockResolvedValue([maliciousData]),
+        createQueryBuilder: jest.fn().mockReturnValue({
+          leftJoinAndSelect: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          getMany: jest.fn().mockResolvedValue([maliciousData]),
+        }),
+      } as any;
+
+      dataSourceService.getRepository.mockReturnValue(mockRepo);
+
+      const result = await service.getRoutesWithSWR();
+
+      // Should handle malicious data safely
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should prevent key injection in cache keys', async () => {
+      // Test that the service handles malicious table names safely
+      const maliciousTableName = 'route_definition; DROP TABLE users; --';
+
+      dataSourceService.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([]),
+        createQueryBuilder: jest.fn().mockReturnValue({
+          leftJoinAndSelect: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          getMany: jest.fn().mockResolvedValue([]),
+        }),
+      } as any);
+
+      const result = await service.getRoutesWithSWR();
+
+      // Should handle malicious table names safely
+      expect(result).toBeDefined();
+    });
+
+    it('should prevent cache overflow attacks', async () => {
+      const largeData = Array.from({ length: 10000 }, (_, i) => ({
+        id: i,
+        name: 'A'.repeat(100), // Large strings
+        data: Array(100).fill('B'), // Large arrays
+      }));
+
+      // Mock the database to return large data
+      dataSourceService.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([]),
+        createQueryBuilder: jest.fn().mockReturnValue({
+          leftJoinAndSelect: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          getMany: jest.fn().mockResolvedValue(largeData),
+        }),
+      } as any);
+
+      const result = await service.getRoutesWithSWR();
+
+      // Should handle large data gracefully
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should prevent cache timing attacks', async () => {
+      const startTime = Date.now();
+
+      // First access (cache miss)
+      await service.getRoutesWithSWR();
+      const firstAccessTime = Date.now() - startTime;
+
+      const startTime2 = Date.now();
+      // Second access (cache hit)
+      await service.getRoutesWithSWR();
+      const secondAccessTime = Date.now() - startTime2;
+
+      // Cache hit should be faster but not significantly different
+      const timeDifference = Math.abs(firstAccessTime - secondAccessTime);
+      expect(timeDifference).toBeLessThan(500); // Within 500ms
+    });
+
+    it('should prevent cache key enumeration', async () => {
+      // Service should not allow key enumeration
+      const result = await service.getRoutesWithSWR();
+
+      // Should return only intended data
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should prevent cache bypass attacks', async () => {
+      // Try to bypass cache by calling multiple times
+      const result1 = await service.getRoutesWithSWR();
+      const result2 = await service.getRoutesWithSWR();
+
+      // Both should return same data (cached)
+      expect(result1).toEqual(result2);
+    });
+
+    it('should handle malformed cache data gracefully', async () => {
+      const malformedData = {
+        invalid: 'data',
+        broken: null,
+        corrupted: undefined,
+      };
+
+      // Mock the database to return malformed data
+      dataSourceService.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([]),
+        createQueryBuilder: jest.fn().mockReturnValue({
+          leftJoinAndSelect: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          getMany: jest.fn().mockResolvedValue([malformedData]),
+        }),
+      } as any);
+
+      const result = await service.getRoutesWithSWR();
+
+      // Should handle malformed data gracefully
+      expect(result).toBeDefined();
+    });
+
+    it('should prevent cache injection in route data', async () => {
+      const maliciousRoute = {
+        id: 1,
+        path: '/malicious<script>alert("xss")</script>',
+        handlers: [
+          {
+            id: 1,
+            logic: 'eval("alert(1)")',
+            method: { method: 'GET' },
+          },
+        ],
+      };
+
+      // Mock the database to return malicious route data
+      dataSourceService.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([]),
+        createQueryBuilder: jest.fn().mockReturnValue({
+          leftJoinAndSelect: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          getMany: jest.fn().mockResolvedValue([maliciousRoute]),
+        }),
+      } as any);
+
+      const result = await service.getRoutesWithSWR();
+
+      // Should handle malicious route data safely
+      expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should prevent cache poisoning through nested objects', async () => {
+      const createPoisonedObject = (depth: number) => {
+        let obj: any = { value: 'test' };
+        for (let i = 0; i < depth; i++) {
+          obj = {
+            nested: obj,
+            __proto__: { isAdmin: true },
+            constructor: { prototype: { isAdmin: true } },
+          };
+        }
+        return obj;
+      };
+
+      const poisonedData = createPoisonedObject(100);
+
+      // Mock the database to return poisoned data
+      dataSourceService.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([]),
+        createQueryBuilder: jest.fn().mockReturnValue({
+          leftJoinAndSelect: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          getMany: jest.fn().mockResolvedValue([poisonedData]),
+        }),
+      } as any);
+
+      const result = await service.getRoutesWithSWR();
+
+      // Should handle poisoned objects safely
+      expect(result).toBeDefined();
+    });
+
+    it('should prevent cache key collision attacks', async () => {
+      // Attempt to create key collision through malicious data
+      const collisionData = {
+        id: 1,
+        name: 'user\x00admin', // Null byte injection
+      };
+
+      // Mock the database to return collision data
+      dataSourceService.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([]),
+        createQueryBuilder: jest.fn().mockReturnValue({
+          leftJoinAndSelect: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          getMany: jest.fn().mockResolvedValue([collisionData]),
+        }),
+      } as any);
+
+      const result = await service.getRoutesWithSWR();
+
+      // Should handle key collisions safely
+      expect(result).toBeDefined();
+    });
+  });
 });

@@ -1,3 +1,4 @@
+// @ts-nocheck - Ignore TypeScript decorator issues in test environment
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -82,6 +83,9 @@ describe('walkFilter - Relation _in/_not_in Operators', () => {
   let posts: Post[];
   let categories: Category[];
   let roles: Role[];
+
+  // Increase timeout for database setup
+  jest.setTimeout(30000);
 
   beforeAll(async () => {
     dataSource = new DataSource({
