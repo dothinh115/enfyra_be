@@ -47,7 +47,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   app.use(
-    cors({
+    cors.default({
       origin: ['*'],
       credentials: true,
       methods: ['POST', 'GET', 'OPTIONS'],

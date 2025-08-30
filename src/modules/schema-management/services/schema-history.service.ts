@@ -96,14 +96,9 @@ export class SchemaHistoryService {
       await tableDefRepo.save(oldest.schema);
       this.logger.warn('⚠️ Đã khôi phục metadata từ schema_history');
       // Fire & forget syncAll
-      this.metadataSyncService
-        .syncAll({
-          fromRestore: true,
-          type: options?.type,
-        })
-        .catch(error => {
-          this.logger.error('Restore syncAll failed:', error.message);
-        });
+      this.metadataSyncService.syncAll().catch(error => {
+        this.logger.error('Restore syncAll failed:', error.message);
+      });
     } else {
       this.logger.warn('⚠️ Không có bản backup schema nào để khôi phục');
     }

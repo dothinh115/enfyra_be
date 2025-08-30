@@ -1,2 +1,4 @@
-// Infrastructure modules barrel export - currently unused
-// Most imports use direct module paths
+// Infrastructure modules exports
+export * from './handler-executor';
+export * from './query-engine';
+export * from './redis';

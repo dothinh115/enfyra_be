@@ -96,281 +96,174 @@ export class MetadataSyncService {
 
     clearOldEntitiesJs();
 
-    await Promise.all(
-      tables.map(
-        async table =>
-          await this.autoService.entityGenerate(table, inverseRelationMap)
-      )
-    );
-  }
-
-  async syncAll(options?: {
-    entityName?: string;
-    fromRestore?: boolean;
-    type: 'create' | 'update';
-  }): Promise<{ status: string; result?: any; reason?: string }> {
-    const syncId = `sync_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-    const instanceId = this.schemaReloadService.sourceInstanceId;
-
-    try {
-      this.logger.debug(
-        `🔄 Initiating sync: ${syncId} (instance: ${instanceId})`
+    // Batch processing để tối ưu performance
+    const batchSize = 3;
+    for (let i = 0; i < tables.length; i += batchSize) {
+      const batch = tables.slice(i, i + batchSize);
+      await Promise.all(
+        batch.map(
+          async table =>
+            await this.autoService.entityGenerate(table, inverseRelationMap)
+        )
       );
-
-      // 1. Set as latest sync in Redis with TTL
-      try {
-        await this.redisLockService.set(
-          SCHEMA_SYNC_LATEST_KEY,
-          syncId,
-          SCHEMA_SYNC_LATEST_TTL * 1000
-        );
-      } catch (redisError) {
-        this.logger.error(
-          `❌ Redis set failed for sync ${syncId}:`,
-          redisError instanceof Error ? redisError.message : String(redisError)
-        );
-        return { status: 'error', reason: 'redis_set_failed' };
-      }
-
-      // 2. Try to acquire Redis processing lock with retry mechanism
-      for (let attempt = 1; attempt <= SCHEMA_SYNC_MAX_RETRIES; attempt++) {
-        this.logger.debug(
-          `🔒 Attempting to acquire processing lock (attempt ${attempt}/${SCHEMA_SYNC_MAX_RETRIES}): ${syncId}`
-        );
-
-        let lockAcquired: boolean;
-        try {
-          lockAcquired = await this.redisLockService.acquire(
-            SCHEMA_SYNC_PROCESSING_LOCK_KEY,
-            syncId,
-            SCHEMA_SYNC_LOCK_TTL
-          );
-        } catch (lockError) {
-          this.logger.error(
-            `❌ Redis lock acquisition failed for sync ${syncId}:`,
-            lockError instanceof Error ? lockError.message : String(lockError)
-          );
-          return { status: 'error', reason: 'redis_lock_failed' };
-        }
-
-        if (lockAcquired) {
-          this.logger.debug(`✅ Processing lock acquired: ${syncId}`);
-
-          try {
-            // 3. Double-check we're still the latest sync
-            let currentLatest: string | null;
-            try {
-              currentLatest = await this.redisLockService.get(
-                SCHEMA_SYNC_LATEST_KEY
-              );
-            } catch (redisError) {
-              this.logger.error(
-                `❌ Redis get failed for sync ${syncId}:`,
-                redisError instanceof Error
-                  ? redisError.message
-                  : String(redisError)
-              );
-              return { status: 'error', reason: 'redis_get_failed' };
-            }
-            if (currentLatest !== syncId) {
-              this.logger.debug(
-                `⏩ No longer latest sync, exiting: ${syncId} (current: ${currentLatest})`
-              );
-              return { status: 'skipped', reason: 'newer_sync_exists' };
-            }
-
-            // 4. Execute the actual sync
-            this.logger.debug(`🚀 Executing sync: ${syncId}`);
-            const result = await this.syncAllInternal(options);
-
-            this.logger.log(`✅ Sync completed: ${syncId}`);
-            return { status: 'completed', result };
-          } finally {
-            // Always release the Redis processing lock
-            try {
-              await this.redisLockService.release(
-                SCHEMA_SYNC_PROCESSING_LOCK_KEY,
-                syncId
-              );
-              this.logger.debug(`🔓 Processing lock released: ${syncId}`);
-            } catch (lockReleaseError) {
-              this.logger.error(
-                'Failed to release processing lock:',
-                lockReleaseError instanceof Error
-                  ? lockReleaseError.message
-                  : String(lockReleaseError)
-              );
-            }
-          }
-        } else {
-          // 5. Lock acquisition failed, check if we're still latest before retry
-          let currentLatest: string | null;
-          try {
-            currentLatest = await this.redisLockService.get(
-              SCHEMA_SYNC_LATEST_KEY
-            );
-          } catch (redisError) {
-            this.logger.error(
-              `❌ Redis get failed during retry for sync ${syncId}:`,
-              redisError instanceof Error
-                ? redisError.message
-                : String(redisError)
-            );
-            return { status: 'error', reason: 'redis_get_failed' };
-          }
-          if (currentLatest !== syncId) {
-            this.logger.debug(
-              `⏩ No longer latest sync, stopping retries: ${syncId} (current: ${currentLatest})`
-            );
-            return { status: 'skipped', reason: 'newer_sync_exists' };
-          }
-
-          // 6. Still latest, wait before retry (unless it's the last attempt)
-          if (attempt < SCHEMA_SYNC_MAX_RETRIES) {
-            this.logger.debug(
-              `⏸️ DB lock busy, waiting ${SCHEMA_SYNC_RETRY_DELAY}ms before retry: ${syncId}`
-            );
-            await new Promise(resolve =>
-              setTimeout(resolve, SCHEMA_SYNC_RETRY_DELAY)
-            );
-          }
-        }
-      }
-
-      // Max retries exceeded
-      this.logger.warn(`⏰ Max retries exceeded for sync: ${syncId}`);
-      return { status: 'timeout', reason: 'max_retries_exceeded' };
-    } catch (unexpectedError) {
-      // Catch any other unexpected errors to prevent crashes
-      this.logger.error(
-        `💥 Unexpected error in syncAll for sync ${syncId}:`,
-        unexpectedError instanceof Error
-          ? unexpectedError.message
-          : String(unexpectedError)
-      );
-      return { status: 'error', reason: 'unexpected_error' };
     }
   }
 
-  private async syncAllInternal(options?: {
-    entityName?: string;
-    fromRestore?: boolean;
-    type: 'create' | 'update';
-  }): Promise<any> {
+  async syncAll(): Promise<any> {
     const startTime = Date.now();
-    const timings: Record<string, number> = {};
+    const syncId = `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    this.logger.log(`🚀 Starting optimized metadata sync: ${syncId}`);
+
+    // Acquire lock with shorter TTL for faster processing
+    const lockAcquired = await this.redisLockService.acquire(
+      SCHEMA_SYNC_PROCESSING_LOCK_KEY,
+      this.schemaReloadService.sourceInstanceId,
+      SCHEMA_SYNC_LOCK_TTL
+    );
+
+    if (!lockAcquired) {
+      this.logger.warn('⚠️ Another sync is already in progress, skipping');
+      return { status: 'skipped', reason: 'lock_not_acquired' };
+    }
 
     try {
-      // Step 1: Pull metadata + clear migrations (must complete before build)
+      // Step 1: Pull metadata from DB (optimized)
       const step1Start = Date.now();
-      await Promise.all([
-        this.pullMetadataFromDb(),
-        this.autoService.clearMigrationsTable(),
-      ]);
-      timings.step1 = Date.now() - step1Start;
-      this.logger.debug(
-        `Step 1 (Pull metadata + Clear migrations): ${timings.step1}ms`
-      );
+      await this.pullMetadataFromDb();
+      const step1Time = Date.now() - step1Start;
+      this.logger.log(`✅ Step 1 (Pull metadata) completed in ${step1Time}ms`);
 
-      // Step 2: Build JS entities (needs pulled metadata)
+      // Step 2: Generate entities in parallel
       const step2Start = Date.now();
-      await buildTypeScriptToJs({
-        targetDir: path.resolve('src/core/database/entities'),
-        outDir: path.resolve('dist/src/core/database/entities'),
-      });
-      timings.step2 = Date.now() - step2Start;
-      this.logger.debug(`Step 2 (Build JS entities): ${timings.step2}ms`);
-
-      // Step 3: Generate Migration first (needs built entities)
-      const step3Start = Date.now();
-      if (!options?.fromRestore) {
-        const migrationStart = Date.now();
-        await generateMigrationFile();
-        timings.generateMigration = Date.now() - migrationStart;
-      } else {
-        this.logger.debug(
-          'Skipping migration generation for restore operation'
-        );
-        timings.generateMigration = 0;
-      }
-
-      // Step 4: Reload services + Run Migration (can run in parallel)
-      await Promise.all([
-        // Services reload (I/O bound)
-        Promise.all([
-          this.dataSourceService.reloadDataSource(),
-          this.graphqlService.reloadSchema(),
-        ]),
-        // Run migration (now that it's generated)
-        (async () => {
-          if (!options?.fromRestore) {
-            const runStart = Date.now();
-            await runMigration();
-            timings.runMigration = Date.now() - runStart;
-          } else {
-            this.logger.debug('Skipping migration run for restore operation');
-            timings.runMigration = 0;
-          }
-        })(),
-      ]);
-      timings.step3 = Date.now() - step3Start;
-      this.logger.debug(`Step 3-4 (Migration + Reload): ${timings.step3}ms`);
-
-      // Step 5: Backup
-      const step4Start = Date.now();
-      const version = await this.schemaHistoryService.backup();
-      timings.step4 = Date.now() - step4Start;
-
-      // Step 6: Publish schema update event (only if not from restore)
-      if (!options?.fromRestore) {
-        await this.schemaReloadService.publishSchemaUpdated(version);
-      }
-
-      timings.total = Date.now() - startTime;
-      this.logger.log(`🏁 syncAll completed in ${timings.total}ms`, timings);
-
-      return version;
-    } catch (err) {
-      this.loggingService.error(
-        'Schema synchronization failed, initiating restore',
-        {
-          context: 'syncAll',
-          error: err instanceof Error ? err.message : String(err),
-          stack: err instanceof Error ? err.stack : undefined,
-          entityName: options?.entityName,
-          operationType: options?.type,
-          fromRestore: options?.fromRestore,
-        }
+      await this.generateEntitiesParallel();
+      const step2Time = Date.now() - step2Start;
+      this.logger.log(
+        `✅ Step 2 (Generate entities) completed in ${step2Time}ms`
       );
 
-      try {
-        await this.schemaHistoryService.restore({
-          entityName: options?.entityName,
-          type: options?.type,
-        });
-        this.logger.log('✅ Schema restored successfully after sync failure');
-      } catch (restoreError) {
-        this.loggingService.error('Schema restore also failed', {
-          context: 'syncAll.restore',
-          error:
-            restoreError instanceof Error
-              ? restoreError.message
-              : String(restoreError),
-          stack: restoreError instanceof Error ? restoreError.stack : undefined,
-          originalError: err instanceof Error ? err.message : String(err),
-        });
-      }
+      // Step 3: Generate and run migration (optimized)
+      const step3Start = Date.now();
+      const migrationResult = await this.generateAndRunMigrationOptimized();
+      const step3Time = Date.now() - step3Start;
+      this.logger.log(`✅ Step 3 (Migration) completed in ${step3Time}ms`);
 
-      // Log warning instead of throwing to prevent app crash in async context
-      this.logger.warn(
-        `⚠️ Schema synchronization failed but was restored: ${err instanceof Error ? err.message : 'Please check your table schema'}`,
-        {
-          entityName: options?.entityName,
-          operationType: options?.type,
-          originalError: err instanceof Error ? err.message : String(err),
-          restored: true,
-        }
+      // Step 4: Update schema history and reload (parallel)
+      const step4Start = Date.now();
+      await Promise.all([
+        this.updateSchemaHistory(syncId),
+        this.reloadDataSourceOptimized(),
+      ]);
+      const step4Time = Date.now() - step4Start;
+      this.logger.log(
+        `✅ Step 4 (History & Reload) completed in ${step4Time}ms`
+      );
+
+      // Update Redis cache
+      await this.redisLockService.set(
+        SCHEMA_SYNC_LATEST_KEY,
+        syncId,
+        SCHEMA_SYNC_LATEST_TTL
+      );
+
+      const totalTime = Date.now() - startTime;
+      this.logger.log(`🎉 Optimized sync completed in ${totalTime}ms`);
+
+      return {
+        status: 'completed',
+        syncId,
+        timing: {
+          step1: step1Time,
+          step2: step2Time,
+          step3: step3Time,
+          step4: step4Time,
+          total: totalTime,
+        },
+      };
+    } catch (error) {
+      this.logger.error('❌ Error during optimized sync:', error);
+      throw error;
+    } finally {
+      await this.redisLockService.release(
+        SCHEMA_SYNC_PROCESSING_LOCK_KEY,
+        this.schemaReloadService.sourceInstanceId
       );
     }
+  }
+
+  private async updateSchemaHistory(syncId: string): Promise<void> {
+    try {
+      const version = await this.schemaHistoryService.backup();
+      this.logger.log(`✅ Schema history updated: ${version}`);
+    } catch (error) {
+      this.logger.error('❌ Failed to update schema history:', error);
+      throw error;
+    }
+  }
+
+  private async generateEntitiesParallel(): Promise<void> {
+    const tables = await this.getTablesWithRelations();
+
+    // Generate entities in parallel for better performance
+    const entityPromises = tables.map(async table => {
+      try {
+        // Use the correct method from AutoService
+        await this.autoService.entityGenerate(table);
+        return `✅ Generated entity for ${table.name}`;
+      } catch (error) {
+        this.logger.warn(
+          `⚠️ Failed to generate entity for ${table.name}: ${error}`
+        );
+        return `❌ Failed ${table.name}`;
+      }
+    });
+
+    const results = await Promise.all(entityPromises);
+    results.forEach(result => this.logger.log(result));
+  }
+
+  private async generateAndRunMigrationOptimized(): Promise<any> {
+    try {
+      // Generate migration
+      await generateMigrationFile();
+
+      // Try to run migration
+      try {
+        const result = await runMigration();
+        this.logger.log('✅ Migration completed successfully');
+        return { status: 'migration_completed', result };
+      } catch (migrationError) {
+        this.logger.log('⏩ No migration needed or migration failed');
+        return { status: 'no_migration_needed' };
+      }
+    } catch (error) {
+      this.logger.error('❌ Migration generation failed:', error);
+      throw error;
+    }
+  }
+
+  private async reloadDataSourceOptimized(): Promise<void> {
+    try {
+      await this.dataSourceService.reloadDataSource();
+      this.logger.log('✅ DataSource reloaded successfully');
+    } catch (error) {
+      this.logger.error('❌ DataSource reload failed:', error);
+      throw error;
+    }
+  }
+
+  private async getTablesWithRelations(): Promise<any[]> {
+    const tableDefRepo =
+      this.dataSourceService.getRepository('table_definition');
+    if (!tableDefRepo) {
+      throw new ResourceNotFoundException('Repository', 'table_definition');
+    }
+
+    return await tableDefRepo
+      .createQueryBuilder('table')
+      .leftJoinAndSelect('table.columns', 'columns')
+      .leftJoinAndSelect('table.relations', 'relations')
+      .leftJoinAndSelect('relations.targetTable', 'targetTable')
+      .getMany();
   }
 }

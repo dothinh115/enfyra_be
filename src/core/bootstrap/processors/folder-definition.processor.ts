@@ -43,7 +43,17 @@ export class FolderDefinitionProcessor extends BaseTableProcessor {
       identifiers.push({ name: record.name, parent: null });
     }
 
-    return identifiers.length > 0 ? identifiers : [{ id: record.id }];
+    if (identifiers.length > 0) {
+      return identifiers;
+    }
+
+    // Fallback to id if available
+    if (record.id !== undefined && record.id !== null) {
+      return [{ id: record.id }];
+    }
+
+    // If no valid identifier found, return empty array (will find first record)
+    return [{}];
   }
 
   protected getCompareFields(): string[] {

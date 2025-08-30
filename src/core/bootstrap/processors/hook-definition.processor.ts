@@ -18,18 +18,18 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
         const transformedHook = { ...hook };
 
         // Map route reference
-        if (hook.route && typeof hook.route === 'string') {
+        if (this.isValidRouteReference(hook.route)) {
           const rawPath = hook.route;
-          const pathsToTry = Array.from(
-            new Set([
-              rawPath,
-              rawPath.startsWith('/') ? rawPath.slice(1) : '/' + rawPath,
-            ])
-          );
+          const pathsToTry = this.generatePathVariations(rawPath);
 
-          const route = await routeRepo.findOne({
-            where: pathsToTry.map(p => ({ path: p })),
-          });
+          // Try each path until we find a route
+          let route = null;
+          for (const path of pathsToTry) {
+            route = await routeRepo.findOne({
+              where: { path: path },
+            });
+            if (route) break;
+          }
 
           if (!route) {
             this.logger.warn(
@@ -45,14 +45,20 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
         if (hook.methods && Array.isArray(hook.methods)) {
           const methodEntities = [];
           for (const methodName of hook.methods) {
-            const method = await methodRepo.findOne({
-              where: { method: methodName },
-            });
-            if (method) {
-              methodEntities.push(method);
-            } else {
+            try {
+              const method = await methodRepo.findOne({
+                where: { method: methodName },
+              });
+              if (method) {
+                methodEntities.push(method);
+              } else {
+                this.logger.warn(
+                  `⚠️ Method '${methodName}' not found for hook ${hook.name}`
+                );
+              }
+            } catch (methodError) {
               this.logger.warn(
-                `⚠️ Method '${methodName}' not found for hook ${hook.name}`
+                `⚠️ Error finding method '${methodName}' for hook ${hook.name}: ${methodError instanceof Error ? methodError.message : String(methodError)}`
               );
             }
           }
@@ -73,6 +79,19 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
 
     // Filter out null records
     return transformedRecords.filter(Boolean);
+  }
+
+  private isValidRouteReference(route: any): boolean {
+    return typeof route === 'string' && route.length > 0;
+  }
+
+  private generatePathVariations(rawPath: string): string[] {
+    return Array.from(
+      new Set([
+        rawPath,
+        rawPath.startsWith('/') ? rawPath.slice(1) : '/' + rawPath,
+      ])
+    );
   }
 
   getUniqueIdentifier(record: any): object {

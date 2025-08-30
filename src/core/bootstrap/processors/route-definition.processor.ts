@@ -19,9 +19,23 @@ export class RouteDefinitionProcessor extends BaseTableProcessor {
         const transformedRecord = { ...record };
 
         // Handle mainTable reference
-        const mainTable = await tableDefRepo.findOne({
-          where: { name: record.mainTable },
-        });
+        if (!this.isValidTableReference(record.mainTable)) {
+          this.logger.warn(
+            `⚠️ Invalid mainTable reference '${record.mainTable}' for route ${record.path}, skipping.`
+          );
+          return null;
+        }
+
+        let mainTable = null;
+        try {
+          mainTable = await tableDefRepo.findOne({
+            where: { name: record.mainTable },
+          });
+        } catch (tableError) {
+          this.logger.warn(
+            `⚠️ Error finding table '${record.mainTable}' for route ${record.path}: ${tableError instanceof Error ? tableError.message : String(tableError)}`
+          );
+        }
 
         if (!mainTable) {
           this.logger.warn(
@@ -64,6 +78,10 @@ export class RouteDefinitionProcessor extends BaseTableProcessor {
 
     // Filter out null records (where mainTable wasn't found)
     return transformedRecords.filter(Boolean);
+  }
+
+  private isValidTableReference(tableName: any): boolean {
+    return typeof tableName === 'string' && tableName.length > 0;
   }
 
   getUniqueIdentifier(record: any): object {

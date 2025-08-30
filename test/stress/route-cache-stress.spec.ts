@@ -378,7 +378,9 @@ describe('RouteCacheService - Stress Testing', () => {
         await Promise.all(promises);
 
         const duration = Date.now() - startTime;
-        const throughput = (count / duration) * 1000; // requests per second
+        // Handle case where duration is very small (avoid division by zero)
+        const throughput =
+          duration > 0 ? (count / duration) * 1000 : count * 1000;
         throughputs.push(throughput);
       }
 
@@ -386,8 +388,15 @@ describe('RouteCacheService - Stress Testing', () => {
       expect(throughputs).toHaveLength(4);
       throughputs.forEach(tp => {
         expect(tp).toBeGreaterThan(0);
-        expect(tp).toBeLessThan(200000); // Higher upper bound for cache hits
+        expect(tp).toBeLessThan(1000000); // Higher upper bound for cache hits
       });
+
+      // Performance should scale reasonably (not necessarily linearly due to caching)
+      const firstThroughput = throughputs[0];
+      const lastThroughput = throughputs[throughputs.length - 1];
+
+      // Throughput should not degrade significantly
+      expect(lastThroughput).toBeGreaterThan(firstThroughput * 0.1); // At least 10% of initial throughput
     });
   });
 

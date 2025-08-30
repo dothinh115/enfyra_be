@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-// import { isEqual } from 'lodash'; // Unused import removed
+
 import { DataSourceService } from '../../../core/database/data-source/data-source.service';
 import { MetadataSyncService } from '../../schema-management/services/metadata-sync.service';
 import { LoggingService } from '../../../core/exceptions/services/logging.service';
@@ -354,14 +354,9 @@ export class TableHandlerService {
   }) {
     try {
       // Fire & forget syncAll - it will handle publish internally
-      this.metadataSyncService
-        .syncAll({
-          entityName: options.entityName,
-          type: options.type,
-        })
-        .catch(error => {
-          this.logger.error('Background sync failed:', error.message);
-        });
+      this.metadataSyncService.syncAll().catch(error => {
+        this.logger.error('Background sync failed:', error.message);
+      });
 
       this.logger.log('✅ Schema sync queued', {
         entityName: options.entityName,

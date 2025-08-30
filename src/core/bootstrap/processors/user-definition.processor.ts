@@ -11,11 +11,27 @@ export class UserDefinitionProcessor extends BaseTableProcessor {
   async transformRecords(records: any[]): Promise<any[]> {
     // Hash passwords before upsert
     return Promise.all(
-      records.map(async record => ({
-        ...record,
-        password: await this.bcryptService.hash(record.password),
-      }))
+      records.map(async record => {
+        // Type guard cho password - cần thiết cho security
+        if (this.isValidPassword(record.password)) {
+          try {
+            return {
+              ...record,
+              password: await this.bcryptService.hash(record.password),
+            };
+          } catch (hashError) {
+            this.logger.warn(
+              `⚠️ Failed to hash password for user ${record.username}: ${hashError instanceof Error ? hashError.message : String(hashError)}`
+            );
+          }
+        }
+        return record;
+      })
     );
+  }
+
+  private isValidPassword(password: any): boolean {
+    return typeof password === 'string' && password.length > 0;
   }
 
   getUniqueIdentifier(record: any): object {

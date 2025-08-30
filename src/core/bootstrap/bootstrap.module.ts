@@ -1,33 +1,47 @@
-import { Global, Module } from '@nestjs/common';
-import { BootstrapService } from './services/bootstrap.service';
-import { CoreInitService } from './services/core-init.service';
-import { DefaultDataService } from './services/default-data.service';
+import { Global, Module, forwardRef } from '@nestjs/common';
+import { CommonModule } from '../../shared/common/common.module';
+import { ExceptionsModule } from '../exceptions/exceptions.module';
+import { DataSourceModule } from '../database/data-source/data-source.module';
+import { AuthModule } from '../auth/auth.module';
+import { SchemaManagementModule } from '../../modules/schema-management/schema-management.module';
+import { RedisModule } from '../../infrastructure/redis/redis.module';
 
-// Import processors
-import { UserDefinitionProcessor } from './processors/user-definition.processor';
-import { MenuDefinitionProcessor } from './processors/menu-definition.processor';
-import { RouteDefinitionProcessor } from './processors/route-definition.processor';
-import { MethodDefinitionProcessor } from './processors/method-definition.processor';
-import { HookDefinitionProcessor } from './processors/hook-definition.processor';
-import { SettingDefinitionProcessor } from './processors/setting-definition.processor';
-import { ExtensionDefinitionProcessor } from './processors/extension-definition.processor';
-import { FolderDefinitionProcessor } from './processors/folder-definition.processor';
+// Import all services from index
+import {
+  BootstrapService,
+  CoreInitService,
+  DefaultDataService,
+  ProcessorFactoryService,
+} from './services';
+
+// Import only essential processors from index
+import {
+  UserDefinitionProcessor,
+  MethodDefinitionProcessor,
+  SettingDefinitionProcessor,
+} from './processors';
 
 @Global()
 @Module({
+  imports: [
+    CommonModule, // Shared utilities
+    ExceptionsModule, // Error handling
+    DataSourceModule, // Database access
+    AuthModule, // For BcryptService
+    forwardRef(() => SchemaManagementModule), // Schema management services
+    forwardRef(() => RedisModule), // Redis services
+  ],
   providers: [
+    // Core services
     BootstrapService,
     CoreInitService,
     DefaultDataService,
-    // Register processors
-    UserDefinitionProcessor,
-    MenuDefinitionProcessor,
-    RouteDefinitionProcessor,
-    MethodDefinitionProcessor,
-    HookDefinitionProcessor,
-    SettingDefinitionProcessor,
-    ExtensionDefinitionProcessor,
-    FolderDefinitionProcessor,
+    ProcessorFactoryService,
+
+    // Only essential processors - others are lazy loaded by ProcessorFactoryService
+    UserDefinitionProcessor, // User management (required for auth)
+    MethodDefinitionProcessor, // HTTP methods (required for routes)
+    SettingDefinitionProcessor, // System settings (required for config)
   ],
   exports: [BootstrapService, CoreInitService, DefaultDataService],
 })

@@ -26,7 +26,7 @@ export class MenuDefinitionProcessor extends BaseTableProcessor {
         const transformed = { ...record };
 
         // Convert sidebar name to ID if needed
-        if (transformed.sidebar && typeof transformed.sidebar === 'string') {
+        if (this.isValidSidebarReference(transformed.sidebar)) {
           // Look for sidebar in both existing DB and records being processed
           let sidebar = await repo.findOne({
             where: { type: 'Mini Sidebar', label: transformed.sidebar },
@@ -34,16 +34,25 @@ export class MenuDefinitionProcessor extends BaseTableProcessor {
 
           // If not found in DB, look in current batch of records
           if (!sidebar) {
-            const sidebarRecord = records.find(
-              r => r.type === 'Mini Sidebar' && r.label === transformed.sidebar
+            const sidebarRecord = this.findSidebarRecord(
+              records,
+              transformed.sidebar
             );
             if (sidebarRecord) {
-              // Create the sidebar first if it doesn't exist
-              const created = repo.create(sidebarRecord);
-              sidebar = await repo.save(created);
-              this.logger.debug(
-                `Created sidebar "${transformed.sidebar}" with id ${sidebar.id}`
-              );
+              try {
+                // Create the sidebar first if it doesn't exist
+                const created = repo.create(sidebarRecord);
+                sidebar = await repo.save(created);
+                this.logger.debug(
+                  `Created sidebar "${transformed.sidebar}" with id ${sidebar.id}`
+                );
+              } catch (createError) {
+                this.logger.warn(
+                  `Failed to create sidebar "${transformed.sidebar}": ${createError instanceof Error ? createError.message : String(createError)}`
+                );
+                // Continue without sidebar
+                sidebar = null;
+              }
             }
           }
 
@@ -63,6 +72,16 @@ export class MenuDefinitionProcessor extends BaseTableProcessor {
     }
 
     return transformedRecords;
+  }
+
+  private isValidSidebarReference(sidebar: any): boolean {
+    return typeof sidebar === 'string' && sidebar.length > 0;
+  }
+
+  private findSidebarRecord(records: any[], sidebarName: string): any {
+    return records.find(
+      r => r.type === 'Mini Sidebar' && r.label === sidebarName
+    );
   }
 
   getUniqueIdentifier(record: any): object[] {
