@@ -1,4 +1,4 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, ManyToMany, JoinTable, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Unique, Index, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, ManyToMany, JoinTable, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Table_definition } from './table_definition.entity';
 import { Route_permission_definition } from './route_permission_definition.entity';
 import { Route_handler_definition } from './route_handler_definition.entity';
@@ -7,6 +7,7 @@ import { Method_definition } from './method_definition.entity';
 
 @Entity('route_definition')
 @Unique(['mainTable', 'path'])
+@Index(['mainTable'])
 export class Route_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
@@ -20,11 +21,10 @@ export class Route_definition {
     isSystem: boolean;
     @Column({ type: "varchar", nullable: false })
     path: string;
-    @Index()
-    @ManyToOne('Table_definition', { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
+    @ManyToOne('Table_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     mainTable: any;
-    @ManyToMany('Table_definition', { eager: true, nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToMany('Table_definition', { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinTable()
     targetTables: any;
     @OneToMany('Route_permission_definition', (rel: any) => rel.route, { cascade: true })
@@ -33,7 +33,7 @@ export class Route_definition {
     handlers: any;
     @OneToMany('Hook_definition', (rel: any) => rel.route, { cascade: true })
     hooks: any;
-    @ManyToMany('Method_definition', (rel: any) => rel.routes, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToMany('Method_definition', (rel: any) => rel.routes, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     publishedMethods: any;
     @CreateDateColumn()
     createdAt: Date;

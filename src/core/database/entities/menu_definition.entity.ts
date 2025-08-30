@@ -1,10 +1,13 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn, OneToMany, OneToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Unique, Index, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, OneToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Extension_definition } from './extension_definition.entity';
 
 @Entity('menu_definition')
 @Unique(['label', 'type'])
 @Unique(['label', 'sidebar', 'type'])
 @Unique(['path'])
+@Index(['order'])
+@Index(['parent'])
+@Index(['sidebar'])
 export class Menu_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
@@ -19,19 +22,16 @@ export class Menu_definition {
     @Column({ type: "varchar", nullable: false })
     label: string;
     @Column({ type: "int", nullable: false, default: 0 })
-    @Index()
     order: number;
-    @Column({ type: "varchar", nullable: false })
+    @Column({ type: "varchar", nullable: true })
     path: string;
     @Column({ type: "simple-json", nullable: true })
     permission: any;
-    @Column({ type: "enum", nullable: false, enum: ['mini', 'menu'] })
-    type: 'mini' | 'menu';
-    @Index()
+    @Column({ type: "enum", nullable: false, enum: ['Mini Sidebar', 'Dropdown Menu', 'Menu'] })
+    type: 'Mini Sidebar' | 'Dropdown Menu' | 'Menu';
     @ManyToOne('Menu_definition', (rel: any) => rel.children, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     parent: any;
-    @Index()
     @ManyToOne('Menu_definition', (rel: any) => rel.menus, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     sidebar: any;
@@ -39,7 +39,7 @@ export class Menu_definition {
     children: any;
     @OneToMany('Menu_definition', (rel: any) => rel.sidebar, { cascade: true })
     menus: any;
-    @OneToOne('Extension_definition', (rel: any) => rel.menu)
+    @OneToOne('Extension_definition', (rel: any) => rel.menu, { nullable: true })
     extension: any;
     @CreateDateColumn()
     createdAt: Date;

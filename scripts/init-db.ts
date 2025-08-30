@@ -7,7 +7,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const metadata = JSON.parse(
-  fs.readFileSync(path.resolve(process.cwd(), 'data/snapshot.json'), 'utf8'),
+  fs.readFileSync(path.resolve(process.cwd(), 'data/snapshot.json'), 'utf8')
 );
 
 function capitalize(str: string): string {
@@ -32,6 +32,7 @@ const dbTypeToTSType = (dbType: string): string => {
     uuid: 'string',
     enum: 'string',
     'simple-json': 'any',
+    'array-select': 'any', // Maps to simple-json in DB, any[] in TS
   };
   return map[dbType] || 'any';
 };
@@ -91,7 +92,7 @@ async function ensureDatabaseExists() {
     `);
     if (checkDb.length === 0) {
       await tempDataSource.query(
-        `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\``,
+        `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\``
       );
       console.log(`✅ MySQL: Created database ${DB_NAME}`);
     } else {
@@ -103,7 +104,7 @@ async function ensureDatabaseExists() {
     `);
     if (checkDb.length === 0) {
       await tempDataSource.query(
-        `CREATE DATABASE "${DB_NAME}" WITH ENCODING 'UTF8'`,
+        `CREATE DATABASE "${DB_NAME}" WITH ENCODING 'UTF8'`
       );
       console.log(`✅ Postgres: Created database ${DB_NAME}`);
     } else {
@@ -123,8 +124,14 @@ async function writeEntitiesFromSnapshot() {
     manipulationSettings: { quoteKind: QuoteKind.Single },
   });
 
+  // Map để lưu các field cần tạo index cho mỗi table
+  const indexFields = new Map<string, string[]>();
+
   const entitiesDir = path.resolve(process.cwd(), 'src/core/database/entities');
-  const distEntitiesDir = path.resolve(process.cwd(), 'dist/src/core/database/entities');
+  const distEntitiesDir = path.resolve(
+    process.cwd(),
+    'dist/src/core/database/entities'
+  );
 
   if (!fs.existsSync(entitiesDir))
     fs.mkdirSync(entitiesDir, { recursive: true });
@@ -136,7 +143,7 @@ async function writeEntitiesFromSnapshot() {
     const sourceFile = project.createSourceFile(
       path.join(entitiesDir, `${tableName}.entity.ts`),
       '',
-      { overwrite: true },
+      { overwrite: true }
     );
 
     const usedImports = new Set([
@@ -152,25 +159,58 @@ async function writeEntitiesFromSnapshot() {
       decorators: [{ name: 'Entity', arguments: [`'${tableName}'`] }],
     });
 
+    // Collect all unique constraint keys to prevent index duplicates
+    const allUniqueKeys = new Set<string>();
+    const allIndexKeys = new Set<string>();
+
     for (const uniqueGroup of (def as any).uniques || []) {
       if (Array.isArray(uniqueGroup) && uniqueGroup.length) {
+        // Sort fields để xử lý đảo thứ tự
+        const fields = uniqueGroup.slice().sort();
+        const key = fields.join('|');
+
         classDeclaration.addDecorator({
           name: 'Unique',
-          arguments: [
-            `[${uniqueGroup.map((f: string) => `'${f}'`).join(', ')}]`,
-          ],
+          arguments: [`[${fields.map((f: string) => `'${f}'`).join(', ')}]`],
         });
         usedImports.add('Unique');
+
+        // Lưu key để check conflict
+        allUniqueKeys.add(key);
+        allIndexKeys.add(key); // Unique constraints cũng act as indexes
       }
     }
 
     for (const indexGroup of (def as any).indexes || []) {
       if (Array.isArray(indexGroup) && indexGroup.length > 1) {
+        // Sort fields để xử lý đảo thứ tự
+        const fields = indexGroup.slice().sort();
+        const key = fields.join('|');
+
+        // Skip nếu duplicate index hoặc bị block bởi unique constraint
+        if (!allIndexKeys.has(key)) {
+          classDeclaration.addDecorator({
+            name: 'Index',
+            arguments: [`[${fields.map((f: string) => `'${f}'`).join(', ')}]`],
+          });
+          usedImports.add('Index');
+          allIndexKeys.add(key);
+        }
+      }
+    }
+
+    // Thêm class-level @Index cho foreign key fields
+    const tableIndexFields = indexFields.get(tableName) || [];
+    for (const fieldName of tableIndexFields) {
+      // Check xem field có bị block bởi unique constraint đơn lẻ không
+      // (Unique cụm vẫn cho phép thêm index riêng lẻ)
+      const isBlockedBySingleUnique = allUniqueKeys.has(fieldName);
+
+      // Chỉ thêm nếu field không bị block bởi unique constraint đơn lẻ
+      if (!isBlockedBySingleUnique) {
         classDeclaration.addDecorator({
           name: 'Index',
-          arguments: [
-            `[${indexGroup.map((f: string) => `'${f}'`).join(', ')}]`,
-          ],
+          arguments: [`['${fieldName}']`],
         });
         usedImports.add('Index');
       }
@@ -191,7 +231,9 @@ async function writeEntitiesFromSnapshot() {
             ? 'timestamp'
             : col.type === 'richtext' || col.type === 'code'
               ? 'text'
-              : col.type;
+              : col.type === 'array-select'
+                ? 'simple-json'
+                : col.type;
 
         const opts = [
           `type: '${dbType}'`,
@@ -212,7 +254,7 @@ async function writeEntitiesFromSnapshot() {
 
           if (invalidDefault) {
             console.warn(
-              `⚠️ Bỏ qua defaultValue không hợp lệ cho cột "${col.name}"`,
+              `⚠️ Bỏ qua defaultValue không hợp lệ cho cột "${col.name}"`
             );
           } else if (
             typeof defaultVal === 'string' &&
@@ -226,9 +268,9 @@ async function writeEntitiesFromSnapshot() {
           }
         }
 
-        if (col.type === 'enum' && Array.isArray(col.enumValues)) {
+        if (col.type === 'enum' && Array.isArray(col.options)) {
           opts.push(
-            `enum: [${col.enumValues.map((v: string) => `'${v}'`).join(', ')}]`,
+            `enum: [${col.options.map((v: string) => `'${v}'`).join(', ')}]`
           );
         }
 
@@ -248,7 +290,9 @@ async function writeEntitiesFromSnapshot() {
             ? 'Date'
             : col.type === 'richtext' || col.type === 'code'
               ? 'string'
-              : dbTypeToTSType(col.type),
+              : col.type === 'array-select'
+                ? 'any[]' // Array type for array-select
+                : dbTypeToTSType(col.type),
         decorators,
       });
     }
@@ -273,7 +317,7 @@ async function writeEntitiesFromSnapshot() {
 
       const isInverse = !!rel.targetClass;
       const relationOpts = [];
-      
+
       // Only apply CASCADE DELETE for many-to-many (join table records)
       // For other relations, use SET NULL or RESTRICT based on nullable constraint
       if (rel.type === 'many-to-many') {
@@ -281,19 +325,25 @@ async function writeEntitiesFromSnapshot() {
           `onDelete: "${rel.onDelete || 'CASCADE'}"`,
           `onUpdate: "${rel.onUpdate || 'CASCADE'}"`
         );
-      } else if (rel.type === 'many-to-one' || (rel.type === 'one-to-one' && !isInverse)) {
+      } else if (
+        rel.type === 'many-to-one' ||
+        (rel.type === 'one-to-one' && !isInverse)
+      ) {
         // For foreign key relations:
         // - If nullable: SET NULL (allow deletion, set FK to null)
         // - If required: RESTRICT (prevent deletion to maintain data integrity)
-        const defaultDelete = rel.isNullable === false ? 'RESTRICT' : 'SET NULL';
+        const defaultDelete =
+          rel.isNullable === false ? 'RESTRICT' : 'SET NULL';
         relationOpts.push(
           `onDelete: "${rel.onDelete || defaultDelete}"`,
           `onUpdate: "${rel.onUpdate || 'CASCADE'}"`
         );
       }
       // Note: one-to-many doesn't need onDelete/onUpdate as it doesn't have foreign key
-      
-      relationOpts.push(`nullable: ${rel.isNullable === false ? 'false' : 'true'}`);
+
+      relationOpts.push(
+        `nullable: ${rel.isNullable === false ? 'false' : 'true'}`
+      );
 
       // Thêm cascade cho ManyToMany và OneToMany
       if (
@@ -317,8 +367,11 @@ async function writeEntitiesFromSnapshot() {
       const shouldAddIndex = rel.type === 'many-to-one';
 
       if (shouldAddIndex) {
-        decorators.push({ name: 'Index', arguments: [] });
-        usedImports.add('Index');
+        // Thêm field name vào danh sách để generate class-level @Index
+        if (!indexFields.has(tableName)) {
+          indexFields.set(tableName, []);
+        }
+        indexFields.get(tableName)!.push(rel.propertyName);
       }
 
       decorators.push({ name: relType, arguments: args });
@@ -365,7 +418,7 @@ async function writeEntitiesFromSnapshot() {
   }
 
   // Save TypeScript files
-  await Promise.all(project.getSourceFiles().map((file) => file.save()));
+  await Promise.all(project.getSourceFiles().map(file => file.save()));
   console.log('✅ Entity generation completed.');
 
   // Compile to JavaScript using ts-morph
@@ -385,7 +438,7 @@ async function compileEntitiesToJS(project: Project, outputDir: string) {
       experimentalDecorators: true,
       skipLibCheck: true,
       declaration: false,
-      outDir: outputDir,
+      outDir: '.', // Use relative path to avoid duplication
     },
     useInMemoryFileSystem: true,
   });
@@ -396,7 +449,7 @@ async function compileEntitiesToJS(project: Project, outputDir: string) {
     const content = sourceFile.getFullText();
     const relativePath = path.relative(
       path.resolve(process.cwd(), 'src/core/database/entities'),
-      filePath,
+      filePath
     );
     compileProject.createSourceFile(relativePath, content);
   }
@@ -406,7 +459,9 @@ async function compileEntitiesToJS(project: Project, outputDir: string) {
 
   // Write JS files to disk
   for (const outputFile of emitResult.getFiles()) {
-    const jsFilePath = path.join(outputDir, outputFile.filePath);
+    // Fix path duplication issue
+    const relativePath = outputFile.filePath.replace(/^src\//, '');
+    const jsFilePath = path.join(outputDir, relativePath);
     const jsDir = path.dirname(jsFilePath);
 
     if (!fs.existsSync(jsDir)) {
@@ -441,7 +496,7 @@ export async function initializeDatabase() {
   const queryRunner = checkDS.createQueryRunner();
   try {
     const [result] = await queryRunner.query(
-      `SELECT isInit FROM setting_definition LIMIT 1`,
+      `SELECT isInit FROM setting_definition LIMIT 1`
     );
 
     if (result?.isInit === true || result?.isInit === 1) {
@@ -453,7 +508,7 @@ export async function initializeDatabase() {
   } catch (err) {
     // Nếu bảng chưa tồn tại thì cứ tiếp tục init
     console.log(
-      '🔄 Bảng setting_definition chưa tồn tại hoặc chưa có dữ liệu.',
+      '🔄 Bảng setting_definition chưa tồn tại hoặc chưa có dữ liệu.'
     );
   }
 
@@ -471,7 +526,12 @@ export async function initializeDatabase() {
     username: DB_USERNAME,
     password: DB_PASSWORD,
     database: DB_NAME,
-    entities: [path.resolve(process.cwd(), 'dist/src/core/database/entities/*.entity.js')],
+    entities: [
+      path.resolve(
+        process.cwd(),
+        'dist/src/core/database/entities/*.entity.js'
+      ),
+    ],
     synchronize: true,
     logging: false,
   });
@@ -483,7 +543,7 @@ export async function initializeDatabase() {
 
 // For direct execution
 if (require.main === module) {
-  initializeDatabase().catch((e) => {
+  initializeDatabase().catch(e => {
     console.error(e);
     process.exit(1);
   });

@@ -8,11 +8,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   ResourceNotFoundException,
   ScriptExecutionException,
-  ScriptTimeoutException,
 } from '../../../core/exceptions/custom-exceptions';
 import { LoggingService } from '../../../core/exceptions/services/logging.service';
 import { HandlerExecutorService } from '../../../infrastructure/handler-executor/services/handler-executor.service';
-import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
+import { RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
 
 @Injectable()
 export class DynamicService {
@@ -20,30 +19,24 @@ export class DynamicService {
 
   constructor(
     private handlerExecutorService: HandlerExecutorService,
-    private loggingService: LoggingService,
+    private loggingService: LoggingService
   ) {}
 
-  async runHandler(
-    req: Request & {
-      routeData: any & {
-        params: any;
-        handler: string;
-        context: TDynamicContext;
-      };
-      user: any;
-    },
-  ) {
+  async runHandler(req: RequestWithRouteData) {
     // Calculate timeout outside try block so it's available in catch
     const isTableDefinitionOperation =
       req.routeData.mainTable?.name === 'table_definition' ||
       req.routeData.targetTables?.some(
-        (table) => table.name === 'table_definition',
+        table => table.name === 'table_definition'
       );
-    const timeout = isTableDefinitionOperation ? 10000 : 5000;
 
     try {
       const userHandler = req.routeData.handler?.trim();
-      const defaultHandler = this.getDefaultHandler(req.method);
+      const hasMainTable =
+        req.routeData.mainTable && req.routeData.context.$repos?.main;
+      const defaultHandler = hasMainTable
+        ? this.getDefaultHandler(req.method)
+        : null;
 
       if (!userHandler && !defaultHandler) {
         throw new ResourceNotFoundException('Handler', req.method);
@@ -53,21 +46,19 @@ export class DynamicService {
 
       const result = await this.handlerExecutorService.run(
         scriptCode,
-        req.routeData.context,
-        timeout,
+        req.routeData.context
       );
 
       return result;
     } catch (error) {
       this.loggingService.error('Handler execution failed', {
         context: 'runHandler',
-        error: error.message,
-        stack: error.stack,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
         method: req.method,
         url: req.url,
         handler: req.routeData?.handler,
         isTableOperation: isTableDefinitionOperation,
-        timeout: timeout,
         userId: req.user?.id,
       });
 
@@ -76,21 +67,16 @@ export class DynamicService {
         throw error;
       }
 
-      // Handle timeout errors specifically
-      if (error.message === 'Timeout') {
-        throw new ScriptTimeoutException(timeout, req.routeData?.handler);
-      }
-
       // Handle other script errors
       throw new ScriptExecutionException(
-        error.message,
+        error instanceof Error ? error.message : String(error),
         req.routeData?.handler,
         {
           method: req.method,
           url: req.url,
           userId: req.user?.id,
           isTableOperation: isTableDefinitionOperation,
-        },
+        }
       );
     }
   }

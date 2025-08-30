@@ -10,7 +10,7 @@ export class SchemaHistoryService {
   constructor(
     @Inject(forwardRef(() => MetadataSyncService))
     private readonly metadataSyncService: MetadataSyncService,
-    private dataSourceService: DataSourceService,
+    private dataSourceService: DataSourceService
   ) {}
 
   async backup() {
@@ -29,18 +29,47 @@ export class SchemaHistoryService {
       where: {},
       order: { createdAt: 'DESC' },
     });
-    const hash = crypto
-      .createHash('sha256')
-      .update(JSON.stringify(tables))
-      .digest('hex');
+    // Normalize tables by removing timestamps and sorting
+    const normalizedTables = tables
+      .map((table: any) => ({
+        ...table,
+        createdAt: undefined,
+        updatedAt: undefined,
+        columns: table.columns
+          ?.map((col: any) => ({
+            ...col,
+            createdAt: undefined,
+            updatedAt: undefined,
+          }))
+          .sort((a: any, b: any) => a.id - b.id),
+        relations: table.relations
+          ?.map((rel: any) => ({
+            ...rel,
+            createdAt: undefined,
+            updatedAt: undefined,
+          }))
+          .sort((a: any, b: any) => a.id - b.id),
+      }))
+      .sort((a: any, b: any) => a.id - b.id);
+
+    const tableJson = JSON.stringify(normalizedTables);
+    const hash = crypto.createHash('sha256').update(tableJson).digest('hex');
+
     if (hash === oldestSchema?.hash) {
-      this.logger.debug(`Trùng hash, bỏ qua!!`);
-      return;
+      this.logger.debug(`Schema unchanged, skipping backup`);
+      return oldestSchema.id;
     }
     const historyCount = await schemaHistoryRepo.count();
     if (historyCount > 20) {
-      if (oldestSchema) {
-        await schemaHistoryRepo.delete(oldestSchema.id);
+      const oldestRecord: any = await schemaHistoryRepo.findOne({
+        where: {},
+        order: { createdAt: 'ASC' },
+      });
+      if (oldestRecord) {
+        await schemaHistoryRepo.delete(oldestRecord.id);
+        this.logger.debug(
+          `Cleaned up old schema history record: ${oldestRecord.id}`
+        );
       }
     }
 
@@ -66,9 +95,9 @@ export class SchemaHistoryService {
     if (oldest) {
       await tableDefRepo.save(oldest.schema);
       this.logger.warn('⚠️ Đã khôi phục metadata từ schema_history');
-      await this.metadataSyncService.syncAll({
-        fromRestore: true,
-        type: options?.type,
+      // Fire & forget syncAll
+      this.metadataSyncService.syncAll().catch(error => {
+        this.logger.error('Restore syncAll failed:', error.message);
       });
     } else {
       this.logger.warn('⚠️ Không có bản backup schema nào để khôi phục');

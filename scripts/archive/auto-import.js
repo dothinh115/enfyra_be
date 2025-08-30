@@ -22,8 +22,8 @@ const argv = yargs(hideBin(process.argv))
   .help().argv;
 
 // ✅ CONFIGURATION
-const TARGET_DIRS = argv.target.map((d) => path.resolve(d));
-const SCAN_DIRS = argv.scan.map((d) => path.resolve(d));
+const TARGET_DIRS = argv.target.map(d => path.resolve(d));
+const SCAN_DIRS = argv.scan.map(d => path.resolve(d));
 
 const knownGlobalImports = {
   Entity: 'typeorm',
@@ -58,7 +58,7 @@ function getAllTsFiles(dirPath) {
 }
 
 function getAllFilesFromDirs(dirs) {
-  return dirs.flatMap((dir) => getAllTsFiles(dir));
+  return dirs.flatMap(dir => getAllTsFiles(dir));
 }
 
 function buildExportMap(scanDirs, refFile) {
@@ -76,7 +76,7 @@ function buildExportMap(scanDirs, refFile) {
     const sourceFile = project.addSourceFileAtPath(file);
     const exports = sourceFile.getExportedDeclarations();
 
-    for (const [name, decls] of exports) {
+    for (const [name] of exports) {
       if (!exportMap.has(name)) {
         const relativePath = path
           .relative(refDir, file)
@@ -85,7 +85,7 @@ function buildExportMap(scanDirs, refFile) {
 
         exportMap.set(
           name,
-          relativePath.startsWith('.') ? relativePath : './' + relativePath,
+          relativePath.startsWith('.') ? relativePath : './' + relativePath
         );
       }
     }
@@ -100,12 +100,12 @@ function getMissingIdentifiers(sourceFile) {
   const imported = new Set();
 
   // ✅ Existing imports
-  sourceFile.getImportDeclarations().forEach((decl) => {
-    decl.getNamedImports().forEach((imp) => imported.add(imp.getName()));
+  sourceFile.getImportDeclarations().forEach(decl => {
+    decl.getNamedImports().forEach(imp => imported.add(imp.getName()));
   });
 
   // ✅ Regular identifiers
-  sourceFile.forEachDescendant((node) => {
+  sourceFile.forEachDescendant(node => {
     if (node.getKind() === SyntaxKind.Identifier) {
       const name = node.getText();
       const symbol = node.getSymbol();
@@ -129,12 +129,10 @@ function getMissingIdentifiers(sourceFile) {
   });
 
   // ✅ Local class / variable
-  sourceFile.getClasses().forEach((cls) => declared.add(cls.getName()));
-  sourceFile
-    .getVariableDeclarations()
-    .forEach((v) => declared.add(v.getName()));
+  sourceFile.getClasses().forEach(cls => declared.add(cls.getName()));
+  sourceFile.getVariableDeclarations().forEach(v => declared.add(v.getName()));
 
-  declared.forEach((name) => used.delete(name));
+  declared.forEach(name => used.delete(name));
 
   return [...used];
 }
@@ -155,10 +153,10 @@ function applyAutoImports(sourceFile, missingNames, exportMap) {
   for (const { name, module } of suggestions) {
     const existing = sourceFile
       .getImportDeclarations()
-      .find((imp) => imp.getModuleSpecifierValue() === module);
+      .find(imp => imp.getModuleSpecifierValue() === module);
 
     if (existing) {
-      const names = existing.getNamedImports().map((n) => n.getName());
+      const names = existing.getNamedImports().map(n => n.getName());
       if (!names.includes(name)) existing.addNamedImport(name);
     } else {
       sourceFile.addImportDeclaration({
@@ -185,26 +183,26 @@ async function main() {
     skipAddingFilesFromTsConfig: true,
   });
 
-  const sourceFiles = targetFiles.map((file) =>
-    project.addSourceFileAtPath(file),
+  const sourceFiles = targetFiles.map(file =>
+    project.addSourceFileAtPath(file)
   );
 
   await pMap(
     sourceFiles,
-    async (sourceFile) => {
+    async sourceFile => {
       const missing = getMissingIdentifiers(sourceFile);
       const added = applyAutoImports(sourceFile, missing, exportMap);
       if (added) {
         console.log(`✅ Auto imported: ${sourceFile.getFilePath()}`);
       }
     },
-    { concurrency: 4 },
+    { concurrency: 4 }
   ); // limit 4 files at once
 
   await project.save(); // 💾 Only call save once
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error('❌ Error:', err);
   process.exit(1);
 });

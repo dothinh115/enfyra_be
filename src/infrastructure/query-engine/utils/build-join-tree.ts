@@ -69,10 +69,10 @@ export function buildJoinTree({
       currentAlias = `${rootAlias}_${path.slice(0, i + 1).join('_')}`;
       const propertyPath = segment;
 
-      if (!joinArr.find((j) => j.alias === currentAlias)) {
+      if (!joinArr.find(j => j.alias === currentAlias)) {
         joinArr.push({ alias: currentAlias, parentAlias, propertyPath });
         log.push?.(
-          `+ Add join path: ${parentAlias}.${propertyPath} → alias = ${currentAlias}`,
+          `+ Add join path: ${parentAlias}.${propertyPath} → alias = ${currentAlias}`
         );
       }
 
@@ -110,7 +110,7 @@ export function buildJoinTree({
       const result = addJoin(path);
       if (result) {
         log.push?.(
-          `+ Add join (select relation): ${result.parentAlias}.${result.propertyPath} → alias: ${result.alias}`,
+          `+ Add join (select relation): ${result.parentAlias}.${result.propertyPath} → alias: ${result.alias}`
         );
       }
       selectSet.add(`${res.alias}.id`);
@@ -140,10 +140,10 @@ export function buildJoinTree({
 
     for (const col of res.lastMeta.columns) {
       if (
-        res.lastMeta.relations.some((r) => r.propertyName === col.propertyName)
+        res.lastMeta.relations.some(r => r.propertyName === col.propertyName)
       ) {
         log.push?.(
-          `- Skip column "${col.propertyName}" because it conflicts with relation`,
+          `- Skip column "${col.propertyName}" because it conflicts with relation`
         );
         continue;
       }
@@ -157,7 +157,7 @@ export function buildJoinTree({
       if (childResult) {
         selectSet.add(`${childResult.alias}.id`);
         log.push?.(
-          `+ Add select (wildcard relation.id): ${childResult.alias}.id`,
+          `+ Add select (wildcard relation.id): ${childResult.alias}.id`
         );
       }
     }
@@ -166,9 +166,9 @@ export function buildJoinTree({
   const normalizePaths = (input?: string | string[]): string[][] => {
     if (!input) return [];
     if (typeof input === 'string') {
-      return input.split(',').map((s) => s.trim().split('.'));
+      return input.split(',').map(s => s.trim().split('.'));
     }
-    return input.map((s) => s.trim().split('.'));
+    return input.map(s => s.trim().split('.'));
   };
 
   const fieldPaths = normalizePaths(fields ? fields : '*');
@@ -184,7 +184,7 @@ export function buildJoinTree({
   const extractPathsFromFilter = (
     f: any,
     basePath: string[] = [],
-    currentMeta = meta,
+    currentMeta = meta
   ) => {
     if (!f || typeof f !== 'object') return;
     if (Array.isArray(f)) {
@@ -203,7 +203,7 @@ export function buildJoinTree({
           const result = addJoin(path);
           if (result) {
             log.push?.(
-              `+ Add join (filter): ${result.parentAlias}.${result.propertyPath} → alias: ${result.alias}`,
+              `+ Add join (filter): ${result.parentAlias}.${result.propertyPath} → alias: ${result.alias}`
             );
           }
 
@@ -230,7 +230,7 @@ export function buildJoinTree({
     const result = addJoin(path.slice(0, -1));
     if (result) {
       log.push?.(
-        `+ Add join (sort): ${result.parentAlias}.${result.propertyPath}`,
+        `+ Add join (sort): ${result.parentAlias}.${result.propertyPath}`
       );
     }
 

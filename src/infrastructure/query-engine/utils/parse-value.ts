@@ -19,7 +19,7 @@ export function parseValue(fieldType: string, value: any): any {
 
     case 'date':
     case 'datetime':
-    case 'timestamp':
+    case 'timestamp': {
       // If it's already a Date object, return it
       if (value instanceof Date) return value;
       // Try to parse the date string
@@ -28,11 +28,12 @@ export function parseValue(fieldType: string, value: any): any {
         throw new Error(`Invalid date value: ${value}`);
       }
       return parsedDate;
+    }
 
     case 'uuid':
     case 'varchar':
     case 'text':
     default:
-      return String(value);
+      return String(value).trim();
   }
 }

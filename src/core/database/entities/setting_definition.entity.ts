@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Method_definition } from './method_definition.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('setting_definition')
 export class Setting_definition {
@@ -15,8 +14,6 @@ export class Setting_definition {
     projectName: string;
     @Column({ type: "varchar", nullable: true })
     projectUrl: string;
-    @OneToMany('Method_definition', (rel: any) => rel.setting, { cascade: true })
-    methods: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()

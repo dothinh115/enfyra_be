@@ -8,7 +8,7 @@ import { DataSourceService } from '../../../core/database/data-source/data-sourc
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     configService: ConfigService,
-    private dataSourceService: DataSourceService,
+    private dataSourceService: DataSourceService
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

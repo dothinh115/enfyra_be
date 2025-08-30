@@ -1,3 +1,5 @@
-// Shared components barrel export - currently unused
-// Most imports use direct paths for better tree-shaking
-export * from './common/common.module';
+// Shared modules exports
+export * from './common';
+export * from './guards';
+export * from './interceptors';
+export * from './middleware';

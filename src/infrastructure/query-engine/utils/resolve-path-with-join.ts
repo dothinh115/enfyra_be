@@ -36,7 +36,7 @@ export function resolvePathWithJoin({
     if (found.kind === 'field') {
       if (i !== path.length - 1) {
         throw new Error(
-          `Invalid path: "${segment}" is a field on table "${currentMeta.tableName}", but path continues.`,
+          `Invalid path: "${segment}" is a field on table "${currentMeta.tableName}", but path continues.`
         );
       }
 

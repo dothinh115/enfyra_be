@@ -65,7 +65,7 @@ export async function buildTypeScriptToJs({
     }
 
     logger.log(
-      `✅ Successfully compiled ${tsFiles.length} TypeScript files to ${outDir}`,
+      `✅ Successfully compiled ${tsFiles.length} TypeScript files to ${outDir}`
     );
   } catch (err) {
     logger.error('❌ Error building JavaScript files:', err);

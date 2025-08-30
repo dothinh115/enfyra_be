@@ -1,8 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Index, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Method_definition } from './method_definition.entity';
 import { Route_definition } from './route_definition.entity';
 
 @Entity('hook_definition')
+@Index(['route'])
 export class Hook_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
@@ -23,7 +24,6 @@ export class Hook_definition {
     @ManyToMany('Method_definition', (rel: any) => rel.hooks, { nullable: true, cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinTable()
     methods: any;
-    @Index()
     @ManyToOne('Route_definition', (rel: any) => rel.hooks, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     route: any;

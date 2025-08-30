@@ -13,10 +13,17 @@ export type TDynamicContext = {
   $req: Request & {
     [key: string]: any;
   };
-  $errors: {};
+  $errors: Record<string, never>;
   $result?: any;
   $data?: any;
   $statusCode?: number;
+  $uploadedFile?: {
+    originalname: string;
+    mimetype: string;
+    buffer: Buffer;
+    size: number;
+    fieldname: string;
+  };
   $share?: {
     $data?: any;
     [key: string]: any;

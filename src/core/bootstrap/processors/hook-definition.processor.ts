@@ -10,29 +10,30 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
 
   async transformRecords(records: any[]): Promise<any[]> {
     const routeRepo = this.dataSourceService.getRepository('route_definition');
-    const methodRepo = this.dataSourceService.getRepository('method_definition');
+    const methodRepo =
+      this.dataSourceService.getRepository('method_definition');
 
     const transformedRecords = await Promise.all(
-      records.map(async (hook) => {
+      records.map(async hook => {
         const transformedHook = { ...hook };
 
         // Map route reference
-        if (hook.route && typeof hook.route === 'string') {
+        if (this.isValidRouteReference(hook.route)) {
           const rawPath = hook.route;
-          const pathsToTry = Array.from(
-            new Set([
-              rawPath,
-              rawPath.startsWith('/') ? rawPath.slice(1) : '/' + rawPath,
-            ]),
-          );
+          const pathsToTry = this.generatePathVariations(rawPath);
 
-          const route = await routeRepo.findOne({
-            where: pathsToTry.map((p) => ({ path: p })),
-          });
+          // Try each path until we find a route
+          let route = null;
+          for (const path of pathsToTry) {
+            route = await routeRepo.findOne({
+              where: { path: path },
+            });
+            if (route) break;
+          }
 
           if (!route) {
             this.logger.warn(
-              `⚠️ Route '${hook.route}' not found for hook ${hook.name}, skipping.`,
+              `⚠️ Route '${hook.route}' not found for hook ${hook.name}, skipping.`
             );
             return null;
           }
@@ -44,21 +45,27 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
         if (hook.methods && Array.isArray(hook.methods)) {
           const methodEntities = [];
           for (const methodName of hook.methods) {
-            const method = await methodRepo.findOne({
-              where: { method: methodName },
-            });
-            if (method) {
-              methodEntities.push(method);
-            } else {
+            try {
+              const method = await methodRepo.findOne({
+                where: { method: methodName },
+              });
+              if (method) {
+                methodEntities.push(method);
+              } else {
+                this.logger.warn(
+                  `⚠️ Method '${methodName}' not found for hook ${hook.name}`
+                );
+              }
+            } catch (methodError) {
               this.logger.warn(
-                `⚠️ Method '${methodName}' not found for hook ${hook.name}`,
+                `⚠️ Error finding method '${methodName}' for hook ${hook.name}: ${methodError instanceof Error ? methodError.message : String(methodError)}`
               );
             }
           }
 
           if (methodEntities.length === 0) {
             this.logger.warn(
-              `⚠️ No valid methods found for hook ${hook.name}, skipping.`,
+              `⚠️ No valid methods found for hook ${hook.name}, skipping.`
             );
             return null;
           }
@@ -67,11 +74,24 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
         }
 
         return transformedHook;
-      }),
+      })
     );
 
     // Filter out null records
     return transformedRecords.filter(Boolean);
+  }
+
+  private isValidRouteReference(route: any): boolean {
+    return typeof route === 'string' && route.length > 0;
+  }
+
+  private generatePathVariations(rawPath: string): string[] {
+    return Array.from(
+      new Set([
+        rawPath,
+        rawPath.startsWith('/') ? rawPath.slice(1) : '/' + rawPath,
+      ])
+    );
   }
 
   getUniqueIdentifier(record: any): object {
@@ -79,18 +99,43 @@ export class HookDefinitionProcessor extends BaseTableProcessor {
     return { name: record.name };
   }
 
-  // TODO: Uncomment when update logic is restored
-  // protected getCompareFields(): string[] {
-  //   return ['name', 'description', 'preHook', 'afterHook', 'priority', 'isEnabled'];
-  // }
+  protected getCompareFields(): string[] {
+    return [
+      'name',
+      'description',
+      'preHook',
+      'afterHook',
+      'priority',
+      'isEnabled',
+    ];
+  }
 
-  // TODO: Special update handling for many-to-many relationships
+  protected getRecordIdentifier(record: any): string {
+    const route = record.route;
+    const methods = record.methods;
+
+    let routeStr = '';
+    if (route) {
+      routeStr = typeof route === 'string' ? route : route.path;
+    }
+
+    let methodsStr = '';
+    if (methods && Array.isArray(methods)) {
+      methodsStr = methods
+        .map(m => (typeof m === 'string' ? m : m.method))
+        .join(', ');
+    }
+
+    return `[Hook] ${record.name}${routeStr ? ` on ${routeStr}` : ''}${methodsStr ? ` (${methodsStr})` : ''}`;
+  }
+
+  // Special update handling for many-to-many relationships
   // protected async updateRecord(existingId: any, record: any, repo: Repository<any>): Promise<void> {
   //   const { methods, ...updateData } = record;
-  //   
+  //
   //   // Update basic fields
   //   await repo.update(existingId, updateData);
-  //   
+  //
   //   // Handle many-to-many methods separately
   //   if (methods && Array.isArray(methods)) {
   //     await repo.save({

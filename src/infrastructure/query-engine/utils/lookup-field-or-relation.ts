@@ -1,9 +1,8 @@
 import { EntityMetadata } from 'typeorm';
-import { RelationMetadata } from 'typeorm/metadata/RelationMetadata';
 
 export function lookupFieldOrRelation(
   meta: EntityMetadata,
-  property: string,
+  property: string
 ):
   | { kind: 'field'; propertyName: string; type: string }
   | {
@@ -15,10 +14,10 @@ export function lookupFieldOrRelation(
       inverseJoinColumn: string;
       isMany: boolean;
       joinTableName?: string;
-      relationMeta: RelationMetadata;
+      relationMeta: any;
     }
   | undefined {
-  const relation = meta.relations.find((rel) => rel.propertyName === property);
+  const relation = meta.relations.find(rel => rel.propertyName === property);
   if (relation) {
     const relationType = relation.relationType;
     const joinColumn = relation.joinColumns?.[0]?.propertyName || 'id';
@@ -47,7 +46,7 @@ export function lookupFieldOrRelation(
     };
   }
 
-  const column = meta.columns.find((col) => col.propertyName === property);
+  const column = meta.columns.find(col => col.propertyName === property);
   if (column) {
     return {
       kind: 'field',

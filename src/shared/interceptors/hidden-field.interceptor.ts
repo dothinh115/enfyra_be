@@ -14,12 +14,12 @@ export class HideFieldInterceptor implements NestInterceptor {
   constructor(private dataSourceService: DataSourceService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    return next.handle().pipe(map((data) => this.sanitizeDeep(data)));
+    return next.handle().pipe(map(data => this.sanitizeDeep(data)));
   }
 
   private sanitizeDeep(value: any): any {
     if (Array.isArray(value)) {
-      return value.map((v) => this.sanitizeDeep(v));
+      return value.map(v => this.sanitizeDeep(v));
     }
 
     if (value && typeof value === 'object') {
@@ -62,8 +62,8 @@ export class HideFieldInterceptor implements NestInterceptor {
   private findMatchingEntityMetas(obj: any): EntityMetadata[] {
     return this.dataSourceService
       .getDataSource()
-      .entityMetadatas.filter((meta) =>
-        meta.columns.every((col) => col.propertyName in obj),
+      .entityMetadatas.filter(meta =>
+        meta.columns.every(col => col.propertyName in obj)
       );
   }
 }

@@ -31,24 +31,23 @@ export class RequestContextMiddleware implements NestMiddleware {
 
     // Override response.end to log response
     const originalEnd = res.end;
-    const self = this;
-    res.end = function (chunk?: any, encoding?: any, cb?: any) {
+    res.end = (chunk?: any, encoding?: any, cb?: any) => {
       const responseTime = Date.now() - startTime;
 
       // Log response
-      self.loggingService.logResponse(
+      this.loggingService.logResponse(
         req.method,
         req.url,
         res.statusCode,
         responseTime,
-        (req as any).user?.id,
+        (req as any).user?.id
       );
 
       // Clear context after response
-      self.loggingService.clearContext();
+      this.loggingService.clearContext();
 
       // Call original end method
-      return originalEnd.call(this, chunk, encoding, cb);
+      return originalEnd.call(res, chunk, encoding, cb);
     };
 
     // Add correlation ID to response headers
@@ -89,7 +88,7 @@ export class RequestContextMiddleware implements NestMiddleware {
       'authorization',
     ];
 
-    sensitiveFields.forEach((field) => {
+    sensitiveFields.forEach(field => {
       if (sanitized[field]) {
         sanitized[field] = '[REDACTED]';
       }
@@ -107,7 +106,7 @@ export class RequestContextMiddleware implements NestMiddleware {
     const sanitized = { ...headers };
     const sensitiveHeaders = ['authorization', 'cookie', 'x-api-key'];
 
-    sensitiveHeaders.forEach((header) => {
+    sensitiveHeaders.forEach(header => {
       if (sanitized[header]) {
         sanitized[header] = '[REDACTED]';
       }

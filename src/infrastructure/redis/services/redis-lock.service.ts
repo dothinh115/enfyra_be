@@ -8,6 +8,11 @@ export class RedisLockService {
 
   constructor(private readonly redisService: RedisService) {
     this.redis = this.redisService.getOrNil();
+    if (!this.redis) {
+      throw new Error(
+        'Redis connection not available - RedisLockService cannot initialize'
+      );
+    }
   }
 
   private serialize(value: any): string {
@@ -31,7 +36,7 @@ export class RedisLockService {
       serializedValue,
       'PX',
       ttlMs,
-      'NX',
+      'NX'
     );
     const ttl = await this.redis.pttl(key);
     console.log(`[RedisLockService] ACQUIRE ${key} => ${result}, TTL=${ttl}ms`);
@@ -51,7 +56,10 @@ export class RedisLockService {
       console.log(`[RedisLockService] RELEASE ${key} => ${deleted}`);
       return deleted === 1;
     } catch (error) {
-      console.log(`[RedisLockService] RELEASE ${key} => ERROR:`, error.message);
+      console.log(
+        `[RedisLockService] RELEASE ${key} => ERROR:`,
+        error instanceof Error ? error.message : String(error)
+      );
       return false;
     }
   }

@@ -47,7 +47,7 @@ export class CreateColumnDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  enumValues?: string[];
+  values?: string[];
 
   @IsBoolean()
   @IsOptional()
@@ -103,7 +103,7 @@ export class CreateRelationDto {
   @Transform(({ obj }) => {
     if (obj.isEager === true && obj.isInverseEager === true) {
       throw new Error(
-        'Cannot enable both isEager and isInverseEager simultaneously to avoid bidirectional eager loading.',
+        'Cannot enable both isEager and isInverseEager simultaneously to avoid bidirectional eager loading.'
       );
     }
     return obj.isEager;
@@ -130,7 +130,7 @@ export class CreateRelationDto {
   @Transform(({ obj }) => {
     if (obj.isEager === true && obj.isInverseEager === true) {
       throw new Error(
-        'Cannot enable both isEager and isInverseEager simultaneously to avoid bidirectional eager loading.',
+        'Cannot enable both isEager and isInverseEager simultaneously to avoid bidirectional eager loading.'
       );
     }
     return obj.isEager;

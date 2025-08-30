@@ -22,23 +22,23 @@ export class AutoService {
   constructor(
     private commonService: CommonService,
     @Inject(forwardRef(() => DataSourceService))
-    private dataSourceService: DataSourceService,
+    private dataSourceService: DataSourceService
   ) {}
 
   async entityGenerate(
     payload: CreateTableDto,
-    inverseRelationMap?: TInverseRelationMap,
+    inverseRelationMap?: TInverseRelationMap
   ) {
     const capitalize = this.commonService.capitalize.bind(this.commonService);
     const dbTypeToTSType = this.commonService.dbTypeToTSType.bind(
-      this.commonService,
+      this.commonService
     );
 
     const className = capitalize(payload.name);
     const entityDir = path.resolve('src', 'core', 'database', 'entities');
     const entityPath = path.resolve(
       entityDir,
-      `${payload.name.toLowerCase()}.entity.ts`,
+      `${payload.name.toLowerCase()}.entity.ts`
     );
     if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
 
@@ -55,25 +55,30 @@ export class AutoService {
       overwrite: true,
     });
 
-    // Extract columns with unique: true to avoid duplicate @Unique decorators
-    const columnsWithUnique = payload.columns
-      .filter(col => col.isUnique)
-      .map(col => col.name);
-
-    // Extract columns with index: true to avoid duplicate @Index decorators  
-    const columnsWithIndex = payload.columns
-      .filter(col => col.isIndex)
-      .map(col => col.name);
-
     // Extract all valid field names from entity definition (columns + relations)
     const columnFields = payload.columns.map(col => col.name);
-    const relationFields = (payload.relations || []).map(rel => rel.propertyName);
+    const relationFields = (payload.relations || []).map(
+      rel => rel.propertyName
+    );
     const validEntityFields = [...columnFields, ...relationFields];
 
+    // Create set of actual fields that will be in the entity (columns + relations + system fields)
+    const actualEntityFields = new Set([
+      ...columnFields,
+      ...relationFields,
+      'id',
+      'createdAt',
+      'updatedAt', // System fields
+    ]);
+
     // Transform uniques/indexes from simple-json array format to expected object format
-    const transformedUniques = (payload.uniques || []).map(uniqueArray => ({ value: uniqueArray as unknown as string[] }));
-    const transformedIndexes = (payload.indexes || []).map(indexArray => ({ value: indexArray as unknown as string[] }));
-    
+    const transformedUniques = (payload.uniques || []).map(uniqueArray => ({
+      value: uniqueArray as unknown as string[],
+    }));
+    const transformedIndexes = (payload.indexes || []).map(indexArray => ({
+      value: indexArray as unknown as string[],
+    }));
+
     const classDeclaration = wrapEntityClass({
       sourceFile,
       className,
@@ -81,9 +86,9 @@ export class AutoService {
       uniques: transformedUniques,
       indexes: transformedIndexes,
       usedImports,
-      columnsWithUnique,
-      columnsWithIndex,
       validEntityFields,
+      actualEntityFields,
+      relations: payload.relations || [], // Truyền relations
     });
 
     for (const col of payload.columns) {
@@ -145,7 +150,7 @@ export class AutoService {
     }
 
     for (const [moduleSpecifier, namedImports] of Object.entries(
-      groupedImports,
+      groupedImports
     )) {
       sourceFile.addImportDeclaration({ namedImports, moduleSpecifier });
     }
@@ -195,7 +200,7 @@ export class AutoService {
       this.logger.log('✅ Successfully cleared data in migrations table.');
     } else {
       this.logger.warn(
-        '⚠️ Migrations table does not exist, skipping deletion.',
+        '⚠️ Migrations table does not exist, skipping deletion.'
       );
     }
 

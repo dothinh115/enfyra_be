@@ -7,7 +7,7 @@ export class ParseQueryMiddleware implements NestMiddleware {
     const query = req.query;
     const newQuery = { ...req.query };
 
-    for (const key of ['filter', 'fields', 'sort', 'aggregate']) {
+    for (const key of ['filter', 'fields', 'sort', 'aggregate', 'deep']) {
       if (typeof query[key] === 'string') {
         try {
           newQuery[key] = JSON.parse(req.query[key] as string);

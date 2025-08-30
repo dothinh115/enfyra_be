@@ -5,7 +5,7 @@ const logger = new Logger('EntityWriter');
 
 export async function writeEntityFile(
   sourceFile: SourceFile,
-  entityPath: string,
+  entityPath: string
 ) {
   await sourceFile.save();
   logger.log(`✅ Entity written: ${entityPath}`);

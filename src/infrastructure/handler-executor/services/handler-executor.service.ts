@@ -2,7 +2,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 // Internal imports
-import { TDynamicContext } from '../../../shared/utils/types/dynamic-context.type';
+import { TDynamicContext } from '../../../shared/interfaces/dynamic-context.interface';
 
 // Relative imports
 import { ChildProcessManager } from '../utils/child-process-manager';
@@ -19,20 +19,21 @@ export class HandlerExecutorService {
   async run(
     code: string,
     ctx: TDynamicContext,
-    timeoutMs = 5000,
+    timeoutMs = 5000
   ): Promise<any> {
     const pool = this.executorPoolService.getPool();
     const isDone = { value: false };
-    return new Promise(async (resolve, reject) => {
-      const child = await pool.acquire();
-      const timeout = ChildProcessManager.setupTimeout(
-        child,
-        timeoutMs,
-        code,
-        isDone,
-        reject,
-      );
 
+    const child = await pool.acquire();
+    const timeout = ChildProcessManager.setupTimeout(
+      child,
+      timeoutMs,
+      code,
+      isDone,
+      () => {} // Empty reject function, will be overridden
+    );
+
+    return new Promise((resolve, reject) => {
       ChildProcessManager.setupChildProcessListeners(
         child,
         ctx,
@@ -41,7 +42,7 @@ export class HandlerExecutorService {
         isDone,
         resolve,
         reject,
-        code,
+        code
       );
 
       ChildProcessManager.sendExecuteMessage(child, wrapCtx(ctx), code);

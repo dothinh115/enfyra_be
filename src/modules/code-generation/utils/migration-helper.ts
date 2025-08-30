@@ -24,17 +24,17 @@ async function cleanupOrphanedTables(dataSource: any) {
 
     // Get entity table names from current entities
     const entityTableNames = dataSource.entityMetadatas.map(
-      (meta: any) => meta.tableName,
+      (meta: any) => meta.tableName
     );
 
     // Find orphaned tables (exist in DB but not in entities)
     const orphanedTables = databaseTables.filter(
-      (dbTable: any) => !entityTableNames.includes(dbTable.TABLE_NAME),
+      (dbTable: any) => !entityTableNames.includes(dbTable.TABLE_NAME)
     );
 
     if (orphanedTables.length > 0) {
       logger.warn(
-        `Found ${orphanedTables.length} orphaned table(s) to clean up:`,
+        `Found ${orphanedTables.length} orphaned table(s) to clean up:`
       );
 
       for (const table of orphanedTables) {
@@ -54,14 +54,14 @@ async function cleanupOrphanedTables(dataSource: any) {
           for (const fk of referencingFKs) {
             try {
               await queryRunner.query(
-                `ALTER TABLE \`${fk.TABLE_NAME}\` DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``,
+                `ALTER TABLE \`${fk.TABLE_NAME}\` DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``
               );
               logger.debug(
-                `  → Dropped FK ${fk.CONSTRAINT_NAME} from ${fk.TABLE_NAME}`,
+                `  → Dropped FK ${fk.CONSTRAINT_NAME} from ${fk.TABLE_NAME}`
               );
             } catch (fkError) {
               logger.warn(
-                `  → Failed to drop FK ${fk.CONSTRAINT_NAME}: ${fkError.message}`,
+                `  → Failed to drop FK ${fk.CONSTRAINT_NAME}: ${fkError instanceof Error ? fkError.message : String(fkError)}`
               );
             }
           }
@@ -78,12 +78,12 @@ async function cleanupOrphanedTables(dataSource: any) {
           for (const fk of outgoingFKs) {
             try {
               await queryRunner.query(
-                `ALTER TABLE \`${tableName}\` DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``,
+                `ALTER TABLE \`${tableName}\` DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``
               );
               logger.debug(`  → Dropped outgoing FK ${fk.CONSTRAINT_NAME}`);
             } catch (fkError) {
               logger.warn(
-                `  → Failed to drop outgoing FK ${fk.CONSTRAINT_NAME}: ${fkError.message}`,
+                `  → Failed to drop outgoing FK ${fk.CONSTRAINT_NAME}: ${fkError instanceof Error ? fkError.message : String(fkError)}`
               );
             }
           }
@@ -93,7 +93,7 @@ async function cleanupOrphanedTables(dataSource: any) {
           logger.log(`🗑️ Dropped orphaned table: ${tableName}`);
         } catch (dropError: any) {
           logger.error(
-            `❌ Failed to drop table ${tableName}: ${dropError.message}`,
+            `❌ Failed to drop table ${tableName}: ${dropError.message}`
           );
         }
       }
@@ -121,14 +121,14 @@ async function generateMigrationFileDirect() {
     'core',
     'database',
     'migrations',
-    'AutoMigration',
+    'AutoMigration'
   );
   const needDeleteDir = path.resolve(
     'dist',
     'src',
     'core',
     'database',
-    'migrations',
+    'migrations'
   );
   const entityDir = path.resolve('dist', 'src', 'core', 'database', 'entities');
 
@@ -176,10 +176,10 @@ async function generateMigrationFileDirect() {
 
         // Extract table and column names with more robust regex
         const dropMatch = queryStr.match(
-          /ALTER TABLE [`"]?([^`"\s]+)[`"]?\s+DROP COLUMN [`"]?([^`"\s]+)[`"]?/i,
+          /ALTER TABLE [`"]?([^`"\s]+)[`"]?\s+DROP COLUMN [`"]?([^`"\s]+)[`"]?/i
         );
         const addMatch = nextQueryStr.match(
-          /ALTER TABLE [`"]?([^`"\s]+)[`"]?\s+ADD [`"]?([^`"\s]+)[`"]?\s+(.+)/i,
+          /ALTER TABLE [`"]?([^`"\s]+)[`"]?\s+ADD [`"]?([^`"\s]+)[`"]?\s+(.+)/i
         );
 
         if (dropMatch && addMatch && dropMatch[1] === addMatch[1]) {
@@ -191,7 +191,7 @@ async function generateMigrationFileDirect() {
           // Validate that we have valid names
           if (!tableName || !oldColumnName || !newColumnName) {
             logger.warn(
-              `Invalid column names detected, skipping optimization: ${queryStr}`,
+              `Invalid column names detected, skipping optimization: ${queryStr}`
             );
             optimizedUpQueries.push(query);
             if (sqlInMemory.downQueries[i]) {
@@ -208,7 +208,7 @@ async function generateMigrationFileDirect() {
 
           if (!isConsecutivePair) {
             logger.debug(
-              `Not a consecutive DROP/ADD pair, keeping original query`,
+              `Not a consecutive DROP/ADD pair, keeping original query`
             );
             optimizedUpQueries.push(query);
             if (sqlInMemory.downQueries[i]) {
@@ -220,7 +220,7 @@ async function generateMigrationFileDirect() {
           if (oldColumnName === newColumnName) {
             // Same column name - this is a type change, convert to MODIFY COLUMN
             logger.debug(
-              `Converting DROP/ADD to MODIFY for ${tableName}.${oldColumnName}`,
+              `Converting DROP/ADD to MODIFY for ${tableName}.${oldColumnName}`
             );
 
             // Handle different database types
@@ -234,7 +234,7 @@ async function generateMigrationFileDirect() {
             } else {
               // Fallback to original queries for unsupported database types
               logger.warn(
-                `Unsupported database type ${dbType} for column modification, using original queries`,
+                `Unsupported database type ${dbType} for column modification, using original queries`
               );
               optimizedUpQueries.push(query);
               optimizedUpQueries.push(nextQuery);
@@ -258,7 +258,7 @@ async function generateMigrationFileDirect() {
           } else {
             // Different column names - this is a rename, convert to RENAME COLUMN
             logger.debug(
-              `Converting DROP/ADD to RENAME for ${tableName}.${oldColumnName} -> ${newColumnName}`,
+              `Converting DROP/ADD to RENAME for ${tableName}.${oldColumnName} -> ${newColumnName}`
             );
 
             // Handle different database types for RENAME COLUMN
@@ -277,7 +277,7 @@ async function generateMigrationFileDirect() {
             } else {
               // For unsupported database types, use the original DROP/ADD approach
               logger.warn(
-                `Unsupported database type ${dbType} for column rename, using original DROP/ADD approach`,
+                `Unsupported database type ${dbType} for column rename, using original DROP/ADD approach`
               );
               optimizedUpQueries.push(query);
               optimizedUpQueries.push(nextQuery);
@@ -323,7 +323,7 @@ async function generateMigrationFileDirect() {
     const migrationPath = path.join(migrationDir, `${migrationName}.js`);
 
     const upQueries = sqlInMemory.upQueries
-      .map((query) => {
+      .map(query => {
         // Escape backticks, backslashes, and other problematic characters
         const escapedQuery = query.query
           .replace(/\\/g, '\\\\') // Escape backslashes first
@@ -334,7 +334,7 @@ async function generateMigrationFileDirect() {
       .join('\n');
 
     const downQueries = sqlInMemory.downQueries
-      .map((query) => {
+      .map(query => {
         // Escape backticks, backslashes, and other problematic characters
         const escapedQuery = query.query
           .replace(/\\/g, '\\\\') // Escape backslashes first
@@ -383,7 +383,7 @@ async function runMigrationDirect() {
     'src',
     'core',
     'database',
-    'migrations',
+    'migrations'
   );
 
   logger.log('🚀 Running migration using DataSource API...');
@@ -403,7 +403,17 @@ async function runMigrationDirect() {
       database: process.env.DB_NAME,
       synchronize: false,
       entities,
-      migrations: [path.resolve('dist', 'src', 'core', 'database', 'migrations', '**', '*.js')], // Look for JS files in dist
+      migrations: [
+        path.resolve(
+          'dist',
+          'src',
+          'core',
+          'database',
+          'migrations',
+          '**',
+          '*.js'
+        ),
+      ], // Look for JS files in dist
       migrationsRun: false, // Don't auto-run migrations
       logging: false,
     });
@@ -418,7 +428,7 @@ async function runMigrationDirect() {
       logger.log('✅ No pending migrations to run');
     } else {
       logger.log(`✅ Successfully ran ${migrations.length} migration(s):`);
-      migrations.forEach((migration) => {
+      migrations.forEach(migration => {
         logger.log(`  - ${migration.name}`);
       });
     }

@@ -1,9 +1,11 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, OneToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Unique, Index, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { User_definition } from './user_definition.entity';
 import { Menu_definition } from './menu_definition.entity';
 
 @Entity('extension_definition')
 @Unique(['menu'])
+@Index(['createdBy'])
+@Index(['updatedBy'])
 export class Extension_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
@@ -25,14 +27,12 @@ export class Extension_definition {
     type: 'page' | 'widget';
     @Column({ type: "varchar", nullable: false, default: "1.0.0" })
     version: string;
-    @Index()
     @ManyToOne('User_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     createdBy: any;
     @OneToOne('Menu_definition', (rel: any) => rel.extension, { nullable: true, cascade: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     menu: any;
-    @Index()
     @ManyToOne('User_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     updatedBy: any;

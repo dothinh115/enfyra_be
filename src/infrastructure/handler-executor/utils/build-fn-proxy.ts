@@ -2,7 +2,7 @@ import { pendingCalls } from '../runner';
 
 let callCounter = 1;
 export function buildFunctionProxy(prefixPath: string): any {
-  return new Proxy(function () {}, {
+  return new Proxy(async function () {}, {
     get(_, prop: string | symbol) {
       // Skip special properties during debug/log
       if (
@@ -20,14 +20,16 @@ export function buildFunctionProxy(prefixPath: string): any {
     },
 
     apply(_, __, args: any[]) {
-      const callId = `call_${++callCounter}`;
-      process.send?.({
-        type: 'call',
-        callId,
-        path: prefixPath,
-        args,
-      });
-      return waitForParentResponse(callId);
+      return (async () => {
+        const callId = `call_${++callCounter}`;
+        process.send?.({
+          type: 'call',
+          callId,
+          path: prefixPath,
+          args,
+        });
+        return await waitForParentResponse(callId);
+      })();
     },
   });
 }

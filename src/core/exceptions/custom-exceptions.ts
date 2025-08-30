@@ -6,7 +6,7 @@ export abstract class CustomException extends HttpException {
     message: string,
     statusCode: HttpStatus,
     public readonly errorCode: string,
-    public readonly details?: any,
+    public readonly details?: any
   ) {
     super(
       {
@@ -14,7 +14,7 @@ export abstract class CustomException extends HttpException {
         errorCode,
         details,
       },
-      statusCode,
+      statusCode
     );
   }
 }
@@ -32,7 +32,7 @@ export class ValidationException extends CustomException {
       message,
       HttpStatus.UNPROCESSABLE_ENTITY,
       'VALIDATION_ERROR',
-      details,
+      details
     );
   }
 }
@@ -55,7 +55,7 @@ export class DuplicateResourceException extends CustomException {
       `${resource} with ${field} '${value}' already exists`,
       HttpStatus.CONFLICT,
       'DUPLICATE_RESOURCE',
-      { resource, field, value },
+      { resource, field, value }
     );
   }
 }
@@ -97,7 +97,7 @@ export class DatabaseConnectionException extends CustomException {
     super(
       'Database connection failed',
       HttpStatus.SERVICE_UNAVAILABLE,
-      'DATABASE_CONNECTION_ERROR',
+      'DATABASE_CONNECTION_ERROR'
     );
   }
 }
@@ -115,7 +115,7 @@ export class ExternalServiceException extends CustomException {
       `External service '${service}' error: ${message}`,
       HttpStatus.BAD_GATEWAY,
       'EXTERNAL_SERVICE_ERROR',
-      { service, details },
+      { service, details }
     );
   }
 }
@@ -126,7 +126,7 @@ export class ServiceUnavailableException extends CustomException {
       `Service '${service}' is currently unavailable`,
       HttpStatus.SERVICE_UNAVAILABLE,
       'SERVICE_UNAVAILABLE',
-      { service },
+      { service }
     );
   }
 }
@@ -138,7 +138,7 @@ export class RateLimitExceededException extends CustomException {
       `Rate limit exceeded. Maximum ${limit} requests per ${window}`,
       HttpStatus.TOO_MANY_REQUESTS,
       'RATE_LIMIT_EXCEEDED',
-      { limit, window },
+      { limit, window }
     );
   }
 }
@@ -150,7 +150,7 @@ export class ScriptExecutionException extends CustomException {
       `Script execution failed: ${message}`,
       HttpStatus.BAD_REQUEST,
       'SCRIPT_EXECUTION_ERROR',
-      { scriptId, details },
+      { scriptId, details }
     );
   }
 }
@@ -161,7 +161,7 @@ export class ScriptTimeoutException extends CustomException {
       `Script execution timed out after ${timeoutMs}ms`,
       HttpStatus.REQUEST_TIMEOUT,
       'SCRIPT_TIMEOUT',
-      { timeoutMs, scriptId },
+      { timeoutMs, scriptId }
     );
   }
 }
@@ -172,7 +172,7 @@ export class ScriptSyntaxException extends CustomException {
       `Script syntax error: ${message}`,
       HttpStatus.BAD_REQUEST,
       'SCRIPT_SYNTAX_ERROR',
-      { line, column },
+      { line, column }
     );
   }
 }
@@ -190,7 +190,7 @@ export class ConfigurationException extends CustomException {
       `Configuration error: ${message}`,
       HttpStatus.INTERNAL_SERVER_ERROR,
       'CONFIGURATION_ERROR',
-      { configKey },
+      { configKey }
     );
   }
 }
@@ -208,7 +208,7 @@ export class FileNotFoundException extends CustomException {
       `File not found: ${filePath}`,
       HttpStatus.NOT_FOUND,
       'FILE_NOT_FOUND',
-      { filePath },
+      { filePath }
     );
   }
 }
@@ -219,14 +219,14 @@ export class FileSizeExceededException extends CustomException {
       `File size exceeded. Maximum: ${maxSize}, Actual: ${actualSize}`,
       HttpStatus.PAYLOAD_TOO_LARGE,
       'FILE_SIZE_EXCEEDED',
-      { maxSize, actualSize },
+      { maxSize, actualSize }
     );
   }
 }
 
 // Utility function to check if an exception is a custom exception
 export function isCustomException(
-  exception: any,
+  exception: any
 ): exception is CustomException {
   return exception instanceof CustomException;
 }

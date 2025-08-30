@@ -7,14 +7,14 @@ import { DataSourceService } from '../../../core/database/data-source/data-sourc
 export class SystemProtectionService {
   constructor(
     private commonService: CommonService,
-    private dataSourceService: DataSourceService,
+    private dataSourceService: DataSourceService
   ) {}
 
   private getAllRelationFieldsWithInverse(tableName: string): string[] {
     try {
       const dataSource = this.dataSourceService.getDataSource();
       const meta = dataSource.getMetadata(tableName);
-      const relations = meta.relations.map((r) => r.propertyName);
+      const relations = meta.relations.map(r => r.propertyName);
 
       const inverseRelations: string[] = [];
       for (const otherMeta of dataSource.entityMetadatas) {
@@ -28,7 +28,18 @@ export class SystemProtectionService {
         }
       }
 
-      return [...new Set([...relations, ...inverseRelations])];
+      const baseRelations = [...new Set([...relations, ...inverseRelations])];
+
+      // For table_definition, add nested relations
+      if (tableName === 'table_definition') {
+        baseRelations.push(
+          'columns.table',
+          'relations.sourceTable',
+          'relations.targetTable'
+        );
+      }
+
+      return baseRelations;
     } catch {
       return [];
     }
@@ -48,7 +59,7 @@ export class SystemProtectionService {
   private getChangedFields(
     data: any,
     existing: any,
-    relationFields: string[],
+    relationFields: string[]
   ): string[] {
     const d = this.stripRelations(data, relationFields);
     const e = this.stripRelations(existing, relationFields);
@@ -56,7 +67,7 @@ export class SystemProtectionService {
     if (!d || typeof d !== 'object') return [];
     if (!e || typeof e !== 'object') return Object.keys(d);
 
-    return Object.keys(d).filter((key) => {
+    return Object.keys(d).filter(key => {
       const isChanged = key in e && !isEqual(d[key], e[key]);
       return isChanged;
     });
@@ -86,7 +97,7 @@ export class SystemProtectionService {
   private async assertRelationSystemRecordsNotRemoved(
     tableName: string,
     existing: any,
-    newData: any,
+    newData: any
   ) {
     const relationFields = this.getAllRelationFieldsWithInverse(tableName);
     if (relationFields.length === 0) return;
@@ -99,14 +110,14 @@ export class SystemProtectionService {
 
       const oldSystemIds = oldItems
         .filter((i: any) => i?.isSystem)
-        .map((i) => i.id);
-      const newIds = newItems.filter((i: any) => i?.id).map((i) => i.id);
+        .map(i => i.id);
+      const newIds = newItems.filter((i: any) => i?.id).map(i => i.id);
       const newCreated = newItems.filter((i: any) => !i?.id);
 
       for (const id of oldSystemIds) {
         if (!newIds.includes(id)) {
           throw new Error(
-            `Cannot delete system record (id=${id}) in relation '${field}'`,
+            `Cannot delete system record (id=${id}) in relation '${field}'`
           );
         }
       }
@@ -114,7 +125,7 @@ export class SystemProtectionService {
       for (const item of newCreated) {
         if (item?.isSystem) {
           throw new Error(
-            `Cannot create new system record in relation '${field}'`,
+            `Cannot create new system record in relation '${field}'`
           );
         }
       }
@@ -135,11 +146,12 @@ export class SystemProtectionService {
     currentUser?: any;
   }) {
     const fullExisting = await this.reloadIfSystem(existing, tableName);
+
     const relationFields = this.getAllRelationFieldsWithInverse(tableName);
     const changedFields = this.getChangedFields(
       data,
       fullExisting,
-      relationFields,
+      relationFields
     );
 
     if (operation === 'create') {
@@ -154,7 +166,7 @@ export class SystemProtectionService {
       await this.assertRelationSystemRecordsNotRemoved(
         tableName,
         fullExisting,
-        data,
+        data
       );
     }
 
@@ -164,10 +176,10 @@ export class SystemProtectionService {
         'publishedMethods',
         'icon',
       ]);
-      const disallowed = changedFields.filter((f) => !allowed.includes(f));
+      const disallowed = changedFields.filter(f => !allowed.includes(f));
       if (disallowed.length > 0) {
         throw new Error(
-          `Cannot modify system route (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
+          `Cannot modify system route (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`
         );
       }
 
@@ -190,10 +202,10 @@ export class SystemProtectionService {
       }
       if (operation === 'update' && fullExisting?.isSystem) {
         const allowed = this.getAllowedFields(['description']);
-        const disallowed = changedFields.filter((f) => !allowed.includes(f));
+        const disallowed = changedFields.filter(f => !allowed.includes(f));
         if (disallowed.length > 0)
           throw new Error(
-            `Cannot modify system hook (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
+            `Cannot modify system hook (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`
           );
 
         if (
@@ -220,6 +232,7 @@ export class SystemProtectionService {
         throw new Error('Cannot delete Root Admin user');
 
       if (operation === 'update') {
+        // isRootAdmin field cannot be changed by anyone
         if (
           'isRootAdmin' in data &&
           data.isRootAdmin !== fullExisting?.isRootAdmin
@@ -229,17 +242,11 @@ export class SystemProtectionService {
 
         const isSelf = currentUser?.id === fullExisting?.id;
 
+        // Only Root Admin can modify themselves
         if (isRoot && !isSelf)
           throw new Error('Only Root Admin can modify themselves');
 
-        if (isSelf) {
-          const allowed = this.getAllowedFields(['email', 'password']);
-          const disallowed = changedFields.filter((k) => !allowed.includes(k));
-          if (disallowed.length > 0)
-            throw new Error(
-              `Root Admin can only modify: ${allowed.join(', ')}. Violations: ${disallowed.join(', ')}`,
-            );
-        }
+        // Allow Root Admin to modify all fields (except isRootAdmin which is blocked above)
       }
     }
 
@@ -252,10 +259,10 @@ export class SystemProtectionService {
 
       if (operation === 'update' && isSystem) {
         const allowed = this.getAllowedFields(['description']);
-        const disallowed = changedFields.filter((k) => !allowed.includes(k));
+        const disallowed = changedFields.filter(k => !allowed.includes(k));
         if (disallowed.length > 0)
           throw new Error(
-            `Cannot modify system table (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
+            `Cannot modify system table (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`
           );
 
         const oldCols = fullExisting.columns || [];
@@ -264,7 +271,7 @@ export class SystemProtectionService {
         const newRels = data?.relations || [];
 
         const removedCols = oldCols.filter(
-          (col) => !newCols.some((c) => c.id === col.id),
+          col => !newCols.some(c => c.id === col.id)
         );
         for (const col of removedCols) {
           if (col.isSystem)
@@ -272,40 +279,81 @@ export class SystemProtectionService {
         }
 
         const removedRels = oldRels.filter(
-          (rel) => !newRels.some((r) => r.id === rel.id),
+          rel => !newRels.some(r => r.id === rel.id)
         );
         for (const rel of removedRels) {
           if (rel.isSystem)
             throw new Error(
-              `Cannot delete system relation: '${rel.propertyName}'`,
+              `Cannot delete system relation: '${rel.propertyName}'`
             );
         }
 
-        for (const oldCol of oldCols.filter((c) => c.isSystem)) {
-          const updated = newCols.find((c) => c.id === oldCol.id);
+        for (const oldCol of oldCols.filter(c => c.isSystem)) {
+          const updated = newCols.find(c => c.id === oldCol.id);
           if (!updated || typeof updated !== 'object') continue;
+
+          // Only check fields that actually changed, with special handling for reference fields
+          const changedFields = Object.keys(updated).filter(key => {
+            // Special handling for table reference - compare by ID only
+            if (key === 'table') {
+              const updatedTableId = updated[key]?.id;
+              const oldTableId = oldCol[key]?.id;
+
+              // If old table is undefined, infer from parent context
+              // Column belongs to the table being updated, so table ID should match
+              const inferredOldTableId = oldTableId || fullExisting.id;
+
+              return updatedTableId !== inferredOldTableId;
+            }
+            return !isEqual(updated[key], oldCol[key]);
+          });
+
           const allowed = this.getAllowedFields(['description']);
-          const changed = Object.keys(updated).filter(
-            (key) =>
-              !allowed.includes(key) && !isEqual(updated[key], oldCol[key]),
+          const disallowedChanges = changedFields.filter(
+            k => !allowed.includes(k)
           );
-          if (changed.length > 0)
+
+          if (disallowedChanges.length > 0)
             throw new Error(
-              `Cannot modify system column '${oldCol.name}' (only allowed: ${allowed.join(', ')})`,
+              `Cannot modify system column '${oldCol.name}' (only allowed: ${allowed.join(', ')}): ${disallowedChanges.join(', ')}`
             );
         }
 
-        for (const oldRel of oldRels.filter((r) => r.isSystem)) {
-          const updated = newRels.find((r) => r.id === oldRel.id);
+        for (const oldRel of oldRels.filter(r => r.isSystem)) {
+          const updated = newRels.find(r => r.id === oldRel.id);
           if (!updated || typeof updated !== 'object') continue;
+
+          // Only check fields that actually changed, with special handling for reference fields
+          const changedFields = Object.keys(updated).filter(key => {
+            // Special handling for table references - compare by ID only
+            if (key === 'sourceTable' || key === 'targetTable') {
+              const updatedTableId = updated[key]?.id;
+              const oldTableId = oldRel[key]?.id;
+
+              // If old is undefined, the relation reference hasn't changed if IDs match
+              // This handles the case where TypeORM doesn't always populate nested relations
+              if (!oldTableId && updatedTableId) {
+                // For sourceTable, it should match the parent table being updated
+                if (key === 'sourceTable') {
+                  return updatedTableId !== fullExisting.id;
+                }
+                // For targetTable, we can't infer - assume no change if old was undefined
+                return false;
+              }
+
+              return updatedTableId !== oldTableId;
+            }
+            return !isEqual(updated[key], oldRel[key]);
+          });
+
           const allowed = this.getAllowedFields(['description']);
-          const changed = Object.keys(updated).filter(
-            (key) =>
-              !allowed.includes(key) && !isEqual(updated[key], oldRel[key]),
+          const disallowedChanges = changedFields.filter(
+            k => !allowed.includes(k)
           );
-          if (changed.length > 0)
+
+          if (disallowedChanges.length > 0)
             throw new Error(
-              `Cannot modify system relation '${oldRel.propertyName}' (only allowed: ${allowed.join(', ')})`,
+              `Cannot modify system relation '${oldRel.propertyName}' (only allowed: ${allowed.join(', ')}): ${disallowedChanges.join(', ')}`
             );
         }
       }
@@ -332,10 +380,10 @@ export class SystemProtectionService {
           'permission',
         ]);
 
-        const disallowed = changedFields.filter((k) => !allowed.includes(k));
+        const disallowed = changedFields.filter(k => !allowed.includes(k));
         if (disallowed.length > 0) {
           throw new Error(
-            `Cannot modify system menu (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
+            `Cannot modify system menu (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`
           );
         }
 
@@ -386,10 +434,10 @@ export class SystemProtectionService {
           'permissions',
         ]);
 
-        const disallowed = changedFields.filter((k) => !allowed.includes(k));
+        const disallowed = changedFields.filter(k => !allowed.includes(k));
         if (disallowed.length > 0) {
           throw new Error(
-            `Cannot modify system extension (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`,
+            `Cannot modify system extension (only allowed: ${allowed.join(', ')}): ${disallowed.join(', ')}`
           );
         }
 

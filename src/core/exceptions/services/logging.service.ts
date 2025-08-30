@@ -111,7 +111,7 @@ export class LoggingService implements LoggerService {
     method: string,
     url: string,
     userId?: string,
-    additionalData?: any,
+    additionalData?: any
   ): void {
     this.log('API Request', {
       method,
@@ -129,7 +129,7 @@ export class LoggingService implements LoggerService {
     url: string,
     statusCode: number,
     responseTime: number,
-    userId?: string,
+    userId?: string
   ): void {
     this.log('API Response', {
       method,
@@ -148,7 +148,7 @@ export class LoggingService implements LoggerService {
     table: string,
     duration: number,
     success: boolean,
-    error?: any,
+    error?: any
   ): void {
     const logData: any = {
       operation,
@@ -177,7 +177,7 @@ export class LoggingService implements LoggerService {
     method: string,
     duration: number,
     success: boolean,
-    error?: any,
+    error?: any
   ): void {
     const logData: any = {
       service,
@@ -205,7 +205,7 @@ export class LoggingService implements LoggerService {
     scriptId: string,
     duration: number,
     success: boolean,
-    error?: any,
+    error?: any
   ): void {
     const logData: any = {
       scriptId,
@@ -242,7 +242,7 @@ export class LoggingService implements LoggerService {
     event: string,
     userId?: string,
     ip?: string,
-    details?: any,
+    details?: any
   ): void {
     this.warn('Security Event', {
       event,
@@ -260,7 +260,7 @@ export class LoggingService implements LoggerService {
     userId?: string,
     entity?: string,
     entityId?: string,
-    details?: any,
+    details?: any
   ): void {
     this.log('Business Event', {
       event,

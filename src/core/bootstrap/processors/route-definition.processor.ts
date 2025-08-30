@@ -9,59 +9,96 @@ export class RouteDefinitionProcessor extends BaseTableProcessor {
   }
 
   async transformRecords(records: any[]): Promise<any[]> {
-    const tableDefRepo = this.dataSourceService.getRepository('table_definition');
-    const methodRepo = this.dataSourceService.getRepository('method_definition');
-    
+    const tableDefRepo =
+      this.dataSourceService.getRepository('table_definition');
+    const methodRepo =
+      this.dataSourceService.getRepository('method_definition');
+
     const transformedRecords = await Promise.all(
-      records.map(async (record) => {
+      records.map(async record => {
         const transformedRecord = { ...record };
-        
+
         // Handle mainTable reference
-        const mainTable = await tableDefRepo.findOne({
-          where: { name: record.mainTable },
-        });
-        
-        if (!mainTable) {
+        if (!this.isValidTableReference(record.mainTable)) {
           this.logger.warn(
-            `⚠️ Table '${record.mainTable}' not found for route ${record.path}, skipping.`,
+            `⚠️ Invalid mainTable reference '${record.mainTable}' for route ${record.path}, skipping.`
           );
           return null;
         }
-        
+
+        let mainTable = null;
+        try {
+          mainTable = await tableDefRepo.findOne({
+            where: { name: record.mainTable },
+          });
+        } catch (tableError) {
+          this.logger.warn(
+            `⚠️ Error finding table '${record.mainTable}' for route ${record.path}: ${tableError instanceof Error ? tableError.message : String(tableError)}`
+          );
+        }
+
+        if (!mainTable) {
+          this.logger.warn(
+            `⚠️ Table '${record.mainTable}' not found for route ${record.path}, skipping.`
+          );
+          return null;
+        }
+
         transformedRecord.mainTable = mainTable;
-        
+
         // Handle publishedMethods - convert string array to method entities
         if (record.publishedMethods && Array.isArray(record.publishedMethods)) {
-          const methodEntities = await methodRepo.find({
-            where: record.publishedMethods.map((method: string) => ({ method }))
-          });
-          
-          if (methodEntities.length !== record.publishedMethods.length) {
-            const foundMethods = methodEntities.map((m: any) => m.method);
-            const notFound = record.publishedMethods.filter((m: string) => !foundMethods.includes(m));
-            this.logger.warn(
-              `⚠️ Method(s) '${notFound.join(', ')}' not found for route ${record.path}`,
+          const methodEntities = await Promise.all(
+            record.publishedMethods.map(async (methodName: string) => {
+              const method = await methodRepo.findOne({
+                where: { method: methodName },
+              });
+              if (!method) {
+                this.logger.warn(
+                  `⚠️ Method '${methodName}' not found for route ${record.path}`
+                );
+              }
+              return method;
+            })
+          );
+
+          // Filter out null values and assign
+          transformedRecord.publishedMethods = methodEntities.filter(Boolean);
+
+          if (transformedRecord.publishedMethods.length > 0) {
+            this.logger.debug(
+              `🔗 Route ${record.path} linked to methods: ${transformedRecord.publishedMethods.map((m: any) => m.method).join(', ')}`
             );
           }
-          
-          transformedRecord.publishedMethods = methodEntities;
-          this.logger.debug(`🔗 Route ${record.path} linked to methods: ${methodEntities.map((m: any) => m.method).join(', ')}`);
         }
-        
+
         return transformedRecord;
-      }),
+      })
     );
 
     // Filter out null records (where mainTable wasn't found)
     return transformedRecords.filter(Boolean);
   }
 
+  private isValidTableReference(tableName: any): boolean {
+    return typeof tableName === 'string' && tableName.length > 0;
+  }
+
   getUniqueIdentifier(record: any): object {
     return { path: record.path };
   }
 
-  // TODO: Uncomment when update logic is restored
-  // protected getCompareFields(): string[] {
-  //   return ['path', 'isEnabled', 'icon', 'description'];
-  // }
+  protected getCompareFields(): string[] {
+    return ['path', 'isEnabled', 'icon', 'description'];
+  }
+
+  protected getRecordIdentifier(record: any): string {
+    const methods = record.publishedMethods || record._publishedMethods;
+    const methodsList =
+      methods && Array.isArray(methods)
+        ? methods.map(m => (typeof m === 'string' ? m : m.method)).join(', ')
+        : '';
+
+    return `[Route] ${record.path}${methodsList ? ` (${methodsList})` : ''}`;
+  }
 }

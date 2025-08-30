@@ -14,7 +14,7 @@ export async function resolveDeepRelations(options: {
   await Promise.all(
     Object.entries(deep).map(async ([relationName, deepOptions]) => {
       const relationMeta = metaData.relations.find(
-        (r) => r.propertyName === relationName,
+        r => r.propertyName === relationName
       );
       if (!relationMeta) return;
 
@@ -28,7 +28,7 @@ export async function resolveDeepRelations(options: {
 
       if (!joinColumn?.propertyName) {
         log.push(
-          `! Deep relation "${relationName}" skipped due to unable to determine foreignKey`,
+          `! Deep relation "${relationName}" skipped due to unable to determine foreignKey`
         );
         return;
       }
@@ -44,7 +44,7 @@ export async function resolveDeepRelations(options: {
       const metaList: any[] = [];
 
       await Promise.all(
-        rows.map(async (row) => {
+        rows.map(async row => {
           try {
             const res = await queryEngine.find({
               tableName: childTable,
@@ -69,16 +69,16 @@ export async function resolveDeepRelations(options: {
           } catch (error) {
             row[relationName] = [];
             log.push(
-              `! Deep relation "${relationName}" failed with id ${row.id}: ${error.message}`,
+              `! Deep relation "${relationName}" failed with id ${row.id}: ${error instanceof Error ? error.message : String(error)}`
             );
           }
-        }),
+        })
       );
 
       if (metaList.length > 0) {
         metaDeep[relationName] = metaList;
       }
-    }),
+    })
   );
 
   return Object.keys(metaDeep).length ? metaDeep : undefined;

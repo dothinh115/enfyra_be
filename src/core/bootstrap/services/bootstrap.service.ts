@@ -20,12 +20,12 @@ export class BootstrapService implements OnApplicationBootstrap {
     private readonly coreInitService: CoreInitService,
     private dataSourceService: DataSourceService,
     private schemaReloadService: SchemaReloadService,
-    private redisLockService: RedisLockService,
+    private redisLockService: RedisLockService
   ) {}
 
   private async waitForDatabaseConnection(
-    maxRetries = 10,
-    delayMs = 1000,
+    maxRetries = 3,
+    delayMs = 100 // Reduced from 200ms
   ): Promise<void> {
     let settingRepo =
       this.dataSourceService.getRepository('setting_definition');
@@ -37,7 +37,7 @@ export class BootstrapService implements OnApplicationBootstrap {
         return;
       } catch (error) {
         this.logger.warn(
-          `Unable to connect to DB, retrying after ${delayMs}ms...`,
+          `Unable to connect to DB, retrying after ${delayMs}ms... (${i + 1}/${maxRetries})`
         );
         await this.commonService.delay(delayMs);
         await this.dataSourceService.reloadDataSource();
@@ -49,81 +49,56 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   async onApplicationBootstrap() {
-    // return;
     try {
+      // Quick database connection check
       await this.waitForDatabaseConnection();
     } catch (err) {
       this.logger.error('❌ Error during application bootstrap:', err);
     }
+
+    // Check if initialization is needed
     let settingRepo =
       this.dataSourceService.getRepository('setting_definition');
-    let schemaHistoryRepo =
-      this.dataSourceService.getRepository('schema_history');
-
-    if (!settingRepo || !schemaHistoryRepo) {
-      this.logger.error(
-        '❌ Failed to get repositories. Database may not be initialized properly.',
-      );
-      return;
-    }
-
-    let setting: any = await settingRepo.findOne({ 
+    let setting: any = await settingRepo.findOne({
       where: {},
-      order: { id: 'ASC' }  // Get first setting record
+      order: { id: 'ASC' },
     });
 
     if (!setting || !setting.isInit) {
-      await this.coreInitService.createInitMetadata();
+      this.logger.log('🔄 Running upsert to sync default data...');
 
-      await this.defaultDataService.insertAllDefaultRecords();
-      await this.metadataSyncService.syncAll();
+      // Run core initialization in parallel
+      const [coreInitResult, defaultDataResult] = await Promise.all([
+        this.coreInitService.createInitMetadata(),
+        this.defaultDataService.insertAllDefaultRecords(),
+      ]);
 
+      // Run metadata sync after core operations complete
+      this.logger.log('🔄 Starting metadata synchronization...');
+      const syncResult = await this.metadataSyncService.syncAll();
+      this.logger.debug(
+        `Bootstrap sync result: ${syncResult.status}`,
+        syncResult
+      );
+
+      // Update setting
       settingRepo = this.dataSourceService.getRepository('setting_definition');
-      setting = await settingRepo.findOne({ 
+      setting = await settingRepo.findOne({
         where: {},
-        order: { id: 'ASC' }  // Get first setting record
+        order: { id: 'ASC' },
       });
-      
+
       if (!setting) {
         this.logger.error('❌ Setting record not found after initialization');
-        throw new Error('Setting record not found after initialization. DefaultDataService may have failed.');
+        throw new Error(
+          'Setting record not found after initialization. DefaultDataService may have failed.'
+        );
       }
-      
+
       await settingRepo.update(setting.id, { isInit: true });
-      schemaHistoryRepo =
-        this.dataSourceService.getRepository('schema_history');
-      this.logger.debug('Initialization successful');
-
-      const lastVersion: any = await schemaHistoryRepo.findOne({
-        where: {},
-        order: { createdAt: 'DESC' },
-      });
-
-      if (lastVersion) {
-        this.schemaStateService.setVersion(lastVersion.id);
-      }
+      this.logger.log('✅ Bootstrap initialization completed successfully');
     } else {
-      await this.commonService.delay(Math.random() * 500);
-
-      this.logger.log('🔄 Running upsert to sync default data...');
-      await this.defaultDataService.insertAllDefaultRecords();
-
-      const acquired = await this.redisLockService.acquire(
-        'global:boot',
-        this.schemaReloadService.sourceInstanceId,
-        15000,
-      );
-      if (acquired) {
-        await this.metadataSyncService.syncAll();
-        this.logger.warn('Lock acquired successfully', acquired);
-        schemaHistoryRepo =
-          this.dataSourceService.getRepository('schema_history');
-        const lastVersion: any = await schemaHistoryRepo.findOne({
-          where: {},
-          order: { createdAt: 'DESC' },
-        });
-        await this.schemaReloadService.publishSchemaUpdated(lastVersion?.id);
-      }
+      this.logger.log('✅ Application already initialized, skipping bootstrap');
     }
   }
 }

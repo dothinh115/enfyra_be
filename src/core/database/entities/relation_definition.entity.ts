@@ -1,8 +1,10 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Unique, Index, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Table_definition } from './table_definition.entity';
 
 @Entity('relation_definition')
 @Unique(['propertyName', 'sourceTable'])
+@Index(['sourceTable'])
+@Index(['targetTable'])
 export class Relation_definition {
     @PrimaryGeneratedColumn('increment')
     id: number;
@@ -10,10 +12,6 @@ export class Relation_definition {
     description: string;
     @Column({ type: "varchar", nullable: true })
     inversePropertyName: string;
-    @Column({ type: "boolean", nullable: false, default: false })
-    isEager: boolean;
-    @Column({ type: "boolean", nullable: false, default: false })
-    isInverseEager: boolean;
     @Column({ type: "boolean", nullable: false, default: true })
     isNullable: boolean;
     @Column({ type: "boolean", nullable: false, default: false })
@@ -22,12 +20,10 @@ export class Relation_definition {
     propertyName: string;
     @Column({ type: "enum", nullable: false, enum: ['one-to-one', 'many-to-one', 'one-to-many', 'many-to-many'] })
     type: 'one-to-one' | 'many-to-one' | 'one-to-many' | 'many-to-many';
-    @Index()
     @ManyToOne('Table_definition', (rel: any) => rel.relations, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     sourceTable: any;
-    @Index()
-    @ManyToOne('Table_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
+    @ManyToOne('Table_definition', { nullable: false, onDelete: 'RESTRICT', onUpdate: 'CASCADE' })
     @JoinColumn()
     targetTable: any;
     @CreateDateColumn()

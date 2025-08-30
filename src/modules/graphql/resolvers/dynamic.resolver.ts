@@ -30,7 +30,7 @@ export class DynamicResolver {
     private dataSourceService: DataSourceService,
     private handlerExecutorService: HandlerExecutorService,
     private routeCacheService: RouteCacheService,
-    private systemProtectionService: SystemProtectionService,
+    private systemProtectionService: SystemProtectionService
   ) {}
 
   async dynamicResolver(
@@ -44,44 +44,69 @@ export class DynamicResolver {
       aggregate: any;
     },
     context: any,
-    info: any,
+    info: any
   ) {
     const { mainTable, targetTables, user } = await this.middleware(
       tableName,
       context,
-      info,
+      info
     );
 
     const selections = info.fieldNodes?.[0]?.selectionSet?.selections || [];
     const fullFieldPicker = convertFieldNodesToFieldPicker(selections);
     const fieldPicker = fullFieldPicker
-      .filter((f) => f.startsWith('data.'))
-      .map((f) => f.replace(/^data\./, ''));
+      .filter(f => f.startsWith('data.'))
+      .map(f => f.replace(/^data\./, ''));
     const metaPicker = fullFieldPicker
-      .filter((f) => f.startsWith('meta.'))
-      .map((f) => f.replace(/^meta\./, ''));
+      .filter(f => f.startsWith('meta.'))
+      .map(f => f.replace(/^meta\./, ''));
 
-    const query = {
-      fields: fieldPicker.join(','),
-      filter: args.filter,
-      page: args.page,
-      limit: args.limit,
-      meta: metaPicker.join(',') as any,
-      sort: args.sort,
-      aggregate: args.aggregate,
+    // Create context compatible with DynamicRepository
+    const handlerCtx: any = {
+      $errors: ScriptErrorFactory.createErrorHandlers(),
+      $helpers: {
+        jwt: (payload: any, ext: string) =>
+          this.jwtService.sign(payload, { expiresIn: ext }),
+      },
+      $args: {
+        fields: fieldPicker.join(','),
+        filter: args.filter,
+        page: args.page,
+        limit: args.limit,
+        meta: metaPicker.join(',') as any,
+        sort: args.sort,
+        aggregate: args.aggregate,
+      },
+      $query: {
+        fields: fieldPicker.join(','),
+        filter: args.filter,
+        page: args.page,
+        limit: args.limit,
+        meta: metaPicker.join(',') as any,
+        sort: args.sort,
+        aggregate: args.aggregate,
+      },
+      $user: user ?? undefined,
+      $repos: {}, // Will be populated below
+      $req: context.request,
+      $body: {},
+      $params: {},
+      $logs: () => {},
+      $share: {},
     };
 
+    // Create dynamic repositories with context
     const dynamicFindEntries = await Promise.all(
-      [mainTable, ...targetTables].map(async (table) => {
+      [mainTable, ...targetTables].map(async table => {
         const dynamicRepo = new DynamicRepository({
-          query,
+          context: handlerCtx,
           tableName: table.name,
           tableHandlerService: this.tableHandlerService,
           dataSourceService: this.dataSourceService,
           queryEngine: this.queryEngine,
           routeCacheService: this.routeCacheService,
           systemProtectionService: this.systemProtectionService,
-          currentUser: user,
+          // folderManagementService is optional, not needed in GraphQL
         });
 
         await dynamicRepo.init();
@@ -90,34 +115,25 @@ export class DynamicResolver {
           table.name === mainTable.name ? 'main' : (table.alias ?? table.name);
 
         return [name, dynamicRepo];
-      }),
+      })
     );
 
-    const dynamicFindMap = Object.fromEntries(dynamicFindEntries);
-
-    const handlerCtx: any = {
-      $errors: ScriptErrorFactory.createErrorHandlers(),
-      $helpers: {
-        jwt: (payload: any, ext: string) =>
-          this.jwtService.sign(payload, { expiresIn: ext }),
-      },
-      $args: args ?? {},
-      $user: user ?? undefined,
-      $repos: dynamicFindMap,
-      $req: context.request,
-    };
+    // Populate repos in context
+    handlerCtx.$repos = Object.fromEntries(dynamicFindEntries);
 
     try {
       const defaultHandler = `return await $ctx.$repos.main.find();`;
       const result = await this.handlerExecutorService.run(
         defaultHandler,
         handlerCtx,
-        5000,
+        5000
       );
 
       return result;
     } catch (error) {
-      throw new BadRequestException(`Script error: ${error.message}`);
+      throw new BadRequestException(
+        `Script error: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -131,7 +147,7 @@ export class DynamicResolver {
       (await this.routeCacheService.loadAndCacheRoutes());
 
     const currentRoute = routes.find(
-      (route) => route.path === '/' + mainTableName,
+      route => route.path === '/' + mainTableName
     );
 
     const accessToken =
@@ -153,7 +169,7 @@ export class DynamicResolver {
     }
 
     const isPublished = currentRoute.publishedMethods.some(
-      (item: any) => item.method === 'GQL_QUERY',
+      (item: any) => item.method === 'GQL_QUERY'
     );
 
     if (isPublished) {
@@ -182,7 +198,7 @@ export class DynamicResolver {
       currentRoute.routePermissions?.some(
         (permission: any) =>
           permission.role?.id === user.role?.id &&
-          permission.methods?.includes('GQL_QUERY'),
+          permission.methods?.includes('GQL_QUERY')
       );
 
     if (!canPass) {

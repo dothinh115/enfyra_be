@@ -1,11 +1,15 @@
-import { Entity, Unique, PrimaryGeneratedColumn, Column, ManyToOne, Index, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Unique, Index, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { User_definition } from './user_definition.entity';
+import { File_definition } from './file_definition.entity';
 
 @Entity('folder_definition')
 @Unique(['parent', 'slug'])
+@Index(['order'])
+@Index(['parent'])
+@Index(['user'])
 export class Folder_definition {
-    @PrimaryGeneratedColumn('increment')
-    id: number;
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
     @Column({ type: "text", nullable: true })
     description: string;
     @Column({ type: "varchar", nullable: true, default: "lucide:folder" })
@@ -16,20 +20,18 @@ export class Folder_definition {
     name: string;
     @Column({ type: "int", nullable: false, default: 0 })
     order: number;
-    @Column({ type: "varchar", nullable: false, unique: true })
-    path: string;
     @Column({ type: "varchar", nullable: false })
     slug: string;
-    @Index()
     @ManyToOne('Folder_definition', (rel: any) => rel.children, { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     parent: any;
-    @Index()
     @ManyToOne('User_definition', { nullable: true, onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn()
     user: any;
     @OneToMany('Folder_definition', (rel: any) => rel.parent, { cascade: true })
     children: any;
+    @OneToMany('File_definition', (rel: any) => rel.folder, { cascade: true })
+    files: any;
     @CreateDateColumn()
     createdAt: Date;
     @UpdateDateColumn()
