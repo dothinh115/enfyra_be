@@ -9,7 +9,7 @@ import { Response } from 'express';
 import { RequestWithRouteData } from '../../../shared/interfaces/dynamic-context.interface';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as sharp from 'sharp';
+import sharp from 'sharp';
 import * as crypto from 'crypto';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';
