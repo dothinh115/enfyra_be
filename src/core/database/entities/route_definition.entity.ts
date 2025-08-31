@@ -6,7 +6,7 @@ import { Hook_definition } from './hook_definition.entity';
 import { Method_definition } from './method_definition.entity';
 
 @Entity('route_definition')
-@Unique(['mainTable', 'path'])
+@Unique(['path'])
 @Index(['mainTable'])
 export class Route_definition {
     @PrimaryGeneratedColumn('increment')

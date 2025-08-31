@@ -90,7 +90,7 @@
     "route_definition": {
         "name": "route_definition",
         "isSystem": true,
-        "uniques": [["path", "mainTable"]],
+        "uniques": [["path"]],
         "columns": [
             { "name": "id", "type": "int", "isPrimary": true, "isGenerated": true, "isNullable": false, "isSystem": true },
             { "name": "path", "type": "varchar", "isNullable": false, "isSystem": true, "defaultValue": null },
