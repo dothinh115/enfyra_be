@@ -56,10 +56,14 @@ export class GenericTableProcessor extends BaseTableProcessor {
       identifiers.push({ name: record.name, type: record.type });
     }
     
-    // Strategy 5: Fallback to first non-null property
+    // Strategy 5: Fallback to first non-null property (avoid arrays that might cause issues)
     if (identifiers.length === 0) {
       const firstKey = Object.keys(record).find(key => 
-        record[key] !== null && record[key] !== undefined && key !== 'createdAt' && key !== 'updatedAt'
+        record[key] !== null && 
+        record[key] !== undefined && 
+        key !== 'createdAt' && 
+        key !== 'updatedAt' &&
+        !Array.isArray(record[key]) // Skip arrays to avoid TypeORM issues
       );
       if (firstKey) {
         identifiers.push({ [firstKey]: record[firstKey] });

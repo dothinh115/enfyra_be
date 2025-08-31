@@ -7,6 +7,7 @@ import { DefaultDataService } from './services/default-data.service';
 import { UserDefinitionProcessor } from './processors/user-definition.processor';
 import { MenuDefinitionProcessor } from './processors/menu-definition.processor';
 import { RouteDefinitionProcessor } from './processors/route-definition.processor';
+import { RouteHandlerDefinitionProcessor } from './processors/route-handler-definition.processor';
 import { MethodDefinitionProcessor } from './processors/method-definition.processor';
 import { HookDefinitionProcessor } from './processors/hook-definition.processor';
 import { SettingDefinitionProcessor } from './processors/setting-definition.processor';
@@ -23,6 +24,7 @@ import { FolderDefinitionProcessor } from './processors/folder-definition.proces
     UserDefinitionProcessor,
     MenuDefinitionProcessor,
     RouteDefinitionProcessor,
+    RouteHandlerDefinitionProcessor,
     MethodDefinitionProcessor,
     HookDefinitionProcessor,
     SettingDefinitionProcessor,

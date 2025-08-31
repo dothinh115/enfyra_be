@@ -9,6 +9,7 @@ import { BaseTableProcessor } from '../processors/base-table-processor';
 import { UserDefinitionProcessor } from '../processors/user-definition.processor';
 import { MenuDefinitionProcessor } from '../processors/menu-definition.processor';
 import { RouteDefinitionProcessor } from '../processors/route-definition.processor';
+import { RouteHandlerDefinitionProcessor } from '../processors/route-handler-definition.processor';
 import { MethodDefinitionProcessor } from '../processors/method-definition.processor';
 import { HookDefinitionProcessor } from '../processors/hook-definition.processor';
 import { SettingDefinitionProcessor } from '../processors/setting-definition.processor';
@@ -35,6 +36,7 @@ export class DefaultDataService {
     private readonly userProcessor: UserDefinitionProcessor,
     private readonly menuProcessor: MenuDefinitionProcessor,
     private readonly routeProcessor: RouteDefinitionProcessor,
+    private readonly routeHandlerProcessor: RouteHandlerDefinitionProcessor,
     private readonly methodProcessor: MethodDefinitionProcessor,
     private readonly hookProcessor: HookDefinitionProcessor,
     private readonly settingProcessor: SettingDefinitionProcessor,
@@ -49,6 +51,7 @@ export class DefaultDataService {
     this.processors.set('user_definition', this.userProcessor);
     this.processors.set('menu_definition', this.menuProcessor);
     this.processors.set('route_definition', this.routeProcessor);
+    this.processors.set('route_handler_definition', this.routeHandlerProcessor);
     this.processors.set('method_definition', this.methodProcessor);
     this.processors.set('hook_definition', this.hookProcessor);
     this.processors.set('setting_definition', this.settingProcessor);

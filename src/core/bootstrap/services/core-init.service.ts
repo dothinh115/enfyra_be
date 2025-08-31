@@ -245,16 +245,7 @@ export class CoreInitService {
                   .getRepository(relationEntity)
                   .update(existingRel.id, updateData);
                   
-                // Verify update
-                const verifyUpdated = await queryRunner.manager
-                  .getRepository(relationEntity)
-                  .findOne({ where: { id: existingRel.id }});
-                  
-                this.logger.log(`✅ Updated relation ${rel.propertyName} for ${name}:`, {
-                  updateData,
-                  verifyIsNullable: verifyUpdated?.isNullable,
-                  success: verifyUpdated?.isNullable === rel.isNullable
-                });
+                this.logger.log(`🔄 Updated relation ${rel.propertyName} for ${name}`);
               } else {
                 this.logger.debug(`⏩ No update needed for relation ${rel.propertyName} of ${name}`);
               }
