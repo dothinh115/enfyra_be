@@ -16,10 +16,6 @@ DB_IDLE_TIMEOUT=30000               # PostgreSQL idle connection timeout (ms)
 REDIS_URI=redis://localhost:6379
 DEFAULT_TTL=5
 
-#RABBITMQ SETTING
-RABBITMQ_USERNAME=root
-RABBITMQ_PASSWORD=1234
-
 #APP SETTING
 NODE_NAME=my_enfyra
 PORT=1105
